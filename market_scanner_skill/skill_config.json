@@ -1,0 +1,167 @@
+{
+  "skill_id": "coinscope.market_scanner",
+  "name": "Market Scanner",
+  "version": "1.0.0",
+  "platform": "Manus",
+  "category": "Trading Intelligence",
+  "description": "Scans Binance Futures pairs using the CoinScopeAI engine. Returns top-ranked signals by score (0-12), direction (LONG/SHORT), and timeframe.",
+  "author": "CoinScopeAI",
+  "created": "2026-04-03",
+
+  "trigger_phrases": [
+    "scan top movers",
+    "find setups",
+    "what's setting up now",
+    "run a scan",
+    "which pairs have signals",
+    "give me the best setups",
+    "what should I trade now",
+    "any long setups",
+    "any short setups",
+    "scan the market",
+    "top signals right now",
+    "what's moving",
+    "show me signals"
+  ],
+
+  "parameters": {
+    "pairs": {
+      "type": "string",
+      "required": false,
+      "default": "BTC/USDT,ETH/USDT,SOL/USDT,BNB/USDT,XRP/USDT,TAO/USDT",
+      "description": "Comma-separated list of USDT futures pairs to scan"
+    },
+    "top_n": {
+      "type": "integer",
+      "required": false,
+      "default": 5,
+      "min": 1,
+      "max": 20,
+      "description": "Maximum number of results to return"
+    },
+    "min_score": {
+      "type": "float",
+      "required": false,
+      "default": 5.5,
+      "min": 0.0,
+      "max": 12.0,
+      "description": "Minimum FixedScorer score threshold (0-12)"
+    },
+    "signal_filter": {
+      "type": "string",
+      "required": false,
+      "default": "ALL",
+      "enum": ["LONG", "SHORT", "ALL"],
+      "description": "Filter results by signal direction"
+    }
+  },
+
+  "api": {
+    "base_url": "http://localhost:8001",
+    "endpoints": {
+      "health": {
+        "method": "GET",
+        "path": "/health",
+        "description": "Check engine status before running scan"
+      },
+      "scan": {
+        "method": "GET",
+        "path": "/scan",
+        "query_params": {
+          "pairs": "{pairs}"
+        },
+        "description": "Run live market scan across specified pairs"
+      }
+    },
+    "timeout_seconds": 30
+  },
+
+  "output_format": {
+    "type": "table",
+    "fields": [
+      { "key": "rank",     "label": "Rank",     "type": "integer" },
+      { "key": "symbol",   "label": "Pair",     "type": "string"  },
+      { "key": "signal",   "label": "Signal",   "type": "string"  },
+      { "key": "score",    "label": "Score",    "type": "float"   },
+      { "key": "timeframe","label": "TF",       "type": "string"  },
+      { "key": "rsi",      "label": "RSI",      "type": "float"   },
+      { "key": "regime",   "label": "Regime",   "type": "string"  }
+    ],
+    "sort_by": "score",
+    "sort_order": "desc"
+  },
+
+  "score_thresholds": {
+    "long_entry":  5.5,
+    "short_entry": 6.5,
+    "labels": {
+      "0-4.9":   "Weak",
+      "5-5.9":   "Moderate",
+      "6-7.4":   "Good",
+      "7.5-8.9": "Strong",
+      "9-12":    "Very Strong"
+    }
+  },
+
+  "chaining": {
+    "on_success": [
+      {
+        "skill": "coinscope.position_sizer",
+        "trigger": "User asks to size a position on one of the returned pairs"
+      },
+      {
+        "skill": "coinscope.regime_detector",
+        "trigger": "User asks to check regime for a returned pair"
+      },
+      {
+        "skill": "coinscope.telegram_alerter",
+        "trigger": "User asks to set an alert on a returned pair"
+      }
+    ]
+  },
+
+  "error_states": {
+    "engine_offline": {
+      "message": "CoinScopeAI engine is offline. Start it with: uvicorn api:app --reload --port 8001",
+      "retry": false
+    },
+    "no_signals": {
+      "message": "No setups found above min_score threshold. Market may be choppy.",
+      "retry_suggestion": "Lower min_score or check back in 15 min"
+    },
+    "timeout": {
+      "message": "Scan timed out after 30s. Engine may be overloaded.",
+      "retry": true
+    }
+  },
+
+  "dependencies": {
+    "engine": {
+      "file": "api.py",
+      "start_command": "uvicorn api:app --reload --port 8001",
+      "port": 8001
+    },
+    "python_packages": [
+      "requests>=2.28.0",
+      "fastapi>=0.100.0",
+      "uvicorn>=0.22.0",
+      "ccxt>=4.0.0",
+      "numpy>=1.24.0",
+      "pandas>=2.0.0"
+    ],
+    "engine_modules": [
+      "master_orchestrator.py",
+      "scoring_fixed.py",
+      "pair_monitor.py",
+      "hmm_regime_detector.py",
+      "multi_timeframe_filter.py"
+    ]
+  },
+
+  "notes": [
+    "This skill is READ-ONLY. It does not execute any trades.",
+    "If regime is 'chop', treat signal as lower-confidence even if score is high.",
+    "HMM regime model is trained on BTC/ETH/SOL — validate accuracy before live use on other pairs.",
+    "Always show scan timestamp so traders know data freshness."
+  ]
+}

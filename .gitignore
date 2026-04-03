@@ -1,0 +1,109 @@
+# ─────────────────────────────────────────────────────────────
+#  CoinScopeAI — .gitignore
+#  NEVER commit secrets, credentials, or generated artefacts
+# ─────────────────────────────────────────────────────────────
+
+# ── Secrets & Credentials (CRITICAL) ─────────────────────────
+.env
+.env.*
+!.env.example
+secrets.json
+credentials.json
+*.key
+*.pem
+
+# ── Python ────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# ── Virtual Environments ──────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.conda/
+
+# ── Jupyter Notebooks ─────────────────────────────────────────
+.ipynb_checkpoints
+*.ipynb
+
+# ── Testing & Coverage ────────────────────────────────────────
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+htmlcov/
+
+# ── ML Models & Data ──────────────────────────────────────────
+*.pkl
+*.pickle
+*.joblib
+*.h5
+*.hdf5
+models/saved/
+data/raw/
+data/processed/
+*.csv
+*.parquet
+*.feather
+
+# ── Logs ──────────────────────────────────────────────────────
+*.log
+logs/
+*.log.*
+
+# ── OS / Editor ───────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ── Project-specific ──────────────────────────────────────────
+# Duplicate engine folders (keep only coinscope_trading_engine/)
+coinscope_trading_engine 2/
+coinscope_trading_engine 3/
+coinscope_trading_engine 4/
+*.tar.gz
+*.zip
+
+# Temporary & generated docs
+*.docx
+*.pptx
+CLAUDE.md
