@@ -11,6 +11,7 @@ Features:
 - HMAC-SHA256 authentication (standard keys)
 """
 
+import os
 import requests
 import hashlib
 import hmac
