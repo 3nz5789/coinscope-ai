@@ -1,0 +1,34 @@
+# ─────────────────────────────────────────────────────────────
+#  CoinScopeAI — Production Environment Configuration
+#  WARNING: Changes to this file affect live trading.
+#  All modifications require review and approval.
+# ─────────────────────────────────────────────────────────────
+
+app:
+  name: coinscopeai
+  environment: production
+  debug: false
+  log_level: WARNING
+
+engine:
+  host: 0.0.0.0
+  port: 8001
+  testnet_mode: false
+  initial_capital: ${INITIAL_CAPITAL}
+
+risk_gate:
+  max_daily_loss_pct: 0.03
+  max_consecutive_losses: 5
+  max_drawdown_pct: 0.10
+  max_open_positions: 3
+
+database:
+  host: ${DB_HOST}
+  port: 5432
+  name: coinscopeai_prod
+  pool_size: 20
+
+redis:
+  host: ${REDIS_HOST}
+  port: 6379
+  db: 0

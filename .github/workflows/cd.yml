@@ -1,0 +1,53 @@
+name: CoinScopeAI CD
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+
+jobs:
+  # ── Deploy to Staging (on develop merge) ─────────────────────
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
+    environment: staging
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker images
+        run: |
+          echo "Building staging Docker images..."
+          # docker-compose -f infra/docker/docker-compose.dev.yml build
+          echo "✅ Staging build complete (placeholder — configure with real Docker build)"
+
+      - name: Deploy to staging
+        run: |
+          echo "Deploying to staging environment..."
+          echo "✅ Staging deployment complete (placeholder — configure with real deployment)"
+
+  # ── Deploy to Production (on main merge) ─────────────────────
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker images
+        run: |
+          echo "Building production Docker images..."
+          # docker-compose -f infra/docker/docker-compose.prod.yml build
+          echo "✅ Production build complete (placeholder — configure with real Docker build)"
+
+      - name: Deploy to production
+        run: |
+          echo "Deploying to production environment..."
+          echo "⚠️ Production deployment requires manual approval via GitHub Environments."
+          echo "✅ Production deployment complete (placeholder — configure with real deployment)"

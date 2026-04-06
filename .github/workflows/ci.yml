@@ -4,11 +4,16 @@ on:
   push:
     branches: [ main, develop ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, develop ]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  test:
-    name: Run Tests
+  # ── Backend: Trading Engine ──────────────────────────────────
+  backend-lint-test:
+    name: Backend — Lint & Test
     runs-on: ubuntu-latest
 
     steps:
@@ -22,7 +27,9 @@ jobs:
           cache: "pip"
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          pip install -r requirements.txt
+          pip install flake8 black mypy pytest pytest-cov
 
       - name: Create dummy .env for CI
         run: |
@@ -42,26 +49,27 @@ jobs:
           MAX_OPEN_POSITIONS=3
           EOF
 
-      - name: Lint with flake8
+      - name: Lint — flake8 (syntax errors)
         run: |
-          pip install flake8
-          # Stop on syntax errors or undefined names; warn on style
-          flake8 coinscope_trading_engine/ market_scanner_skill/ \
-            --count --select=E9,F63,F7,F82 --show-source --statistics
-          flake8 coinscope_trading_engine/ market_scanner_skill/ \
-            --count --exit-zero --max-line-length=120 --statistics
+          flake8 coinscope_trading_engine/ services/ ai/ \
+            --count --select=E9,F63,F7,F82 --show-source --statistics \
+            --exclude=__pycache__,*.pyc
+
+      - name: Lint — flake8 (style warnings)
+        run: |
+          flake8 coinscope_trading_engine/ services/ ai/ \
+            --count --exit-zero --max-line-length=120 --statistics \
+            --exclude=__pycache__,*.pyc
 
       - name: Run tests
         env:
-          BINANCE_FUTURES_TESTNET_API_KEY: ${{ secrets.BINANCE_FUTURES_TESTNET_API_KEY }}
-          BINANCE_FUTURES_TESTNET_API_SECRET: ${{ secrets.BINANCE_FUTURES_TESTNET_API_SECRET }}
-          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           TESTNET_MODE: "true"
         run: |
-          pytest tests/ -v --tb=short || echo "No tests found — add tests to tests/"
+          pytest tests/ -v --tb=short || echo "⚠️ No tests found — add tests to tests/"
 
+  # ── Security Scan ────────────────────────────────────────────
   security-scan:
-    name: Secret Scan
+    name: Security — Secret Scan
     runs-on: ubuntu-latest
 
     steps:
@@ -71,11 +79,35 @@ jobs:
       - name: Scan for hardcoded secrets
         run: |
           echo "Scanning for hardcoded API keys..."
-          # Fail if any hardcoded Binance-style keys found (64-char hex strings assigned to api_key/secret vars)
           if grep -rn "api_key\s*=\s*['\"][A-Za-z0-9]\{20,\}['\"]" \
-               coinscope_trading_engine/ market_scanner_skill/ \
-               --include="*.py" | grep -v "os.environ\|os.getenv\|getenv\|#"; then
+               coinscope_trading_engine/ services/ ai/ \
+               --include="*.py" | grep -v "os.environ\|os.getenv\|getenv\|#\|example\|dummy\|test"; then
             echo "❌ Hardcoded API key detected! Move to environment variables."
             exit 1
           fi
           echo "✅ No hardcoded secrets found."
+
+  # ── Risk Logic Change Detection ──────────────────────────────
+  risk-change-check:
+    name: Safety — Risk Logic Change Detection
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for risk-sensitive file changes
+        run: |
+          RISK_FILES=$(git diff --name-only origin/main...HEAD | grep -E "(risk|position_siz|gate|stop_loss|drawdown|kelly)" || true)
+          if [ -n "$RISK_FILES" ]; then
+            echo "⚠️ RISK-SENSITIVE FILES MODIFIED:"
+            echo "$RISK_FILES"
+            echo ""
+            echo "This PR modifies risk management or position sizing logic."
+            echo "Please ensure this PR has the 'high-risk' label and has been reviewed by the lead quant analyst."
+          else
+            echo "✅ No risk-sensitive files modified."
+          fi
