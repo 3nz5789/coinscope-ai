@@ -1,230 +1,349 @@
 """
-CoinScopeAI — Unified Data Models
+CoinScopeAI Phase 2 — Unified Data Models
 
-Normalized schemas for all market data across exchanges.
-Every model carries both normalized fields and the raw exchange payload
-so that normalization is lossless.
+Extends Phase 1 models with alpha signals, regime states, liquidation data,
+funding snapshots, order book depth, and cross-exchange aggregated metrics.
 """
 
 from __future__ import annotations
 
-import time
+import enum
+import time as _time
 from dataclasses import dataclass, field
-from enum import Enum
 from typing import Any, Dict, List, Optional
 
 
 # ---------------------------------------------------------------------------
-# Enums
+# Enumerations
 # ---------------------------------------------------------------------------
 
-class Exchange(str, Enum):
+class Exchange(str, enum.Enum):
+    """Supported exchanges across the system."""
+    HYPERLIQUID = "hyperliquid"
     BINANCE = "binance"
     BYBIT = "bybit"
     OKX = "okx"
-    HYPERLIQUID = "hyperliquid"
+    DERIBIT = "deribit"
+    COINGLASS = "coinglass"  # aggregated source
 
 
-class Side(str, Enum):
+class Side(str, enum.Enum):
     BUY = "buy"
     SELL = "sell"
+    LONG = "long"
+    SHORT = "short"
 
 
-class ConnectionState(str, Enum):
-    DISCONNECTED = "disconnected"
-    CONNECTING = "connecting"
-    CONNECTED = "connected"
-    RECONNECTING = "reconnecting"
-    ERROR = "error"
+class MarketRegime(str, enum.Enum):
+    """Market regime classification labels."""
+    TRENDING = "trending"
+    MEAN_REVERTING = "mean_reverting"
+    VOLATILE = "volatile"
+    LOW_LIQUIDITY = "low_liquidity"
+    UNKNOWN = "unknown"
+
+
+class SignalDirection(str, enum.Enum):
+    BULLISH = "bullish"
+    BEARISH = "bearish"
+    NEUTRAL = "neutral"
 
 
 # ---------------------------------------------------------------------------
-# Unified data models
+# Core Market Data (Phase 1 compatible)
 # ---------------------------------------------------------------------------
 
-@dataclass
-class MarkPrice:
-    """Normalized mark / index price."""
-    exchange: Exchange
-    symbol: str                     # unified symbol, e.g. "BTCUSDT"
-    mark_price: float
-    index_price: Optional[float] = None
-    estimated_settle_price: Optional[float] = None
-    timestamp: float = field(default_factory=time.time)   # epoch seconds
-    raw: Dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass
+@dataclass(frozen=True)
 class OrderBookLevel:
+    """Single price level in an order book."""
     price: float
-    quantity: float
+    size: float
+    num_orders: int = 1
 
 
 @dataclass
-class OrderBook:
-    """Normalized order book snapshot / update."""
-    exchange: Exchange
+class L2OrderBook:
+    """Full Level-2 order book snapshot."""
     symbol: str
+    exchange: Exchange
+    timestamp: float
     bids: List[OrderBookLevel] = field(default_factory=list)
     asks: List[OrderBookLevel] = field(default_factory=list)
-    timestamp: float = field(default_factory=time.time)
-    sequence: Optional[int] = None
-    raw: Dict[str, Any] = field(default_factory=dict)
 
     @property
-    def best_bid(self) -> Optional[OrderBookLevel]:
-        return self.bids[0] if self.bids else None
+    def best_bid(self) -> Optional[float]:
+        return self.bids[0].price if self.bids else None
 
     @property
-    def best_ask(self) -> Optional[OrderBookLevel]:
-        return self.asks[0] if self.asks else None
+    def best_ask(self) -> Optional[float]:
+        return self.asks[0].price if self.asks else None
 
     @property
     def mid_price(self) -> Optional[float]:
-        if self.best_bid and self.best_ask:
-            return (self.best_bid.price + self.best_ask.price) / 2.0
+        if self.best_bid is not None and self.best_ask is not None:
+            return (self.best_bid + self.best_ask) / 2.0
         return None
 
     @property
     def spread(self) -> Optional[float]:
-        if self.best_bid and self.best_ask:
-            return self.best_ask.price - self.best_bid.price
+        if self.best_bid is not None and self.best_ask is not None:
+            return self.best_ask - self.best_bid
         return None
 
     @property
     def spread_bps(self) -> Optional[float]:
-        """Spread in basis points relative to mid price."""
         mid = self.mid_price
-        s = self.spread
-        if mid and s and mid > 0:
-            return (s / mid) * 10_000
+        spread = self.spread
+        if mid and spread and mid > 0:
+            return (spread / mid) * 10_000
         return None
 
 
 @dataclass
 class Trade:
-    """Normalized public trade."""
-    exchange: Exchange
+    """Normalized trade record."""
     symbol: str
-    trade_id: str
+    exchange: Exchange
     price: float
-    quantity: float
+    size: float
     side: Side
-    timestamp: float = field(default_factory=time.time)
-    raw: Dict[str, Any] = field(default_factory=dict)
+    timestamp: float
+    trade_id: str = ""
 
+
+# ---------------------------------------------------------------------------
+# Funding Rate Models
+# ---------------------------------------------------------------------------
 
 @dataclass
 class FundingRate:
-    """Normalized funding rate."""
-    exchange: Exchange
+    """Single funding rate observation."""
     symbol: str
-    funding_rate: float
-    predicted_rate: Optional[float] = None
-    next_funding_time: Optional[float] = None   # epoch seconds
-    timestamp: float = field(default_factory=time.time)
-    raw: Dict[str, Any] = field(default_factory=dict)
+    exchange: Exchange
+    rate: float
+    timestamp: float
+    premium: float = 0.0
+    next_funding_time: Optional[float] = None
+
+
+@dataclass
+class PredictedFunding:
+    """Predicted next funding rate for a venue."""
+    symbol: str
+    venue: str  # e.g. "HlPerp", "BinPerp", "BybitPerp"
+    predicted_rate: float
+    next_funding_time: float
+
+
+@dataclass
+class FundingSnapshot:
+    """Cross-exchange funding snapshot for a single symbol at a point in time."""
+    symbol: str
+    timestamp: float
+    rates: Dict[str, float] = field(default_factory=dict)  # exchange -> rate
+    predicted: Optional[Dict[str, PredictedFunding]] = None
 
     @property
-    def annualized_rate(self) -> float:
-        """Annualized funding rate assuming 8-hour intervals (3x/day)."""
-        return self.funding_rate * 3 * 365
+    def mean_rate(self) -> float:
+        if not self.rates:
+            return 0.0
+        return sum(self.rates.values()) / len(self.rates)
 
+    @property
+    def max_divergence(self) -> float:
+        if len(self.rates) < 2:
+            return 0.0
+        vals = list(self.rates.values())
+        return max(vals) - min(vals)
+
+
+# ---------------------------------------------------------------------------
+# Asset Context (Hyperliquid-specific enriched data)
+# ---------------------------------------------------------------------------
+
+@dataclass
+class AssetContext:
+    """Per-asset context from Hyperliquid (funding, OI, mark price, etc.)."""
+    symbol: str
+    funding_rate: float
+    mark_price: float
+    mid_price: Optional[float]
+    oracle_price: float
+    open_interest: float
+    day_notional_volume: float
+    premium: float
+    prev_day_price: float
+    impact_prices: Optional[List[float]] = None
+    timestamp: float = field(default_factory=_time.time)
+
+
+# ---------------------------------------------------------------------------
+# Open Interest Models
+# ---------------------------------------------------------------------------
 
 @dataclass
 class OpenInterest:
-    """Normalized open interest."""
-    exchange: Exchange
+    """Open interest observation for a single exchange."""
     symbol: str
-    open_interest: float            # in contracts or base currency
-    open_interest_value: Optional[float] = None   # in quote currency (USD)
-    timestamp: float = field(default_factory=time.time)
-    raw: Dict[str, Any] = field(default_factory=dict)
+    exchange: Exchange
+    oi_value: float  # in USD or contracts depending on source
+    timestamp: float
 
 
 @dataclass
-class Ticker:
-    """Normalized ticker / 24h summary."""
-    exchange: Exchange
+class AggregatedOI:
+    """Cross-exchange aggregated open interest."""
     symbol: str
-    last_price: float
-    bid_price: Optional[float] = None
-    ask_price: Optional[float] = None
-    high_24h: Optional[float] = None
-    low_24h: Optional[float] = None
-    volume_24h: Optional[float] = None
-    volume_24h_quote: Optional[float] = None
-    price_change_pct_24h: Optional[float] = None
-    timestamp: float = field(default_factory=time.time)
-    raw: Dict[str, Any] = field(default_factory=dict)
-
-
-# ---------------------------------------------------------------------------
-# Connection / metrics models
-# ---------------------------------------------------------------------------
-
-@dataclass
-class ConnectionMetrics:
-    """Per-connection health metrics."""
-    exchange: Exchange
-    state: ConnectionState = ConnectionState.DISCONNECTED
-    connected_at: Optional[float] = None
-    last_message_at: Optional[float] = None
-    messages_received: int = 0
-    reconnect_count: int = 0
-    errors: int = 0
-    latency_ms: Optional[float] = None
+    timestamp: float
+    by_exchange: Dict[str, float] = field(default_factory=dict)
 
     @property
-    def uptime_seconds(self) -> Optional[float]:
-        if self.connected_at:
-            return time.time() - self.connected_at
-        return None
+    def total_oi(self) -> float:
+        return sum(self.by_exchange.values())
+
+
+# ---------------------------------------------------------------------------
+# Liquidation Models
+# ---------------------------------------------------------------------------
+
+@dataclass
+class Liquidation:
+    """Single liquidation event."""
+    symbol: str
+    exchange: Exchange
+    side: Side  # LONG = long liquidated, SHORT = short liquidated
+    price: float
+    quantity: float
+    usd_value: float
+    timestamp: float
+
+
+@dataclass
+class LiquidationSnapshot:
+    """Aggregated liquidation data over a time window."""
+    symbol: str
+    timestamp: float
+    window_seconds: int
+    long_liquidations_usd: float = 0.0
+    short_liquidations_usd: float = 0.0
+    total_count: int = 0
+    by_exchange: Dict[str, float] = field(default_factory=dict)
 
     @property
-    def messages_per_second(self) -> Optional[float]:
-        up = self.uptime_seconds
-        if up and up > 0:
-            return self.messages_received / up
+    def total_usd(self) -> float:
+        return self.long_liquidations_usd + self.short_liquidations_usd
+
+    @property
+    def long_short_ratio(self) -> Optional[float]:
+        if self.short_liquidations_usd > 0:
+            return self.long_liquidations_usd / self.short_liquidations_usd
         return None
 
 
 # ---------------------------------------------------------------------------
-# Scanner result models
+# Basis / Futures Premium Models
 # ---------------------------------------------------------------------------
 
 @dataclass
-class ScanSignal:
-    """A signal emitted by a scanner."""
-    scanner_name: str
-    exchange: Exchange
+class BasisData:
+    """Futures basis (premium/discount) for a symbol."""
     symbol: str
-    signal_type: str               # e.g. "breakout_oi_expansion"
-    strength: float                # 0.0 – 1.0
-    details: Dict[str, Any] = field(default_factory=dict)
-    timestamp: float = field(default_factory=time.time)
+    exchange: Exchange
+    spot_price: float
+    futures_price: float
+    timestamp: float
+    expiry: Optional[str] = None  # for dated futures
 
+    @property
+    def basis(self) -> float:
+        return self.futures_price - self.spot_price
 
-# ---------------------------------------------------------------------------
-# Event bus types
-# ---------------------------------------------------------------------------
+    @property
+    def basis_pct(self) -> float:
+        if self.spot_price > 0:
+            return (self.basis / self.spot_price) * 100.0
+        return 0.0
 
-class EventType(str, Enum):
-    MARK_PRICE = "mark_price"
-    ORDER_BOOK = "order_book"
-    TRADE = "trade"
-    FUNDING_RATE = "funding_rate"
-    OPEN_INTEREST = "open_interest"
-    TICKER = "ticker"
-    SCAN_SIGNAL = "scan_signal"
-    CONNECTION_STATE = "connection_state"
+    @property
+    def annualized_basis(self) -> float:
+        """Annualized basis assuming perpetual (8h funding cycle)."""
+        return self.basis_pct * 365.25 * 3  # 3 funding periods per day
 
 
 @dataclass
-class MarketEvent:
-    """Wrapper that carries any normalized payload through the event bus."""
-    event_type: EventType
-    data: Any                       # one of the model types above
-    exchange: Exchange
+class AggregatedBasis:
+    """Cross-exchange basis snapshot."""
     symbol: str
-    timestamp: float = field(default_factory=time.time)
+    timestamp: float
+    by_exchange: Dict[str, BasisData] = field(default_factory=dict)
+
+    @property
+    def mean_basis_pct(self) -> float:
+        if not self.by_exchange:
+            return 0.0
+        return sum(b.basis_pct for b in self.by_exchange.values()) / len(self.by_exchange)
+
+
+# ---------------------------------------------------------------------------
+# Alpha Signal (output of feature generators)
+# ---------------------------------------------------------------------------
+
+@dataclass
+class AlphaSignal:
+    """
+    Standardized output from any alpha feature generator.
+
+    Every generator must produce AlphaSignal objects with consistent schema
+    so downstream consumers (regime enricher, strategy engine) can treat
+    them uniformly.
+    """
+    signal_name: str
+    symbol: str
+    value: float
+    z_score: float
+    timestamp: float
+    confidence: float  # 0.0 – 1.0
+    direction: SignalDirection = SignalDirection.NEUTRAL
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        self.confidence = max(0.0, min(1.0, self.confidence))
+
+
+# ---------------------------------------------------------------------------
+# Regime State (output of regime enricher)
+# ---------------------------------------------------------------------------
+
+@dataclass
+class RegimeState:
+    """
+    Market regime classification result.
+
+    Contains the primary regime label plus confidence scores for each
+    possible regime, allowing downstream consumers to blend regimes.
+    """
+    symbol: str
+    regime: MarketRegime
+    confidence: float
+    timestamp: float
+    scores: Dict[str, float] = field(default_factory=dict)  # regime -> score
+    contributing_signals: List[str] = field(default_factory=list)
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def is_high_confidence(self) -> bool:
+        return self.confidence >= 0.7
+
+
+# ---------------------------------------------------------------------------
+# Configuration Helpers
+# ---------------------------------------------------------------------------
+
+@dataclass
+class AlphaGeneratorConfig:
+    """Shared configuration for alpha feature generators."""
+    lookback_periods: int = 24  # number of observations for rolling stats
+    z_score_threshold: float = 2.0
+    min_data_points: int = 5
+    decay_factor: float = 0.94  # exponential decay for weighting
+    extra: Dict[str, Any] = field(default_factory=dict)
