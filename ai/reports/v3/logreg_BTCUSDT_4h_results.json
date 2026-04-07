@@ -1,0 +1,190 @@
+{
+  "version": "v3",
+  "symbol": "BTCUSDT",
+  "timeframe": "4h",
+  "model_type": "logreg",
+  "n_features": 162,
+  "target_config": {
+    "forward_horizon": 6,
+    "long_threshold": 0.008,
+    "short_threshold": -0.008
+  },
+  "train_samples": 2526,
+  "test_samples": 842,
+  "ml_metrics": {
+    "accuracy": 0.35391923990498814,
+    "precision": 0.3713293970298801,
+    "recall": 0.3604674670908934,
+    "f1_macro": 0.3452358954966721,
+    "auc_roc": 0.5351184889070276
+  },
+  "trading_metrics": {
+    "signal_hit_rate": 0.32941176470588235,
+    "long_hit_rate": 0.33111111111111113,
+    "short_hit_rate": 0.32608695652173914,
+    "avg_return_long": -0.0035729715051545717,
+    "avg_return_short": 4.157001870889694e-05,
+    "signal_profit_factor": 0.7898191326573537,
+    "total_signals": 842,
+    "long_signals": 450,
+    "short_signals": 230
+  },
+  "top_features": [
+    [
+      "mean_rev_zscore_20",
+      0.02163333260518678
+    ],
+    [
+      "weekend_proximity",
+      0.021059091400013417
+    ],
+    [
+      "ob_persistence_20",
+      0.018792736812733482
+    ],
+    [
+      "weekly_vol_42b",
+      0.01797968048187308
+    ],
+    [
+      "oi_expansion_10",
+      0.017331601889142866
+    ],
+    [
+      "vwap_dev_20",
+      0.017041796342090243
+    ],
+    [
+      "rsi_7",
+      0.015157408261755349
+    ],
+    [
+      "liq_intensity_10",
+      0.014921737028858413
+    ],
+    [
+      "rel_volume_20",
+      0.014812294210695333
+    ],
+    [
+      "range_over_atr_7",
+      0.014642231916956567
+    ],
+    [
+      "realized_vol_5",
+      0.01447032997675586
+    ],
+    [
+      "oi_expansion_5",
+      0.014409923028888206
+    ],
+    [
+      "liq_intensity_5",
+      0.014285293969244472
+    ],
+    [
+      "oi_expansion_20",
+      0.014086396488310116
+    ],
+    [
+      "rel_volume_10",
+      0.013742871874156761
+    ],
+    [
+      "liq_ls_ratio_10",
+      0.013671574604337988
+    ],
+    [
+      "ob_liq_cliff_14",
+      0.013573938504336283
+    ],
+    [
+      "donchian_width_20",
+      0.013012392106297154
+    ],
+    [
+      "ema_slope_100",
+      0.012927841489335422
+    ],
+    [
+      "basis_proxy_20",
+      0.012907133461053455
+    ]
+  ],
+  "overfit_metrics": {
+    "is_accuracy": 0.563341250989707,
+    "oos_accuracy": 0.35391923990498814,
+    "accuracy_degradation": 0.20942201108471886,
+    "overfit_score": 0.3793900310170506
+  },
+  "walk_forward": {
+    "oos_accuracy": 0.35793650793650794,
+    "oos_f1_macro": 0.3570982109702288,
+    "oos_hit_rate": 0.3273453093812375,
+    "oos_long_signals": 609,
+    "oos_short_signals": 393,
+    "oos_profit_factor": 0.0,
+    "top_features": [
+      [
+        "funding_price_div",
+        0.03163361292811224
+      ],
+      [
+        "ob_persistence_20",
+        0.027307247628900178
+      ],
+      [
+        "weekend_proximity",
+        0.02482310946018821
+      ],
+      [
+        "near_lower_50",
+        0.019662319318034423
+      ],
+      [
+        "rel_volume_20",
+        0.01920838936661997
+      ],
+      [
+        "trend_strength_100",
+        0.018727078649656746
+      ],
+      [
+        "vol_mean_rev_42b",
+        0.01815672737693798
+      ],
+      [
+        "rel_volume_10",
+        0.017631793176260454
+      ],
+      [
+        "oi_expansion_20",
+        0.01750540282575825
+      ],
+      [
+        "hl_skew_30",
+        0.017027289258556063
+      ],
+      [
+        "liq_cascade_5",
+        0.01616894601977424
+      ],
+      [
+        "liq_cascade_3",
+        0.015493893565939368
+      ],
+      [
+        "log_return_40",
+        0.014650947191237764
+      ],
+      [
+        "liq_ls_ratio_10",
+        0.014192605499309428
+      ],
+      [
+        "rsi_7",
+        0.013382699850920244
+      ]
+    ]
+  }
+}

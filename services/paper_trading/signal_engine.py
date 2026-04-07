@@ -1,11 +1,19 @@
 """
 CoinScopeAI Paper Trading — ML Signal Engine Integration
 ===========================================================
-Feeds real-time OHLCV candles through the ML v2 feature pipeline
+Feeds real-time OHLCV candles through the ML feature pipeline
 and model inference to generate trading signals.
 
 Maintains a rolling window of candles per symbol, computes features
 on each new closed candle, and runs model prediction.
+
+v3 updates:
+  - Supports V3FeatureEngine (Phase 2 alpha proxy features)
+  - Falls back to LongTFFeatureEngine (v2) or FeatureEngine (v1)
+  - Calls extract() (the correct method name)
+  - Adds timestamp column from open_time for temporal features
+  - Supports norm_params for z-score normalization matching training
+  - Loads model metadata (feature_names, norm_params) from _meta.json
 """
 
 import logging
@@ -97,7 +105,13 @@ class MLSignalEngine:
         self._on_signal = callback
 
     def load_model(self, model_path: str):
-        """Load a trained model from disk."""
+        """
+        Load a trained model from disk.
+
+        Supports two formats:
+          1. Dict with keys: model, feature_names, norm_params
+          2. Raw classifier object (LogRegSignalClassifier / LGBMSignalClassifier)
+        """
         import joblib
         model_data = joblib.load(model_path)
 
@@ -106,12 +120,24 @@ class MLSignalEngine:
             self._feature_names = model_data.get("feature_names", [])
             self._norm_params = model_data.get("norm_params", {})
             logger.info(
-                "Model loaded: %d features, norm_params=%s",
+                "Model loaded (dict): %d features, norm_params=%s",
                 len(self._feature_names), bool(self._norm_params),
             )
         else:
+            # Raw classifier — extract feature_names from internal attribute
             self._model = model_data
-            logger.info("Model loaded (raw, no metadata)")
+            if hasattr(model_data, "_feature_names"):
+                self._feature_names = model_data._feature_names
+            logger.info(
+                "Model loaded (raw): %d features, norm_params=%s",
+                len(self._feature_names), bool(self._norm_params),
+            )
+
+    def load_norm_params(self, norm_params_path: str):
+        """Load normalization parameters from a separate file."""
+        import joblib
+        self._norm_params = joblib.load(norm_params_path)
+        logger.info("Norm params loaded: %d features", len(self._norm_params))
 
     def initialize_buffer(self, symbol: str, historical_candles: pd.DataFrame):
         """
@@ -122,7 +148,7 @@ class MLSignalEngine:
 
         for _, row in historical_candles.iterrows():
             candle = {
-                "open_time": row.get("open_time", 0),
+                "open_time": int(row.get("open_time", 0)),
                 "open": float(row.get("open", 0)),
                 "high": float(row.get("high", 0)),
                 "low": float(row.get("low", 0)),
@@ -185,8 +211,19 @@ class MLSignalEngine:
                 if self._on_signal:
                     self._on_signal(signal)
                 return signal
+            elif signal:
+                # Log NEUTRAL signals too for monitoring
+                logger.info(
+                    "NEUTRAL signal for %s: conf=%.3f edge=%.3f P(L/N/S)=%.2f/%.2f/%.2f",
+                    symbol, signal.confidence, signal.edge,
+                    signal.probabilities.get("long", 0),
+                    signal.probabilities.get("neutral", 0),
+                    signal.probabilities.get("short", 0),
+                )
         except Exception as e:
             logger.error("Signal generation error for %s: %s", symbol, e)
+            import traceback
+            logger.error("Traceback: %s", traceback.format_exc())
 
         return None
 
@@ -198,6 +235,10 @@ class MLSignalEngine:
 
         # Build DataFrame from buffer
         df = pd.DataFrame(list(self._buffers[symbol]))
+
+        # Add timestamp column from open_time (required by LongTFFeatureEngine
+        # for temporal features like day-of-week, hour-of-day)
+        df["timestamp"] = pd.to_datetime(df["open_time"], unit="ms")
 
         # Compute features
         features_df = self._compute_features(df)
@@ -226,12 +267,20 @@ class MLSignalEngine:
             X = latest.select_dtypes(include=[np.number])
 
         # Normalize using training params
+        # Format: {feature_name: (mean, std)} — matching V2DatasetBuilder
         if self._norm_params:
-            means = self._norm_params.get("means", {})
-            stds = self._norm_params.get("stds", {})
             for col in X.columns:
-                if col in means and col in stds and stds[col] > 0:
-                    X[col] = (X[col] - means[col]) / stds[col]
+                if col in self._norm_params:
+                    param = self._norm_params[col]
+                    if isinstance(param, (tuple, list)) and len(param) == 2:
+                        mean, std = param
+                    elif isinstance(param, dict):
+                        mean = param.get("mean", 0)
+                        std = param.get("std", 1)
+                    else:
+                        continue
+                    if std > 0:
+                        X[col] = (X[col] - mean) / std
 
         # Replace NaN/inf
         X = X.replace([np.inf, -np.inf], np.nan).fillna(0)
@@ -291,23 +340,40 @@ class MLSignalEngine:
         return signal
 
     def _compute_features(self, df: pd.DataFrame) -> Optional[pd.DataFrame]:
-        """Compute v2 features from OHLCV data."""
+        """
+        Compute features from OHLCV data.
+
+        Tries V3FeatureEngine first (Phase 2 alpha proxies), then falls back
+        to LongTFFeatureEngine (v2), then FeatureEngine (v1).
+        """
         if self._feature_engine is None:
             try:
-                from ai.features.engine_v2 import FeatureEngineV2
-                self._feature_engine = FeatureEngineV2()
+                from ai.features.engine_v3 import V3FeatureEngine
+                self._feature_engine = V3FeatureEngine()
+                logger.info("Using V3FeatureEngine (Phase 2 alpha) for feature extraction")
             except ImportError:
                 try:
-                    from ai.features.engine import FeatureEngine
-                    self._feature_engine = FeatureEngine()
+                    from ai.features.engine_v2 import LongTFFeatureEngine
+                    self._feature_engine = LongTFFeatureEngine()
+                    logger.info("Using LongTFFeatureEngine (v2) for feature extraction")
                 except ImportError:
-                    logger.error("No feature engine available")
-                    return None
+                    try:
+                        from ai.features.engine import FeatureEngine
+                        self._feature_engine = FeatureEngine()
+                        logger.warning(
+                            "V3/V2 engines not available, falling back to FeatureEngine (v1). "
+                            "This will produce fewer features than the model expects."
+                        )
+                    except ImportError:
+                        logger.error("No feature engine available")
+                        return None
 
         try:
-            return self._feature_engine.compute(df)
+            return self._feature_engine.extract(df)
         except Exception as e:
             logger.error("Feature computation error: %s", e)
+            import traceback
+            logger.error("Feature traceback: %s", traceback.format_exc())
             return None
 
     def _detect_regime(self, features_df: pd.DataFrame) -> str:

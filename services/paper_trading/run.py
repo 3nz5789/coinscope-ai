@@ -4,7 +4,7 @@ CoinScopeAI Paper Trading — Run CLI
 Start the paper trading engine.
 
 Usage:
-    python -m services.paper_trading.run [--model MODEL_PATH] [--symbols SYMBOLS] [--timeframe TF]
+    python -m services.paper_trading.run [--model MODEL_PATH] [--norm-params PATH] [--symbols SYMBOLS] [--timeframe TF]
 """
 
 import argparse
@@ -15,7 +15,7 @@ from .config import PaperTradingConfig, TradingConfig, ExchangeConfig, TelegramC
 from .engine import PaperTradingEngine
 
 
-def setup_logging(level: str = "INFO"):
+def setup_logging(level: str = "INFO", log_file: str = "/tmp/coinscopeai_paper_trading.log"):
     """Configure structured logging."""
     logging.basicConfig(
         level=getattr(logging, level.upper(), logging.INFO),
@@ -23,7 +23,7 @@ def setup_logging(level: str = "INFO"):
         datefmt="%Y-%m-%d %H:%M:%S",
         handlers=[
             logging.StreamHandler(sys.stdout),
-            logging.FileHandler("/tmp/coinscopeai_paper_trading.log"),
+            logging.FileHandler(log_file),
         ],
     )
 
@@ -35,6 +35,15 @@ def main():
     parser.add_argument(
         "--model", type=str, default=None,
         help="Path to trained ML model (.joblib)",
+    )
+    parser.add_argument(
+        "--norm-params", type=str, default=None,
+        help="Path to normalization parameters (.joblib). "
+             "If not provided, features are fed unnormalized.",
+    )
+    parser.add_argument(
+        "--meta", type=str, default=None,
+        help="Path to model metadata JSON (v3 format with feature_names + norm_params)",
     )
     parser.add_argument(
         "--symbols", type=str, default=None,
@@ -61,9 +70,13 @@ def main():
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
         help="Logging level (default: INFO)",
     )
+    parser.add_argument(
+        "--log-file", type=str, default="/tmp/coinscopeai_paper_trading.log",
+        help="Log file path",
+    )
 
     args = parser.parse_args()
-    setup_logging(args.log_level)
+    setup_logging(args.log_level, args.log_file)
 
     logger = logging.getLogger("coinscopeai.paper_trading.cli")
     logger.info("=" * 60)
@@ -91,7 +104,11 @@ def main():
     engine = PaperTradingEngine(config)
 
     try:
-        engine.start(model_path=args.model)
+        engine.start(
+            model_path=args.model,
+            norm_params_path=args.norm_params,
+            meta_path=getattr(args, 'meta', None),
+        )
     except KeyboardInterrupt:
         logger.info("Shutting down...")
     except Exception as e:
