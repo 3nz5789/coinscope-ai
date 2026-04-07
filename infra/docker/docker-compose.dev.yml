@@ -1,11 +1,49 @@
 # ─────────────────────────────────────────────────────────────
-#  CoinScopeAI — Development Docker Compose
-#  Usage: docker-compose -f infra/docker/docker-compose.dev.yml up -d
+#  CoinScopeAI — Development Docker Compose (Full Stack)
+#
+#  Usage:
+#    make up                              # start everything
+#    make down                            # stop everything
+#    docker compose -f infra/docker/docker-compose.dev.yml up -d
+#
+#  Services:
+#    db          — PostgreSQL 16 (port 5432)
+#    redis       — Redis 7 (port 6379)
+#    engine      — Trading Engine API (port 8001)
+#    ingestion   — Data Ingestion Pipeline (one-shot job)
+#    backtesting — Backtesting Engine (on-demand)
+#    adminer     — DB admin UI (port 8080)
+#
+#  Environment Tier: Prototype / Development
 # ─────────────────────────────────────────────────────────────
 
 version: "3.9"
 
+x-common-env: &common-env
+  DATABASE_URL: postgresql://coinscopeai:${DB_PASSWORD:-devpassword}@db:5432/coinscopeai_dev
+  DB_HOST: db
+  DB_PORT: "5432"
+  DB_NAME: coinscopeai_dev
+  DB_USER: coinscopeai
+  DB_PASSWORD: ${DB_PASSWORD:-devpassword}
+  REDIS_URL: redis://redis:6379/0
+  ENVIRONMENT: development
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+  TZ: UTC
+
+x-python-service: &python-service
+  build:
+    context: ../../
+  env_file:
+    - ../../.env
+  environment:
+    <<: *common-env
+  networks:
+    - coinscopeai
+  restart: unless-stopped
+
 services:
+  # ─── PostgreSQL ──────────────────────────────────────────────
   db:
     image: postgres:16-alpine
     container_name: coinscopeai-db
@@ -13,26 +51,224 @@ services:
       POSTGRES_DB: coinscopeai_dev
       POSTGRES_USER: coinscopeai
       POSTGRES_PASSWORD: ${DB_PASSWORD:-devpassword}
+      PGDATA: /var/lib/postgresql/data/pgdata
     ports:
-      - "5432:5432"
+      - "${DB_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U coinscopeai"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      test: ["CMD-SHELL", "pg_isready -U coinscopeai -d coinscopeai_dev"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks:
+      - coinscopeai
+    restart: unless-stopped
 
+  # ─── Redis ───────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
     container_name: coinscopeai-redis
+    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redisdata:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - coinscopeai
+    restart: unless-stopped
+
+  # ─── Trading Engine API ──────────────────────────────────────
+  engine:
+    <<: *python-service
+    container_name: coinscopeai-engine
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.engine
+    ports:
+      - "${ENGINE_PORT:-8001}:8001"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 15s
       timeout: 5s
-      retries: 5
+      start_period: 15s
+      retries: 3
+    volumes:
+      - ../../coinscope_trading_engine:/app/coinscope_trading_engine:ro
+    labels:
+      com.coinscopeai.service: "engine"
+      com.coinscopeai.tier: "prototype"
+
+  # ─── Data Ingestion Pipeline ─────────────────────────────────
+  ingestion:
+    <<: *python-service
+    container_name: coinscopeai-ingestion
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.ingestion
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+    profiles:
+      - ingestion
+      - full
+    volumes:
+      - ../../data:/app/data:ro
+    labels:
+      com.coinscopeai.service: "ingestion"
+      com.coinscopeai.tier: "prototype"
+
+  # ─── Backtesting Engine ──────────────────────────────────────
+  backtesting:
+    <<: *python-service
+    container_name: coinscopeai-backtesting
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.backtesting
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+    profiles:
+      - backtesting
+      - full
+    volumes:
+      - backtest-reports:/app/services/backtesting/reports
+      - ../../services/backtesting:/app/services/backtesting:ro
+    labels:
+      com.coinscopeai.service: "backtesting"
+      com.coinscopeai.tier: "prototype"
+
+  # ─── Paper Trading Engine ────────────────────────────────
+  paper-trading:
+    <<: *python-service
+    container_name: coinscopeai-paper-trading
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.paper_trading
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      <<: *common-env
+      BINANCE_TESTNET_API_KEY: ${BINANCE_TESTNET_API_KEY:-}
+      BINANCE_TESTNET_API_SECRET: ${BINANCE_TESTNET_API_SECRET:-}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+    volumes:
+      - ../../services/paper_trading:/app/services/paper_trading:ro
+      - ../../ai:/app/ai:ro
+      - ../../models:/app/models:ro
+      - paper-trading-state:/tmp
+    profiles:
+      - paper-trading
+      - full
+    restart: unless-stopped
+    labels:
+      com.coinscopeai.service: "paper-trading"
+      com.coinscopeai.tier: "prototype"
+
+  # ─── Market Data Recorder (24/7) ─────────────────────────────
+  recorder:
+    <<: *python-service
+    container_name: coinscopeai-recorder
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.recorder
+    volumes:
+      - ../../services/market_data:/app/services/market_data:ro
+      - recorded-data:/app/data/recorded
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f recorder || exit 1"]
+      interval: 60s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+    restart: unless-stopped
+    labels:
+      com.coinscopeai.service: "recorder"
+      com.coinscopeai.tier: "prototype"
+
+  # ─── Paper Trading Engine v2 (EventBus) ──────────────────────
+  paper-trading-v2:
+    <<: *python-service
+    container_name: coinscopeai-paper-trading-v2
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.paper_trading
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      <<: *common-env
+      BINANCE_TESTNET_API_KEY: ${BINANCE_TESTNET_API_KEY:-}
+      BINANCE_TESTNET_API_SECRET: ${BINANCE_TESTNET_API_SECRET:-}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+      ENGINE_VERSION: v2
+    volumes:
+      - ../../services/paper_trading:/app/services/paper_trading:ro
+      - ../../services/market_data:/app/services/market_data:ro
+      - ../../ai:/app/ai:ro
+      - ../../models:/app/models:ro
+      - paper-trading-state:/tmp
+    profiles:
+      - paper-trading-v2
+      - full
+    restart: unless-stopped
+    labels:
+      com.coinscopeai.service: "paper-trading-v2"
+      com.coinscopeai.tier: "prototype"
+
+  # ─── Adminer (DB Admin UI) ──────────────────────────────────
+  adminer:
+    image: adminer:4
+    container_name: coinscopeai-adminer
+    ports:
+      - "${ADMINER_PORT:-8080}:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+      ADMINER_DESIGN: dracula
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - coinscopeai
+    profiles:
+      - tools
+      - full
+    restart: unless-stopped
+
+networks:
+  coinscopeai:
+    name: coinscopeai-network
+    driver: bridge
 
 volumes:
   pgdata:
+    name: coinscopeai-pgdata
+  redisdata:
+    name: coinscopeai-redisdata
+  backtest-reports:
+    name: coinscopeai-backtest-reports
+  paper-trading-state:
+    name: coinscopeai-paper-trading-state
+  recorded-data:
+    name: coinscopeai-recorded-data

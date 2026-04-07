@@ -1,0 +1,71 @@
+# ─────────────────────────────────────────────────────────────
+#  CoinScopeAI — Paper Trading Engine v2 (systemd)
+#
+#  Installation:
+#    sudo cp infra/systemd/coinscopeai-paper-trading.service /etc/systemd/system/
+#    sudo cp .env /opt/coinscopeai/.env
+#    sudo systemctl daemon-reload
+#    sudo systemctl enable coinscopeai-paper-trading
+#    sudo systemctl start coinscopeai-paper-trading
+#
+#  Logs:
+#    journalctl -u coinscopeai-paper-trading -f
+#
+#  Kill switch:
+#    touch /tmp/coinscopeai_kill.flag
+#
+#  Environment Tier: Prototype (TESTNET ONLY)
+# ─────────────────────────────────────────────────────────────
+
+[Unit]
+Description=CoinScopeAI Paper Trading Engine v2 (TESTNET ONLY)
+Documentation=https://github.com/3nz5789/coinscope-ai
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=coinscopeai
+Group=coinscopeai
+
+# Working directory
+WorkingDirectory=/opt/coinscopeai
+
+# Environment
+Environment=PYTHONPATH=/opt/coinscopeai
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=/opt/coinscopeai/.env
+
+# Start the paper trading engine
+ExecStart=/usr/bin/python3 -m services.paper_trading.run \
+    --model models/v2/logreg_BTCUSDT_4h.joblib \
+    --version v2
+
+# Graceful shutdown
+ExecStop=/bin/kill -SIGTERM $MAINPID
+TimeoutStopSec=30
+
+# Restart policy
+Restart=on-failure
+RestartSec=15
+StartLimitBurst=3
+StartLimitIntervalSec=300
+
+# Resource limits
+MemoryMax=4G
+CPUQuota=100%
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=coinscopeai-paper-trading
+
+# Security
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/tmp /opt/coinscopeai/data
+PrivateTmp=false
+
+[Install]
+WantedBy=multi-user.target

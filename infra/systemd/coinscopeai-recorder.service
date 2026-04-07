@@ -1,0 +1,67 @@
+# ─────────────────────────────────────────────────────────────
+#  CoinScopeAI — Market Data Recording Daemon (systemd)
+#
+#  Installation:
+#    sudo cp infra/systemd/coinscopeai-recorder.service /etc/systemd/system/
+#    sudo systemctl daemon-reload
+#    sudo systemctl enable coinscopeai-recorder
+#    sudo systemctl start coinscopeai-recorder
+#
+#  Logs:
+#    journalctl -u coinscopeai-recorder -f
+#
+#  Environment Tier: Prototype
+# ─────────────────────────────────────────────────────────────
+
+[Unit]
+Description=CoinScopeAI Market Data Recording Daemon
+Documentation=https://github.com/3nz5789/coinscope-ai
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=coinscopeai
+Group=coinscopeai
+
+# Working directory — adjust to your installation path
+WorkingDirectory=/opt/coinscopeai
+
+# Python path
+Environment=PYTHONPATH=/opt/coinscopeai
+Environment=PYTHONUNBUFFERED=1
+
+# Start the recorder daemon
+ExecStart=/usr/bin/python3 -m services.market_data.streams.recorder \
+    --symbols BTCUSDT ETHUSDT SOLUSDT BNBUSDT XRPUSDT \
+    --exchanges binance bybit okx deribit \
+    --data-dir /opt/coinscopeai/data/recorded
+
+# Graceful shutdown — send SIGTERM, wait 30s for buffer flush
+ExecStop=/bin/kill -SIGTERM $MAINPID
+TimeoutStopSec=30
+
+# Restart policy — always restart on failure, with backoff
+Restart=always
+RestartSec=10
+StartLimitBurst=5
+StartLimitIntervalSec=300
+
+# Resource limits
+MemoryMax=2G
+CPUQuota=50%
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=coinscopeai-recorder
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/coinscopeai/data/recorded
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

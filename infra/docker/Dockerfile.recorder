@@ -1,0 +1,48 @@
+# ─────────────────────────────────────────────────────────────
+#  CoinScopeAI — Market Data Recording Daemon
+#
+#  24/7 multi-exchange market data recorder.
+#  Records tick trades, L2 orderbook, funding rates, and
+#  liquidations to compressed JSONL files.
+#
+#  Environment Tier: Prototype
+# ─────────────────────────────────────────────────────────────
+
+FROM python:3.11-slim AS base
+
+LABEL maintainer="CoinScopeAI <dev@coinscopeai.com>"
+LABEL service="recorder"
+LABEL tier="prototype"
+
+WORKDIR /app
+
+# System deps
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Python deps
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir websockets aiohttp
+
+# Copy source
+COPY services/ services/
+
+# Create data directory
+RUN mkdir -p /app/data/recorded
+
+# Non-root user
+RUN useradd -m -s /bin/bash coinscopeai \
+    && chown -R coinscopeai:coinscopeai /app
+USER coinscopeai
+
+# Health check — verify process is alive
+HEALTHCHECK --interval=60s --timeout=10s --start-period=30s --retries=3 \
+    CMD pgrep -f "recorder" || exit 1
+
+# Default: record all 5 symbols from all 4 exchanges
+ENTRYPOINT ["python", "-m", "services.market_data.streams.recorder"]
+CMD ["--symbols", "BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", \
+     "--exchanges", "binance", "bybit", "okx", "deribit", \
+     "--data-dir", "/app/data/recorded"]
