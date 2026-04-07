@@ -1,0 +1,61 @@
+[Unit]
+Description=CoinScopeAI Recording Daemon (WebSocket market data ingestion)
+Documentation=https://github.com/3nz5789/coinscope-ai
+After=network-online.target coinscopeai-engine.service
+Wants=network-online.target
+Requires=coinscopeai-engine.service
+
+[Service]
+Type=exec
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/coinscope-ai
+EnvironmentFile=/home/ubuntu/coinscope.env
+
+# ── Process ──────────────────────────────────────────────────────────────────
+ExecStart=/usr/bin/python3 -m coinscope_trading_engine.recorder \
+    --exchanges binance,bybit,okx \
+    --log-level info
+
+# Give the engine 10 s to become ready before the recorder connects
+ExecStartPre=/bin/sleep 10
+
+# ── Restart policy ───────────────────────────────────────────────────────────
+Restart=on-failure
+RestartSec=10s
+StartLimitIntervalSec=180s
+StartLimitBurst=5
+
+# ── Resource limits ──────────────────────────────────────────────────────────
+# Recorder gets medium OOM priority
+OOMScoreAdjust=-200
+LimitNOFILE=65536
+LimitNPROC=2048
+MemoryMax=1G
+CPUQuota=100%
+
+# ── Security hardening ───────────────────────────────────────────────────────
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/ubuntu/coinscope-ai/data /home/ubuntu/logs
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=no
+PrivateDevices=yes
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+
+# ── Logging ──────────────────────────────────────────────────────────────────
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=coinscopeai-recorder
+
+[Install]
+WantedBy=multi-user.target

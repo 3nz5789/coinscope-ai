@@ -1,0 +1,60 @@
+[Unit]
+Description=CoinScopeAI Production Dashboard (React/Vite, port 3000)
+Documentation=https://github.com/3nz5789/coinscope-ai
+After=network-online.target coinscopeai-engine.service
+Wants=network-online.target coinscopeai-engine.service
+
+[Service]
+Type=exec
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/coinscope-ai/apps/dashboard
+EnvironmentFile=/home/ubuntu/coinscope.env
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=VITE_ENGINE_URL=http://localhost:8001
+
+# ── Process ──────────────────────────────────────────────────────────────────
+# Serve the pre-built Vite bundle with a lightweight static server
+ExecStartPre=/usr/bin/npm run build --if-present
+ExecStart=/usr/bin/npx --yes serve -s dist -l 3000
+
+# ── Restart policy ───────────────────────────────────────────────────────────
+Restart=on-failure
+RestartSec=15s
+StartLimitIntervalSec=300s
+StartLimitBurst=3
+
+# ── Resource limits ──────────────────────────────────────────────────────────
+# Dashboard gets lowest OOM priority (first to be killed under memory pressure)
+OOMScoreAdjust=200
+LimitNOFILE=16384
+LimitNPROC=512
+MemoryMax=512M
+CPUQuota=50%
+
+# ── Security hardening ───────────────────────────────────────────────────────
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/ubuntu/coinscope-ai/apps/dashboard
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=no
+PrivateDevices=yes
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+
+# ── Logging ──────────────────────────────────────────────────────────────────
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=coinscopeai-dashboard
+
+[Install]
+WantedBy=multi-user.target
