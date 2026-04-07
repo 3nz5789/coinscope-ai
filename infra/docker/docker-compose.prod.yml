@@ -1,0 +1,75 @@
+# ─────────────────────────────────────────────────────────────
+#  CoinScopeAI — Production Docker Compose
+#  WARNING: This configuration is for production deployment.
+#  All changes require review and approval.
+# ─────────────────────────────────────────────────────────────
+
+version: "3.9"
+
+services:
+  trading-engine:
+    build:
+      context: ../../services/trading-engine
+      dockerfile: Dockerfile
+    container_name: coinscopeai-engine
+    env_file:
+      - ../../.env
+    ports:
+      - "8001:8001"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  dashboard:
+    build:
+      context: ../../apps/dashboard
+      dockerfile: Dockerfile
+    container_name: coinscopeai-dashboard
+    ports:
+      - "3000:3000"
+    depends_on:
+      - trading-engine
+    restart: unless-stopped
+
+  telegram-bot:
+    build:
+      context: ../../services/telegram-bot
+      dockerfile: Dockerfile
+    container_name: coinscopeai-bot
+    env_file:
+      - ../../.env
+    depends_on:
+      - trading-engine
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    container_name: coinscopeai-db
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: coinscopeai-redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  pgdata:

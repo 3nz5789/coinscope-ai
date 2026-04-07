@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────────
-#  CoinScopeAI — .gitignore
+#  CoinScopeAI — .gitignore (Monorepo)
 #  NEVER commit secrets, credentials, or generated artefacts
 # ─────────────────────────────────────────────────────────────
 
@@ -11,6 +11,8 @@ secrets.json
 credentials.json
 *.key
 *.pem
+configs/secrets/*
+!configs/secrets/.gitkeep
 
 # ── Python ────────────────────────────────────────────────────
 __pycache__/
@@ -35,6 +37,8 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+pip-log.txt
+pip-delete-this-directory.txt
 
 # ── Virtual Environments ──────────────────────────────────────
 .venv/
@@ -45,9 +49,18 @@ env.bak/
 venv.bak/
 .conda/
 
+# ── Node.js / Frontend ───────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnp
+.pnp.js
+apps/dashboard/dist/
+apps/dashboard/.next/
+
 # ── Jupyter Notebooks ─────────────────────────────────────────
 .ipynb_checkpoints
-*.ipynb
 
 # ── Testing & Coverage ────────────────────────────────────────
 .tox/
@@ -69,9 +82,16 @@ htmlcov/
 *.joblib
 *.h5
 *.hdf5
-models/saved/
-data/raw/
-data/processed/
+*.pt
+*.pth
+*.onnx
+ai/models/saved/
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+data/features/*
+!data/features/.gitkeep
 *.csv
 *.parquet
 *.feather
@@ -80,6 +100,19 @@ data/processed/
 *.log
 logs/
 *.log.*
+
+# ── Docker ────────────────────────────────────────────────────
+*.pid
+*.seed
+*.pid.lock
+
+# ── Terraform ─────────────────────────────────────────────────
+infra/terraform/.terraform/
+infra/terraform/*.tfstate
+infra/terraform/*.tfstate.*
+infra/terraform/crash.log
+infra/terraform/*.tfvars
+!infra/terraform/*.tfvars.example
 
 # ── OS / Editor ───────────────────────────────────────────────
 .DS_Store
@@ -96,7 +129,7 @@ Thumbs.db
 *~
 
 # ── Project-specific ──────────────────────────────────────────
-# Duplicate engine folders (keep only coinscope_trading_engine/)
+# Legacy duplicate engine folders
 coinscope_trading_engine 2/
 coinscope_trading_engine 3/
 coinscope_trading_engine 4/
@@ -104,6 +137,4 @@ coinscope_trading_engine 4/
 *.zip
 
 # Temporary & generated docs
-*.docx
-*.pptx
 CLAUDE.md

@@ -1,0 +1,9 @@
+# ─────────────────────────────────────────────────────────────
+#  CoinScopeAI Telegram Bot — Python Dependencies
+# ─────────────────────────────────────────────────────────────
+
+python-telegram-bot>=21.0
+httpx>=0.26.0
+python-dotenv>=1.0.0
+structlog>=24.1.0
+apscheduler>=3.10.0

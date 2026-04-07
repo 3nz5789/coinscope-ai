@@ -1,0 +1,32 @@
+# ─────────────────────────────────────────────────────────────
+#  CoinScopeAI — Development Environment Configuration
+# ─────────────────────────────────────────────────────────────
+
+app:
+  name: coinscopeai
+  environment: development
+  debug: true
+  log_level: DEBUG
+
+engine:
+  host: 0.0.0.0
+  port: 8001
+  testnet_mode: true
+  initial_capital: 10000
+
+risk_gate:
+  max_daily_loss_pct: 0.03
+  max_consecutive_losses: 5
+  max_drawdown_pct: 0.10
+  max_open_positions: 3
+
+database:
+  host: localhost
+  port: 5432
+  name: coinscopeai_dev
+  pool_size: 5
+
+redis:
+  host: localhost
+  port: 6379
+  db: 0
