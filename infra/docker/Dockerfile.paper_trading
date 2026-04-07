@@ -1,0 +1,46 @@
+# ─────────────────────────────────────────────────────────────
+#  CoinScopeAI — Paper Trading Service Dockerfile
+#  Long-running service: connects to Binance Testnet WebSocket,
+#  runs ML signal engine, and executes paper trades.
+#  Environment Tier: Prototype (TESTNET ONLY)
+# ─────────────────────────────────────────────────────────────
+
+FROM python:3.11-slim AS base
+
+LABEL maintainer="CoinScopeAI <team@coinscopeai.com>"
+LABEL service="paper-trading"
+LABEL tier="prototype"
+
+# System deps
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Install Python deps
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir websocket-client joblib lightgbm scikit-learn
+
+# Copy application code
+COPY services/paper_trading/ ./services/paper_trading/
+COPY ai/ ./ai/
+COPY coinscope_trading_engine/ ./coinscope_trading_engine/
+COPY data/ingestion/ ./data/ingestion/
+
+# Copy models if they exist
+COPY models/ ./models/ 2>/dev/null || true
+
+# Health check — verify the state file is being updated
+HEALTHCHECK --interval=60s --timeout=5s --start-period=30s --retries=3 \
+    CMD python -c "import json, time; from pathlib import Path; \
+    f=Path('/tmp/coinscopeai_paper_trading_state.json'); \
+    assert f.exists(), 'no state'; \
+    s=json.loads(f.read_text()); \
+    assert time.time()-s.get('saved_at',0)<300, 'stale'" \
+    || exit 1
+
+# Default: start the paper trading engine
+ENTRYPOINT ["python", "-m", "services.paper_trading.run"]
+CMD ["--timeframe", "4h", "--leverage", "3"]
