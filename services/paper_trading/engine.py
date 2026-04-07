@@ -68,7 +68,10 @@ class PaperTradingEngine:
             min_edge=self._config.trading.min_edge,
         )
 
-        self._ws = BinanceFuturesWebSocket(self._config.exchange)
+        self._ws = BinanceFuturesWebSocket(
+            self._config.exchange,
+            rest_client=self._exchange,  # inject REST client for candle-miss fallback
+        )
 
         self._alerter = TelegramAlerter(self._config.telegram)
 
@@ -91,12 +94,14 @@ class PaperTradingEngine:
         self._signals_today = 0
         self._trades_today = 0
 
-    def start(self, model_path: Optional[str] = None):
+    def start(self, model_path: Optional[str] = None, norm_params_path: Optional[str] = None, meta_path: Optional[str] = None):
         """
         Start the paper trading engine.
 
         Args:
             model_path: Path to trained ML model file (.joblib)
+            norm_params_path: Path to normalization parameters (.joblib)
+            meta_path: Path to model metadata JSON (v3 format)
         """
         logger.info("=" * 60)
         logger.info("CoinScopeAI Paper Trading Engine — STARTING")
@@ -118,6 +123,22 @@ class PaperTradingEngine:
             logger.info("ML model loaded from: %s", model_path)
         else:
             logger.warning("No ML model specified — signals will not be generated")
+
+        # ── Step 2b: Load model metadata (v3 format) ─────────
+        if meta_path:
+            import json as json_mod
+            with open(meta_path) as f:
+                meta = json_mod.load(f)
+            self._signal_engine._feature_names = meta.get("feature_names", [])
+            self._signal_engine._norm_params = meta.get("norm_params", {})
+            logger.info(
+                "Model metadata loaded from: %s (%d features, %d norm_params)",
+                meta_path, len(self._signal_engine._feature_names),
+                len(self._signal_engine._norm_params),
+            )
+        elif norm_params_path:
+            self._signal_engine.load_norm_params(norm_params_path)
+            logger.info("Norm params loaded from: %s", norm_params_path)
 
         # ── Step 3: Sync account state ────────────────────────
         self._sync_account()

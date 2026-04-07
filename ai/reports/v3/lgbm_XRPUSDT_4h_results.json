@@ -1,0 +1,190 @@
+{
+  "version": "v3",
+  "symbol": "XRPUSDT",
+  "timeframe": "4h",
+  "model_type": "lgbm",
+  "n_features": 162,
+  "target_config": {
+    "forward_horizon": 6,
+    "long_threshold": 0.008,
+    "short_threshold": -0.008
+  },
+  "train_samples": 2526,
+  "test_samples": 842,
+  "ml_metrics": {
+    "accuracy": 0.39429928741092635,
+    "precision": 0.40847418898392013,
+    "recall": 0.40668960351118427,
+    "f1_macro": 0.3921039669128159,
+    "auc_roc": 0.5570092686607907
+  },
+  "trading_metrics": {
+    "signal_hit_rate": 0.43548387096774194,
+    "long_hit_rate": 0.37175792507204614,
+    "short_hit_rate": 0.5402843601895735,
+    "avg_return_long": -0.0035088971729942972,
+    "avg_return_short": 0.009065151536039555,
+    "signal_profit_factor": 1.090818263178868,
+    "total_signals": 842,
+    "long_signals": 347,
+    "short_signals": 211
+  },
+  "top_features": [
+    [
+      "return_skew_20",
+      0.03357004519044545
+    ],
+    [
+      "vw_std_50",
+      0.0329244673983215
+    ],
+    [
+      "trend_strength_50",
+      0.030987734021949646
+    ],
+    [
+      "oi_price_div_20",
+      0.029696578437701744
+    ],
+    [
+      "oi_vol_autocorr_20",
+      0.02646868947708199
+    ],
+    [
+      "realized_vol_50",
+      0.025177533892834086
+    ],
+    [
+      "vol_concentration_20",
+      0.023240800516462233
+    ],
+    [
+      "return_autocorr_1",
+      0.02194964493221433
+    ],
+    [
+      "basis_convergence",
+      0.02194964493221433
+    ],
+    [
+      "vol_concentration_50",
+      0.02130406714009038
+    ],
+    [
+      "trend_strength_100",
+      0.02065848934796643
+    ],
+    [
+      "oi_expansion_10",
+      0.02065848934796643
+    ],
+    [
+      "oi_expansion_20",
+      0.018076178179470628
+    ],
+    [
+      "price_vs_high_20",
+      0.017430600387346677
+    ],
+    [
+      "hl_skew_10",
+      0.017430600387346677
+    ],
+    [
+      "ob_spread_5",
+      0.017430600387346677
+    ],
+    [
+      "vol_mean_rev_42b",
+      0.015493867010974823
+    ],
+    [
+      "return_autocorr_5",
+      0.014848289218850872
+    ],
+    [
+      "weekly_vol_42b",
+      0.014848289218850872
+    ],
+    [
+      "liq_wick_ratio_10",
+      0.014848289218850872
+    ]
+  ],
+  "overfit_metrics": {
+    "is_accuracy": 0.7078384798099763,
+    "oos_accuracy": 0.39429928741092635,
+    "accuracy_degradation": 0.3135391923990499,
+    "overfit_score": 0.4430862680653402
+  },
+  "walk_forward": {
+    "oos_accuracy": 0.39206349206349206,
+    "oos_f1_macro": 0.3899003595310577,
+    "oos_hit_rate": 0.45031446540880504,
+    "oos_long_signals": 499,
+    "oos_short_signals": 296,
+    "oos_profit_factor": 0.0,
+    "top_features": [
+      [
+        "trend_strength_50",
+        0.033684811617142554
+      ],
+      [
+        "oi_vol_autocorr_20",
+        0.03061832222761484
+      ],
+      [
+        "return_skew_20",
+        0.0294507218568191
+      ],
+      [
+        "vw_std_50",
+        0.02907472273587485
+      ],
+      [
+        "oi_price_div_20",
+        0.02817145432625709
+      ],
+      [
+        "oi_expansion_10",
+        0.024663399991244478
+      ],
+      [
+        "trend_strength_100",
+        0.0211097372747652
+      ],
+      [
+        "realized_vol_100",
+        0.021093920471645974
+      ],
+      [
+        "vol_concentration_20",
+        0.02011551297350895
+      ],
+      [
+        "realized_vol_50",
+        0.019793407231927837
+      ],
+      [
+        "return_autocorr_1",
+        0.017741634174417813
+      ],
+      [
+        "return_kurt_20",
+        0.016595093623622225
+      ],
+      [
+        "price_vs_high_20",
+        0.016229641335638176
+      ],
+      [
+        "vol_concentration_50",
+        0.015395803727360127
+      ],
+      [
+        "weekly_vol_42b",
+        0.015092171988735931
+      ]
+    ]
+  }
+}

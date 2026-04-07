@@ -1,0 +1,190 @@
+{
+  "version": "v3",
+  "symbol": "BTCUSDT",
+  "timeframe": "4h",
+  "model_type": "lgbm",
+  "n_features": 162,
+  "target_config": {
+    "forward_horizon": 6,
+    "long_threshold": 0.008,
+    "short_threshold": -0.008
+  },
+  "train_samples": 2526,
+  "test_samples": 842,
+  "ml_metrics": {
+    "accuracy": 0.3859857482185273,
+    "precision": 0.3982254381600587,
+    "recall": 0.3918998201200032,
+    "f1_macro": 0.3760542093739438,
+    "auc_roc": 0.5311852821858252
+  },
+  "trading_metrics": {
+    "signal_hit_rate": 0.3742603550295858,
+    "long_hit_rate": 0.35926773455377575,
+    "short_hit_rate": 0.401673640167364,
+    "avg_return_long": -0.0013618183554098989,
+    "avg_return_short": 0.0035513466897060058,
+    "signal_profit_factor": 1.0377891387236677,
+    "total_signals": 842,
+    "long_signals": 437,
+    "short_signals": 239
+  },
+  "top_features": [
+    [
+      "dow_sin",
+      0.08365019011406843
+    ],
+    [
+      "funding_price_div",
+      0.049429657794676805
+    ],
+    [
+      "funding_cumul_48",
+      0.03802281368821293
+    ],
+    [
+      "vol_mean_rev_42b",
+      0.034220532319391636
+    ],
+    [
+      "funding_mean_rev",
+      0.034220532319391636
+    ],
+    [
+      "return_autocorr_1",
+      0.030418250950570342
+    ],
+    [
+      "ema_dist_100",
+      0.026615969581749048
+    ],
+    [
+      "avg_gap_8",
+      0.026615969581749048
+    ],
+    [
+      "avg_gap_24",
+      0.026615969581749048
+    ],
+    [
+      "realized_vol_100",
+      0.022813688212927757
+    ],
+    [
+      "return_skew_20",
+      0.022813688212927757
+    ],
+    [
+      "oi_price_div_10",
+      0.022813688212927757
+    ],
+    [
+      "oi_price_div_20",
+      0.022813688212927757
+    ],
+    [
+      "log_return_40",
+      0.019011406844106463
+    ],
+    [
+      "realized_vol_20",
+      0.019011406844106463
+    ],
+    [
+      "vol_concentration_50",
+      0.019011406844106463
+    ],
+    [
+      "return_kurt_20",
+      0.015209125475285171
+    ],
+    [
+      "momentum_7",
+      0.015209125475285171
+    ],
+    [
+      "price_vs_high_50",
+      0.015209125475285171
+    ],
+    [
+      "weekly_vol_7b",
+      0.015209125475285171
+    ]
+  ],
+  "overfit_metrics": {
+    "is_accuracy": 0.6421219319081551,
+    "oos_accuracy": 0.3859857482185273,
+    "accuracy_degradation": 0.2561361836896278,
+    "overfit_score": 0.40538742569897807
+  },
+  "walk_forward": {
+    "oos_accuracy": 0.38333333333333336,
+    "oos_f1_macro": 0.38301005988280096,
+    "oos_hit_rate": 0.35035035035035034,
+    "oos_long_signals": 558,
+    "oos_short_signals": 441,
+    "oos_profit_factor": 0.0,
+    "top_features": [
+      [
+        "dow_sin",
+        0.06569350022217023
+      ],
+      [
+        "funding_price_div",
+        0.04147386038277805
+      ],
+      [
+        "return_autocorr_1",
+        0.03775912407669445
+      ],
+      [
+        "return_autocorr_5",
+        0.02990054604220731
+      ],
+      [
+        "funding_mean_rev",
+        0.022536804349411476
+      ],
+      [
+        "vol_mean_rev_42b",
+        0.021983671971475265
+      ],
+      [
+        "donchian_width_50",
+        0.021828234753106874
+      ],
+      [
+        "vw_std_50",
+        0.0215851291928572
+      ],
+      [
+        "avg_gap_24",
+        0.020566400985716382
+      ],
+      [
+        "return_kurt_20",
+        0.02049275354062562
+      ],
+      [
+        "realized_vol_100",
+        0.018978700916370474
+      ],
+      [
+        "ob_cliff_asym_14",
+        0.018732891955164224
+      ],
+      [
+        "realized_vol_20",
+        0.017760969117189357
+      ],
+      [
+        "avg_gap_8",
+        0.017738768936005032
+      ],
+      [
+        "oi_price_div_20",
+        0.016990359276416074
+      ]
+    ]
+  }
+}

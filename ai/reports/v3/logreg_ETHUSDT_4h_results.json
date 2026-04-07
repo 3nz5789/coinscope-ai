@@ -1,0 +1,190 @@
+{
+  "version": "v3",
+  "symbol": "ETHUSDT",
+  "timeframe": "4h",
+  "model_type": "logreg",
+  "n_features": 162,
+  "target_config": {
+    "forward_horizon": 6,
+    "long_threshold": 0.008,
+    "short_threshold": -0.008
+  },
+  "train_samples": 2526,
+  "test_samples": 842,
+  "ml_metrics": {
+    "accuracy": 0.3515439429928741,
+    "precision": 0.3716001833408984,
+    "recall": 0.3443177221992513,
+    "f1_macro": 0.349315539783648,
+    "auc_roc": 0.5160511383118395
+  },
+  "trading_metrics": {
+    "signal_hit_rate": 0.3333333333333333,
+    "long_hit_rate": 0.3269230769230769,
+    "short_hit_rate": 0.34011627906976744,
+    "avg_return_long": -0.009982659861947508,
+    "avg_return_short": -0.005297485488727168,
+    "signal_profit_factor": 0.5604452040338759,
+    "total_signals": 842,
+    "long_signals": 364,
+    "short_signals": 344
+  },
+  "top_features": [
+    [
+      "realized_vol_20",
+      0.0208896110889499
+    ],
+    [
+      "mean_rev_zscore_20",
+      0.020424855690790646
+    ],
+    [
+      "ob_spread_10",
+      0.019300592351870607
+    ],
+    [
+      "rel_volume_50",
+      0.01846644308697627
+    ],
+    [
+      "weekly_vol_42b",
+      0.01817608419925984
+    ],
+    [
+      "rsi_7",
+      0.01789586589854914
+    ],
+    [
+      "basis_proxy_50",
+      0.015871688490108712
+    ],
+    [
+      "ob_liq_cliff_7",
+      0.015140860677220301
+    ],
+    [
+      "donchian_pos_50",
+      0.01481835406980322
+    ],
+    [
+      "realized_vol_50",
+      0.014712453293582707
+    ],
+    [
+      "liq_cascade_3",
+      0.014396919865567074
+    ],
+    [
+      "liq_intensity_3",
+      0.014366081180654324
+    ],
+    [
+      "realized_vol_100",
+      0.013505467101640418
+    ],
+    [
+      "rel_volume_5",
+      0.013268285961776798
+    ],
+    [
+      "oi_expansion_10",
+      0.013138862003934907
+    ],
+    [
+      "vol_regime",
+      0.013101915553404559
+    ],
+    [
+      "vwap_dev_10",
+      0.012734949367984909
+    ],
+    [
+      "liq_ls_ratio_5",
+      0.012606134011468765
+    ],
+    [
+      "realized_vol_5",
+      0.012470239991954818
+    ],
+    [
+      "log_return_5",
+      0.012254346820093184
+    ]
+  ],
+  "overfit_metrics": {
+    "is_accuracy": 0.5482977038796516,
+    "oos_accuracy": 0.3515439429928741,
+    "accuracy_degradation": 0.19675376088677748,
+    "overfit_score": 0.3592741971593108
+  },
+  "walk_forward": {
+    "oos_accuracy": 0.4031746031746032,
+    "oos_f1_macro": 0.3949260410029863,
+    "oos_hit_rate": 0.3981945837512538,
+    "oos_long_signals": 384,
+    "oos_short_signals": 613,
+    "oos_profit_factor": 0.0,
+    "top_features": [
+      [
+        "oi_vol_autocorr_20",
+        0.022152397992121146
+      ],
+      [
+        "vol_concentration_20",
+        0.020956881092342755
+      ],
+      [
+        "liq_cascade_5",
+        0.020785477738633457
+      ],
+      [
+        "donchian_pos_50",
+        0.018849804061459162
+      ],
+      [
+        "rsi_7",
+        0.01838375375733429
+      ],
+      [
+        "funding_mean_rev",
+        0.01806940257697378
+      ],
+      [
+        "liq_ls_ratio_10",
+        0.017638110145905994
+      ],
+      [
+        "vol_price_corr_20",
+        0.017471917802666215
+      ],
+      [
+        "rel_volume_50",
+        0.017123268649073795
+      ],
+      [
+        "weekend_proximity",
+        0.01700634972743717
+      ],
+      [
+        "ob_liq_cliff_7",
+        0.016967731998828207
+      ],
+      [
+        "vol_concentration_50",
+        0.016633806697323957
+      ],
+      [
+        "trend_strength_100",
+        0.016411405616962135
+      ],
+      [
+        "hurst_proxy_50",
+        0.015465364618115934
+      ],
+      [
+        "ob_imbalance_10",
+        0.015407766317074714
+      ]
+    ]
+  }
+}

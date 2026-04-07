@@ -1,0 +1,190 @@
+{
+  "version": "v3",
+  "symbol": "SOLUSDT",
+  "timeframe": "4h",
+  "model_type": "lgbm",
+  "n_features": 162,
+  "target_config": {
+    "forward_horizon": 6,
+    "long_threshold": 0.008,
+    "short_threshold": -0.008
+  },
+  "train_samples": 2526,
+  "test_samples": 842,
+  "ml_metrics": {
+    "accuracy": 0.3503562945368171,
+    "precision": 0.32781092001931095,
+    "recall": 0.322172117504544,
+    "f1_macro": 0.3095316074642207,
+    "auc_roc": 0.48531358781791667
+  },
+  "trading_metrics": {
+    "signal_hit_rate": 0.39558823529411763,
+    "long_hit_rate": 0.37344398340248963,
+    "short_hit_rate": 0.4494949494949495,
+    "avg_return_long": -0.003020842809245354,
+    "avg_return_short": 0.004741225513358072,
+    "signal_profit_factor": 0.9479578134556073,
+    "total_signals": 842,
+    "long_signals": 482,
+    "short_signals": 198
+  },
+  "top_features": [
+    [
+      "vol_mean_rev_42b",
+      0.03324216284451925
+    ],
+    [
+      "trend_strength_100",
+      0.026509572901325478
+    ],
+    [
+      "vol_concentration_20",
+      0.02566799915842626
+    ],
+    [
+      "realized_vol_100",
+      0.02461603197980223
+    ],
+    [
+      "avg_gap_24",
+      0.020828950136755734
+    ],
+    [
+      "funding_cumul_48",
+      0.018725015779507678
+    ],
+    [
+      "oi_expansion_20",
+      0.018725015779507678
+    ],
+    [
+      "realized_vol_20",
+      0.018093835472333262
+    ],
+    [
+      "oi_price_div_20",
+      0.01788344203660846
+    ],
+    [
+      "vw_std_20",
+      0.017673048600883652
+    ],
+    [
+      "vol_concentration_50",
+      0.016621081422259626
+    ],
+    [
+      "hl_skew_30",
+      0.01641068798653482
+    ],
+    [
+      "ob_imbalance_20",
+      0.015569114243635598
+    ],
+    [
+      "return_kurt_20",
+      0.015148327372185988
+    ],
+    [
+      "oi_vol_autocorr_20",
+      0.014727540500736377
+    ],
+    [
+      "trend_strength_20",
+      0.014517147065011572
+    ],
+    [
+      "momentum_60",
+      0.014517147065011572
+    ],
+    [
+      "basis_momentum",
+      0.014306753629286767
+    ],
+    [
+      "trend_strength_50",
+      0.013465179886387544
+    ],
+    [
+      "vol_regime",
+      0.013465179886387544
+    ]
+  ],
+  "overfit_metrics": {
+    "is_accuracy": 0.8523357086302454,
+    "oos_accuracy": 0.3503562945368171,
+    "accuracy_degradation": 0.5019794140934284,
+    "overfit_score": 0.6096460062716054
+  },
+  "walk_forward": {
+    "oos_accuracy": 0.3626984126984127,
+    "oos_f1_macro": 0.3327290824896365,
+    "oos_hit_rate": 0.40118577075098816,
+    "oos_long_signals": 651,
+    "oos_short_signals": 361,
+    "oos_profit_factor": 0.0,
+    "top_features": [
+      [
+        "trend_strength_100",
+        0.03360097503576193
+      ],
+      [
+        "vol_concentration_50",
+        0.03122571788670677
+      ],
+      [
+        "vol_mean_rev_42b",
+        0.030411752091297893
+      ],
+      [
+        "donchian_width_50",
+        0.026282845960362677
+      ],
+      [
+        "realized_vol_100",
+        0.02453707244410217
+      ],
+      [
+        "oi_expansion_20",
+        0.02217440802321106
+      ],
+      [
+        "funding_cumul_48",
+        0.020121128079619893
+      ],
+      [
+        "dow_sin",
+        0.020063880978617783
+      ],
+      [
+        "trend_strength_50",
+        0.01967937281236002
+      ],
+      [
+        "momentum_60",
+        0.01966289386895369
+      ],
+      [
+        "vw_std_50",
+        0.019282353868260826
+      ],
+      [
+        "trend_strength_20",
+        0.019083513634977185
+      ],
+      [
+        "vol_concentration_20",
+        0.018872510694592802
+      ],
+      [
+        "vol_regime",
+        0.01796726698051405
+      ],
+      [
+        "hl_skew_10",
+        0.01704561578758823
+      ]
+    ]
+  }
+}
