@@ -1,203 +1,379 @@
 """
-Historical Data Recorder — saves all stream events to compressed JSONL files.
+CoinScopeAI Market Data — Recording Daemon
+=============================================
+Records all market data events to JSONL.gz files for offline analysis.
 
 Features:
-- Subscribes to all EventBus events and writes to JSONL.gz files
-- Rotates files by time window (hourly by default)
-- Graceful shutdown: flushes buffers on SIGINT/SIGTERM
-- Organises output: data/<date>/<stream_type>/<exchange>_<symbol>_<hour>.jsonl.gz
+  - Subscribes to all EventBus topics (trades, orderbook, funding, liquidations)
+  - Date-partitioned files: data/{data_type}/{symbol}/{YYYY-MM-DD}.jsonl.gz
+  - Buffered writes with periodic flush (every 10 seconds or 10K events)
+  - Graceful shutdown on SIGINT/SIGTERM (flush all buffers)
+  - Automatic file rotation at midnight UTC
+  - Compression with gzip for storage efficiency
+  - Statistics tracking (events recorded, bytes written, file counts)
 """
 
-from __future__ import annotations
-
-import asyncio
 import gzip
+import json
 import logging
 import os
 import signal
+import threading
 import time
+from collections import defaultdict
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional
 
-import orjson
-
-from .base import (
-    EventBus,
-    EventType,
+from ..event_bus import Event, EventBus
+from ..types import (
     FundingRate,
+    Kline,
     Liquidation,
-    OrderBookUpdate,
-    StreamStatus,
+    OrderBookSnapshot,
     Trade,
-    get_event_bus,
-    now_ms,
 )
 
-logger = logging.getLogger("coinscopeai.streams.recorder")
+logger = logging.getLogger("coinscopeai.market_data.recorder")
 
 
-class StreamRecorder:
+@dataclass
+class RecorderConfig:
+    """Configuration for the recording daemon."""
+    data_dir: str = "data/recorded"
+    flush_interval: float = 10.0        # Flush every 10 seconds
+    flush_threshold: int = 10_000       # Or every 10K events
+    compression_level: int = 6          # gzip level (1=fast, 9=best)
+    record_trades: bool = True
+    record_orderbook: bool = True
+    record_funding: bool = True
+    record_liquidations: bool = True
+    record_klines: bool = True
+    record_alpha: bool = True
+    record_regime: bool = True
+
+
+class RecordingDaemon:
     """
-    Records all EventBus events to compressed JSONL files.
-
-    Usage::
-
-        recorder = StreamRecorder(output_dir="./data")
-        await recorder.start()
-        # ... streams are running and publishing events ...
-        await recorder.stop()  # flushes and closes all files
+    24/7 market data recording daemon.
+    Subscribes to EventBus and writes all events to compressed JSONL files.
     """
 
     def __init__(
         self,
-        output_dir: str = "./data/recordings",
-        event_bus: Optional[EventBus] = None,
-        flush_interval: float = 5.0,
-        rotate_interval: float = 3600.0,  # 1 hour
+        event_bus: EventBus,
+        config: Optional[RecorderConfig] = None,
     ):
-        self.output_dir = Path(output_dir)
-        self.bus = event_bus or get_event_bus()
-        self.flush_interval = flush_interval
-        self.rotate_interval = rotate_interval
-        self._writers: Dict[str, _GzipWriter] = {}
+        self._bus = event_bus
+        self._config = config or RecorderConfig()
         self._running = False
-        self._flush_task: Optional[asyncio.Task] = None
-        self._event_count = 0
-        self._bytes_written = 0
+        self._lock = threading.Lock()
 
-    async def start(self) -> None:
+        # Buffers: {file_path: [json_lines]}
+        self._buffers: Dict[str, List[str]] = defaultdict(list)
+        self._buffer_count = 0
+
+        # Open file handles: {file_path: gzip.GzipFile}
+        self._files: Dict[str, gzip.GzipFile] = {}
+
+        # Stats
+        self._stats = {
+            "events_recorded": 0,
+            "bytes_written": 0,
+            "files_created": 0,
+            "flushes": 0,
+            "errors": 0,
+            "start_time": 0.0,
+            "events_by_type": defaultdict(int),
+        }
+
+        # Flush thread
+        self._flush_thread: Optional[threading.Thread] = None
+
+        # Create data directory
+        os.makedirs(self._config.data_dir, exist_ok=True)
+
+    def start(self):
+        """Start the recording daemon."""
         if self._running:
             return
-        self._running = True
-        self.output_dir.mkdir(parents=True, exist_ok=True)
-        await self.bus.subscribe_all(self._on_event)
-        self._flush_task = asyncio.create_task(self._periodic_flush())
-        # Register signal handlers for graceful shutdown
-        loop = asyncio.get_event_loop()
-        for sig in (signal.SIGINT, signal.SIGTERM):
-            try:
-                loop.add_signal_handler(sig, lambda: asyncio.create_task(self.stop()))
-            except (NotImplementedError, RuntimeError):
-                pass  # Windows or non-main thread
-        logger.info("StreamRecorder started → %s", self.output_dir)
 
-    async def stop(self) -> None:
-        if not self._running:
-            return
+        self._running = True
+        self._stats["start_time"] = time.time()
+
+        # Subscribe to all event types
+        if self._config.record_trades:
+            self._bus.subscribe("recorder_trades", "trade.*.*", self._on_event)
+        if self._config.record_orderbook:
+            self._bus.subscribe("recorder_ob", "orderbook.*.*", self._on_event)
+        if self._config.record_funding:
+            self._bus.subscribe("recorder_funding", "funding.*.*", self._on_event)
+        if self._config.record_liquidations:
+            self._bus.subscribe("recorder_liq", "liquidation.*.*", self._on_event)
+        if self._config.record_klines:
+            self._bus.subscribe("recorder_klines", "kline.*.*.*", self._on_event)
+        if self._config.record_alpha:
+            self._bus.subscribe("recorder_alpha", "alpha.*.*", self._on_event)
+        if self._config.record_regime:
+            self._bus.subscribe("recorder_regime", "regime.*", self._on_event)
+
+        # Start flush thread
+        self._flush_thread = threading.Thread(
+            target=self._flush_loop,
+            daemon=True,
+            name="recorder-flush",
+        )
+        self._flush_thread.start()
+
+        logger.info("Recording daemon started — data_dir=%s", self._config.data_dir)
+
+    def stop(self):
+        """Stop the recording daemon and flush all buffers."""
+        logger.info("Recording daemon stopping — flushing buffers...")
         self._running = False
-        if self._flush_task:
-            self._flush_task.cancel()
-            try:
-                await self._flush_task
-            except asyncio.CancelledError:
-                pass
-        await self._flush_all()
-        await self._close_all()
+
+        if self._flush_thread:
+            self._flush_thread.join(timeout=30)
+
+        # Final flush
+        self._flush_all()
+
+        # Close all file handles
+        with self._lock:
+            for path, fh in self._files.items():
+                try:
+                    fh.close()
+                except Exception as e:
+                    logger.error("Error closing %s: %s", path, e)
+            self._files.clear()
+
         logger.info(
-            "StreamRecorder stopped — %d events, %.2f MB written",
-            self._event_count,
-            self._bytes_written / (1024 * 1024),
+            "Recording daemon stopped — %d events recorded, %d bytes written",
+            self._stats["events_recorded"],
+            self._stats["bytes_written"],
         )
 
-    async def _on_event(self, event_type: EventType, data: Any) -> None:
-        """Callback for all EventBus events."""
-        if not self._running:
-            return
+    def _on_event(self, event: Event):
+        """Handle an incoming event — buffer it for writing."""
         try:
-            record = self._serialize(event_type, data)
-            if record is None:
-                return
-            writer = self._get_writer(event_type, data)
-            writer.write(record)
-            self._event_count += 1
-        except Exception:
-            logger.exception("Recorder write error")
+            # Determine file path from topic
+            parts = event.topic.split(".")
+            data_type = parts[0]  # trade, orderbook, funding, etc.
 
-    def _serialize(self, event_type: EventType, data: Any) -> Optional[bytes]:
-        """Serialize event to JSON bytes with metadata wrapper."""
-        if hasattr(data, "to_dict"):
-            payload = data.to_dict()
-        elif hasattr(data, "__dict__"):
-            payload = {k: v for k, v in data.__dict__.items() if not k.startswith("_")}
-        else:
-            payload = data
-        envelope = {
-            "event_type": event_type.value,
-            "timestamp_ms": now_ms(),
-            "data": payload,
-        }
-        return orjson.dumps(envelope) + b"\n"
+            # Extract symbol
+            if len(parts) >= 2:
+                symbol = parts[1]
+            else:
+                symbol = "unknown"
 
-    def _get_writer(self, event_type: EventType, data: Any) -> "_GzipWriter":
-        """Get or create a writer for this event type + exchange + symbol combo."""
-        exchange = getattr(data, "exchange", "unknown")
-        symbol = getattr(data, "symbol", "unknown")
-        now = datetime.now(timezone.utc)
-        date_str = now.strftime("%Y-%m-%d")
-        hour_str = now.strftime("%H")
+            # Get date string for partitioning
+            ts = getattr(event.data, "timestamp", time.time())
+            date_str = datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d")
 
-        key = f"{event_type.value}/{exchange}/{symbol}/{date_str}/{hour_str}"
-        if key not in self._writers:
-            dir_path = self.output_dir / date_str / event_type.value
-            dir_path.mkdir(parents=True, exist_ok=True)
-            filename = f"{exchange}_{symbol}_{date_str}_{hour_str}.jsonl.gz"
-            filepath = dir_path / filename
-            self._writers[key] = _GzipWriter(filepath)
-            logger.debug("Opened recorder file: %s", filepath)
-        return self._writers[key]
+            # Build file path
+            file_path = os.path.join(
+                self._config.data_dir,
+                data_type,
+                symbol,
+                f"{date_str}.jsonl.gz",
+            )
 
-    async def _periodic_flush(self) -> None:
+            # Serialize event data
+            if hasattr(event.data, "__dataclass_fields__"):
+                record = asdict(event.data)
+            elif isinstance(event.data, dict):
+                record = event.data
+            else:
+                record = {"data": str(event.data)}
+
+            record["_topic"] = event.topic
+            record["_source"] = event.source
+            record["_recorded_at"] = time.time()
+
+            json_line = json.dumps(record, default=str) + "\n"
+
+            with self._lock:
+                self._buffers[file_path].append(json_line)
+                self._buffer_count += 1
+                self._stats["events_by_type"][data_type] += 1
+
+            # Flush if buffer is large
+            if self._buffer_count >= self._config.flush_threshold:
+                self._flush_all()
+
+        except Exception as e:
+            self._stats["errors"] += 1
+            logger.error("Recorder error: %s", e)
+
+    def _flush_loop(self):
+        """Periodic flush thread."""
         while self._running:
-            await asyncio.sleep(self.flush_interval)
-            await self._flush_all()
+            time.sleep(self._config.flush_interval)
+            if self._buffer_count > 0:
+                self._flush_all()
 
-    async def _flush_all(self) -> None:
-        for writer in self._writers.values():
-            n = writer.flush()
-            self._bytes_written += n
+    def _flush_all(self):
+        """Flush all buffers to disk."""
+        with self._lock:
+            buffers_to_flush = dict(self._buffers)
+            self._buffers = defaultdict(list)
+            self._buffer_count = 0
 
-    async def _close_all(self) -> None:
-        for writer in self._writers.values():
-            n = writer.flush()
-            self._bytes_written += n
-            writer.close()
-        self._writers.clear()
+        for file_path, lines in buffers_to_flush.items():
+            if not lines:
+                continue
+            try:
+                self._write_lines(file_path, lines)
+                self._stats["events_recorded"] += len(lines)
+                self._stats["flushes"] += 1
+            except Exception as e:
+                self._stats["errors"] += 1
+                logger.error("Flush error for %s: %s", file_path, e)
 
-    @property
-    def stats(self) -> Dict[str, Any]:
+    def _write_lines(self, file_path: str, lines: List[str]):
+        """Write lines to a gzip-compressed JSONL file."""
+        # Ensure directory exists
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
+        # Get or create file handle
+        if file_path not in self._files:
+            mode = "ab" if os.path.exists(file_path) else "wb"
+            self._files[file_path] = gzip.open(
+                file_path,
+                mode,
+                compresslevel=self._config.compression_level,
+            )
+            self._stats["files_created"] += 1
+
+        fh = self._files[file_path]
+        data = "".join(lines).encode("utf-8")
+        fh.write(data)
+        fh.flush()
+        self._stats["bytes_written"] += len(data)
+
+    def get_stats(self) -> Dict:
+        """Get recording statistics."""
+        uptime = time.time() - self._stats["start_time"] if self._stats["start_time"] else 0
         return {
-            "event_count": self._event_count,
-            "bytes_written": self._bytes_written,
-            "open_files": len(self._writers),
+            "running": self._running,
+            "uptime_seconds": uptime,
+            "events_recorded": self._stats["events_recorded"],
+            "bytes_written": self._stats["bytes_written"],
+            "bytes_written_mb": self._stats["bytes_written"] / (1024 * 1024),
+            "files_created": self._stats["files_created"],
+            "flushes": self._stats["flushes"],
+            "errors": self._stats["errors"],
+            "events_by_type": dict(self._stats["events_by_type"]),
+            "buffer_pending": self._buffer_count,
+            "events_per_second": (
+                self._stats["events_recorded"] / uptime if uptime > 0 else 0
+            ),
         }
 
 
-class _GzipWriter:
-    """Buffered gzip writer for JSONL data."""
+# ── Standalone Daemon Runner ────────────────────────────────
 
-    def __init__(self, path: Path, buffer_size: int = 64 * 1024):
-        self._path = path
-        self._buffer = bytearray()
-        self._buffer_size = buffer_size
-        self._file = gzip.open(str(path), "ab", compresslevel=6)
-        self._total_bytes = 0
+def run_recorder_daemon(
+    symbols: Optional[List[str]] = None,
+    data_dir: str = "data/recorded",
+    exchanges: Optional[List[str]] = None,
+):
+    """
+    Run the recording daemon as a standalone process.
+    Handles SIGINT/SIGTERM for graceful shutdown.
+    """
+    from .exchange_streams import StreamConfig, StreamManager
 
-    def write(self, data: bytes) -> None:
-        self._buffer.extend(data)
-        if len(self._buffer) >= self._buffer_size:
-            self.flush()
+    symbols = symbols or ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT"]
+    exchanges = exchanges or ["binance", "bybit", "okx", "deribit"]
 
-    def flush(self) -> int:
-        if not self._buffer:
-            return 0
-        n = len(self._buffer)
-        self._file.write(bytes(self._buffer))
-        self._file.flush()
-        self._buffer.clear()
-        self._total_bytes += n
-        return n
+    # Set up logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s | %(name)s | %(levelname)s | %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
 
-    def close(self) -> None:
-        self.flush()
-        self._file.close()
+    logger.info("Starting CoinScopeAI Recording Daemon")
+    logger.info("Symbols: %s", symbols)
+    logger.info("Exchanges: %s", exchanges)
+    logger.info("Data directory: %s", data_dir)
+
+    # Initialize components
+    event_bus = EventBus()
+    stream_config = StreamConfig(symbols=symbols)
+    stream_manager = StreamManager(event_bus, stream_config)
+    recorder_config = RecorderConfig(data_dir=data_dir)
+    recorder = RecordingDaemon(event_bus, recorder_config)
+
+    # Graceful shutdown
+    shutdown_event = threading.Event()
+
+    def handle_signal(signum, frame):
+        sig_name = signal.Signals(signum).name
+        logger.info("Received %s — initiating graceful shutdown", sig_name)
+        shutdown_event.set()
+
+    signal.signal(signal.SIGINT, handle_signal)
+    signal.signal(signal.SIGTERM, handle_signal)
+
+    # Start
+    recorder.start()
+    stream_manager.start(exchanges)
+
+    logger.info("Recording daemon running — press Ctrl+C to stop")
+
+    # Stats reporting loop
+    try:
+        while not shutdown_event.is_set():
+            shutdown_event.wait(timeout=60)
+            if not shutdown_event.is_set():
+                stats = recorder.get_stats()
+                stream_stats = stream_manager.get_stats()
+                connected = sum(
+                    1 for s in stream_stats.values() if s.get("connected")
+                )
+                logger.info(
+                    "STATS | events=%d | %.1f MB | %.1f evt/s | %d/%d exchanges connected",
+                    stats["events_recorded"],
+                    stats["bytes_written_mb"],
+                    stats["events_per_second"],
+                    connected,
+                    len(stream_stats),
+                )
+    except KeyboardInterrupt:
+        pass
+
+    # Shutdown
+    logger.info("Shutting down...")
+    stream_manager.stop()
+    recorder.stop()
+    logger.info("Recording daemon stopped cleanly")
+
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="CoinScopeAI Recording Daemon")
+    parser.add_argument(
+        "--symbols", nargs="+",
+        default=["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT"],
+        help="Symbols to record",
+    )
+    parser.add_argument(
+        "--data-dir", default="data/recorded",
+        help="Directory to store recorded data",
+    )
+    parser.add_argument(
+        "--exchanges", nargs="+",
+        default=["binance", "bybit", "okx", "deribit"],
+        help="Exchanges to connect to",
+    )
+    args = parser.parse_args()
+
+    run_recorder_daemon(
+        symbols=args.symbols,
+        data_dir=args.data_dir,
+        exchanges=args.exchanges,
+    )
