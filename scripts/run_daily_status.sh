@@ -2,8 +2,11 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # CoinScopeAI Daily Status Check — Cron Wrapper
 # Runs at 05:00 UTC (08:00 UTC+3) every day.
-# Loads environment from /home/ubuntu/coinscope.env, then executes the
-# Python status check script with --log and --telegram flags.
+#
+# Environment resolution (dual-source approach):
+#   1. First checks if TELEGRAM_BOT_TOKEN is already set in the environment
+#      (e.g., via Manus project secrets) and is not a placeholder.
+#   2. If not set or is a placeholder, falls back to coinscope.env file.
 # ─────────────────────────────────────────────────────────────────────────────
 
 set -euo pipefail
@@ -16,15 +19,30 @@ LOG_DIR="$PROJECT_DIR/logs"
 # Ensure logs directory exists
 mkdir -p "$LOG_DIR"
 
-# Load environment variables from coinscope.env
-if [[ -f "$ENV_FILE" ]]; then
-    set -a
-    # shellcheck disable=SC1090
-    source <(grep -v '^#' "$ENV_FILE" | grep -v '^$')
-    set +a
+# Check if critical env vars are already set and valid (not placeholders)
+_needs_env_file=false
+if [[ -z "${TELEGRAM_BOT_TOKEN:-}" ]] || [[ "$TELEGRAM_BOT_TOKEN" == "your-telegram-bot-token-here" ]]; then
+    _needs_env_file=true
+fi
+if [[ -z "${TELEGRAM_CHAT_ID:-}" ]]; then
+    _needs_env_file=true
+fi
+
+# Load from coinscope.env only if env vars are missing or placeholders
+if [[ "$_needs_env_file" == "true" ]]; then
+    if [[ -f "$ENV_FILE" ]]; then
+        set -a
+        # shellcheck disable=SC1090
+        source <(grep -v '^#' "$ENV_FILE" | grep -v '^$')
+        set +a
+        echo "[INFO] Loaded environment from $ENV_FILE"
+    else
+        echo "[ERROR] Environment file not found: $ENV_FILE" >&2
+        echo "[ERROR] And TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID not set in environment." >&2
+        exit 1
+    fi
 else
-    echo "[ERROR] Environment file not found: $ENV_FILE" >&2
-    exit 1
+    echo "[INFO] Using environment variables (Manus secrets)"
 fi
 
 # Run the status check
