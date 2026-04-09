@@ -6,6 +6,12 @@ bug fixes, and dependency choices for the CoinScopeAI project.
 
 Filed into ``wing_dev`` with rooms: architecture, conventions, bug-fixes, dependencies.
 
+Hall strategy:
+  - architecture  → hall_decisions   (ADRs, design decisions)
+  - conventions   → hall_preferences (coding standards, patterns)
+  - bug-fixes     → hall_advice      (bug fix records with lessons)
+  - dependencies  → hall_facts       (library choices, version facts)
+
 Agents query this to stay consistent with existing patterns.
 Supports queries like:
   "What architecture decisions were made for the dashboard?"
@@ -53,6 +59,7 @@ class ProjectKnowledgeStore(PalaceStore):
         component: str = "",
         agent_role: str = "",
         supersedes: str = "",
+        event_id: str = "",
     ) -> str:
         if category not in VALID_CATEGORIES:
             category = "general"
@@ -71,7 +78,10 @@ class ProjectKnowledgeStore(PalaceStore):
         if supersedes:
             meta["supersedes"] = supersedes
 
-        return self.file_drawer(content=text, room=room, hall="hall_facts", metadata=meta)
+        return self.file_drawer(
+            content=text, room=room, hall="hall_facts",
+            metadata=meta, event_id=event_id,
+        )
 
     def log_architecture_decision(
         self,
@@ -81,6 +91,7 @@ class ProjectKnowledgeStore(PalaceStore):
         alternatives: str = "",
         component: str = "",
         agent_role: str = "",
+        event_id: str = "",
     ) -> str:
         """Log an Architecture Decision Record (ADR)."""
         now = datetime.now(timezone.utc)
@@ -97,7 +108,10 @@ class ProjectKnowledgeStore(PalaceStore):
             "component": component,
             "agent_role": agent_role,
         }
-        return self.file_drawer(content=text, room="architecture", hall="hall_decisions", metadata=meta)
+        return self.file_drawer(
+            content=text, room="architecture", hall="hall_decisions",
+            metadata=meta, event_id=event_id,
+        )
 
     def log_bug_fix(
         self,
@@ -107,6 +121,7 @@ class ProjectKnowledgeStore(PalaceStore):
         fix: str = "",
         files_changed: str = "",
         agent_role: str = "",
+        event_id: str = "",
     ) -> str:
         """Log a bug fix with root cause analysis."""
         text = f"[BUG FIX] {title}\n{description}"
@@ -124,7 +139,10 @@ class ProjectKnowledgeStore(PalaceStore):
             "files_changed": files_changed,
             "agent_role": agent_role,
         }
-        return self.file_drawer(content=text, room="bug-fixes", hall="hall_advice", metadata=meta)
+        return self.file_drawer(
+            content=text, room="bug-fixes", hall="hall_advice",
+            metadata=meta, event_id=event_id,
+        )
 
     def log_convention(
         self,
@@ -132,6 +150,7 @@ class ProjectKnowledgeStore(PalaceStore):
         description: str,
         examples: str = "",
         component: str = "",
+        event_id: str = "",
     ) -> str:
         """Log a coding convention or pattern."""
         text = f"[CONVENTION] {title}\n{description}"
@@ -144,7 +163,10 @@ class ProjectKnowledgeStore(PalaceStore):
             "category": "convention",
             "component": component,
         }
-        return self.file_drawer(content=text, room="conventions", hall="hall_preferences", metadata=meta)
+        return self.file_drawer(
+            content=text, room="conventions", hall="hall_preferences",
+            metadata=meta, event_id=event_id,
+        )
 
     # ------------------------------------------------------------------
     # Query helpers

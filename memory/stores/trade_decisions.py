@@ -4,6 +4,12 @@ Trade Decision Store — wing_trading
 Logs every trade signal, entry/exit decision, and the reasoning behind it.
 Filed into ``wing_trading`` with rooms: signals, entries, exits, analysis.
 
+Hall strategy:
+  - signals  → hall_events     (timestamped signal generation events)
+  - entries  → hall_decisions   (position open decisions with reasoning)
+  - exits    → hall_events     (position close events)
+  - analysis → hall_discoveries (post-trade analysis insights)
+
 Searchable by symbol, date, strategy, outcome, regime.
 """
 
@@ -32,6 +38,7 @@ class TradeDecisionStore(PalaceStore):
         strategy: str = "",
         reasoning: str = "",
         extra: Optional[Dict[str, Any]] = None,
+        event_id: str = "",
     ) -> str:
         now = datetime.now(timezone.utc)
         text = (
@@ -57,7 +64,10 @@ class TradeDecisionStore(PalaceStore):
                 if isinstance(v, (str, int, float, bool)):
                     meta[k] = v
 
-        return self.file_drawer(content=text, room="signals", hall="hall_events", metadata=meta)
+        return self.file_drawer(
+            content=text, room="signals", hall="hall_events",
+            metadata=meta, event_id=event_id,
+        )
 
     # ------------------------------------------------------------------
     # Entry logging
@@ -75,6 +85,7 @@ class TradeDecisionStore(PalaceStore):
         take_profit: float = 0.0,
         kelly_usd: float = 0.0,
         reasoning: str = "",
+        event_id: str = "",
     ) -> str:
         now = datetime.now(timezone.utc)
         text = (
@@ -103,7 +114,10 @@ class TradeDecisionStore(PalaceStore):
             "take_profit": take_profit,
             "kelly_usd": kelly_usd,
         }
-        return self.file_drawer(content=text, room="entries", hall="hall_decisions", metadata=meta)
+        return self.file_drawer(
+            content=text, room="entries", hall="hall_decisions",
+            metadata=meta, event_id=event_id,
+        )
 
     # ------------------------------------------------------------------
     # Exit logging
@@ -120,6 +134,7 @@ class TradeDecisionStore(PalaceStore):
         reason: str = "",
         regime: str = "",
         reasoning: str = "",
+        event_id: str = "",
     ) -> str:
         now = datetime.now(timezone.utc)
         outcome = "WIN" if pnl_usd >= 0 else "LOSS"
@@ -147,7 +162,10 @@ class TradeDecisionStore(PalaceStore):
             "exit_reason": reason,
             "regime": regime,
         }
-        return self.file_drawer(content=text, room="exits", hall="hall_events", metadata=meta)
+        return self.file_drawer(
+            content=text, room="exits", hall="hall_events",
+            metadata=meta, event_id=event_id,
+        )
 
     # ------------------------------------------------------------------
     # Query helpers

@@ -17,6 +17,7 @@ Usage::
     memory_mw = MemoryMiddleware(app)
 """
 
+import hashlib
 import json
 import logging
 import time
@@ -139,6 +140,12 @@ class MemoryMiddleware:
                 reasoning_parts.append(f"whale_filter={sig['whale_filter']}")
             reasoning = "; ".join(reasoning_parts)
 
+            # Generate deterministic event_id for idempotency
+            now_str = datetime.now(timezone.utc).strftime("%Y%m%d%H%M")
+            event_id = hashlib.sha256(
+                f"scan:{symbol}:{signal_type}:{now_str}".encode()
+            ).hexdigest()[:24]
+
             self.mm.trading.log_signal(
                 symbol=symbol,
                 signal=signal_type,
@@ -151,6 +158,7 @@ class MemoryMiddleware:
                        if k not in ("symbol", "signal", "direction", "confidence",
                                     "regime", "price", "entry_price", "strategy")
                        and isinstance(v, (str, int, float, bool))},
+                event_id=event_id,
             )
 
             # Knowledge graph: record signal fact
@@ -171,12 +179,17 @@ class MemoryMiddleware:
         with _regime_lock:
             old_regime = _regime_cache.get(symbol, "")
             if old_regime and old_regime != new_regime:
+                now_str = datetime.now(timezone.utc).strftime("%Y%m%d%H%M")
+                event_id = hashlib.sha256(
+                    f"regime:{symbol}:{old_regime}:{new_regime}:{now_str}".encode()
+                ).hexdigest()[:24]
                 self.mm.system.log_regime_change(
                     symbol=symbol,
                     old_regime=old_regime,
                     new_regime=new_regime,
                     confidence=confidence,
                     price=price,
+                    event_id=event_id,
                 )
                 # Knowledge graph: invalidate old regime, add new
                 self.mm.kg_invalidate(symbol, "in_regime", old_regime)
@@ -190,8 +203,14 @@ class MemoryMiddleware:
 
     def _capture_risk_gate(self, data: Dict[str, Any]) -> None:
         """Capture risk gate → wing_risk/gate-checks."""
+        symbol = data.get("symbol", "PORTFOLIO")
+        now_str = datetime.now(timezone.utc).strftime("%Y%m%d%H%M")
+        event_id = hashlib.sha256(
+            f"risk:{symbol}:{now_str}".encode()
+        ).hexdigest()[:24]
+
         self.mm.risk.log_risk_gate_check(
-            symbol=data.get("symbol", "PORTFOLIO"),
+            symbol=symbol,
             passed=bool(data.get("passed", not data.get("circuit_breaker_active", False))),
             equity=float(data.get("equity", data.get("account_equity", 0.0))),
             daily_pnl=float(data.get("daily_pnl", 0.0)),
@@ -200,6 +219,7 @@ class MemoryMiddleware:
             open_positions=int(data.get("open_positions", 0)),
             circuit_breaker_active=bool(data.get("circuit_breaker_active", False)),
             circuit_breaker_reason=data.get("circuit_breaker_reason", ""),
+            event_id=event_id,
         )
 
     def _capture_performance(self, data: Dict[str, Any]) -> None:
@@ -216,11 +236,16 @@ class MemoryMiddleware:
             if isinstance(v, (int, float)) and k != "timestamp"
         }
         if metrics:
+            now_str = datetime.now(timezone.utc).strftime("%Y%m%d%H%M")
+            event_id = hashlib.sha256(
+                f"perf:PORTFOLIO:{now_str}".encode()
+            ).hexdigest()[:24]
             self.mm.models.log_performance_snapshot(
                 model_name="paper_engine",
                 symbol="PORTFOLIO",
                 metrics=metrics,
                 context=f"Auto-captured at {datetime.now(timezone.utc):%Y-%m-%d %H:%M UTC}",
+                event_id=event_id,
             )
 
     # ------------------------------------------------------------------

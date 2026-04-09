@@ -3,6 +3,11 @@ ML Model Store — wing_models
 ==============================
 Logs model training runs, parameter changes, and performance snapshots.
 Filed into ``wing_models`` with rooms: training-runs, param-changes, snapshots.
+
+Hall strategy:
+  - training-runs → hall_events    (timestamped training run events)
+  - param-changes → hall_decisions (hyperparameter change decisions)
+  - snapshots     → hall_facts     (verified performance snapshot data)
 """
 
 from datetime import datetime, timezone
@@ -25,6 +30,7 @@ class MLModelStore(PalaceStore):
         metrics: Dict[str, float],
         reasoning: str = "",
         extra: Optional[Dict[str, Any]] = None,
+        event_id: str = "",
     ) -> str:
         now = datetime.now(timezone.utc)
         params_str = ", ".join(f"{k}={v}" for k, v in params.items())
@@ -55,7 +61,10 @@ class MLModelStore(PalaceStore):
                 if isinstance(v, (str, int, float, bool)):
                     meta[k] = v
 
-        return self.file_drawer(content=text, room="training-runs", hall="hall_events", metadata=meta)
+        return self.file_drawer(
+            content=text, room="training-runs", hall="hall_events",
+            metadata=meta, event_id=event_id,
+        )
 
     def log_param_change(
         self,
@@ -64,6 +73,7 @@ class MLModelStore(PalaceStore):
         old_value: Any,
         new_value: Any,
         reasoning: str = "",
+        event_id: str = "",
     ) -> str:
         now = datetime.now(timezone.utc)
         text = (
@@ -80,7 +90,10 @@ class MLModelStore(PalaceStore):
             "old_value": str(old_value),
             "new_value": str(new_value),
         }
-        return self.file_drawer(content=text, room="param-changes", hall="hall_decisions", metadata=meta)
+        return self.file_drawer(
+            content=text, room="param-changes", hall="hall_decisions",
+            metadata=meta, event_id=event_id,
+        )
 
     def log_performance_snapshot(
         self,
@@ -88,6 +101,7 @@ class MLModelStore(PalaceStore):
         symbol: str,
         metrics: Dict[str, float],
         context: str = "",
+        event_id: str = "",
     ) -> str:
         now = datetime.now(timezone.utc)
         metrics_str = ", ".join(f"{k}={v}" for k, v in metrics.items())
@@ -107,7 +121,10 @@ class MLModelStore(PalaceStore):
             if isinstance(v, (str, int, float, bool)):
                 meta[f"metric_{k}"] = v
 
-        return self.file_drawer(content=text, room="snapshots", hall="hall_facts", metadata=meta)
+        return self.file_drawer(
+            content=text, room="snapshots", hall="hall_facts",
+            metadata=meta, event_id=event_id,
+        )
 
     # ------------------------------------------------------------------
     # Query helpers

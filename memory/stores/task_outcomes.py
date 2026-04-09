@@ -4,6 +4,10 @@ Task Outcome Store — wing_agent (tasks + lessons rooms)
 Logs what tasks were completed, what worked, what failed, and lessons
 learned.  Filed into ``wing_agent`` rooms: tasks, lessons.
 
+Hall strategy:
+  - tasks   → hall_events  (timestamped task lifecycle events)
+  - lessons → hall_advice   (lessons learned and recommendations)
+
 Helps agents avoid repeating mistakes and build on past successes.
 """
 
@@ -25,6 +29,7 @@ class TaskOutcomeStore(PalaceStore):
         description: str,
         agent_role: str = "",
         priority: str = "normal",
+        event_id: str = "",
     ) -> str:
         now = datetime.now(timezone.utc)
         text = (
@@ -40,7 +45,10 @@ class TaskOutcomeStore(PalaceStore):
             "priority": priority,
             "status": "in_progress",
         }
-        return self.file_drawer(content=text, room="tasks", hall="hall_events", metadata=meta)
+        return self.file_drawer(
+            content=text, room="tasks", hall="hall_events",
+            metadata=meta, event_id=event_id,
+        )
 
     def log_task_completed(
         self,
@@ -51,6 +59,7 @@ class TaskOutcomeStore(PalaceStore):
         lessons_learned: str = "",
         artifacts: str = "",
         agent_role: str = "",
+        event_id: str = "",
     ) -> str:
         now = datetime.now(timezone.utc)
         text = (
@@ -71,7 +80,10 @@ class TaskOutcomeStore(PalaceStore):
             "agent_role": agent_role,
             "status": "completed",
         }
-        drawer_id = self.file_drawer(content=text, room="tasks", hall="hall_events", metadata=meta)
+        drawer_id = self.file_drawer(
+            content=text, room="tasks", hall="hall_events",
+            metadata=meta, event_id=event_id,
+        )
 
         # Auto-extract lesson if provided
         if lessons_learned:
@@ -93,6 +105,7 @@ class TaskOutcomeStore(PalaceStore):
         root_cause: str = "",
         recommendations: str = "",
         agent_role: str = "",
+        event_id: str = "",
     ) -> str:
         now = datetime.now(timezone.utc)
         text = (
@@ -114,7 +127,10 @@ class TaskOutcomeStore(PalaceStore):
             "status": "failed",
             "failure_reason": failure_reason[:200],
         }
-        drawer_id = self.file_drawer(content=text, room="tasks", hall="hall_events", metadata=meta)
+        drawer_id = self.file_drawer(
+            content=text, room="tasks", hall="hall_events",
+            metadata=meta, event_id=event_id,
+        )
 
         # Auto-extract lesson from failure
         if root_cause or recommendations:
@@ -140,6 +156,7 @@ class TaskOutcomeStore(PalaceStore):
         category: str = "general",
         agent_role: str = "",
         related_task_id: str = "",
+        event_id: str = "",
     ) -> str:
         text = f"[LESSON] {title}\n{lesson}"
 
@@ -150,7 +167,10 @@ class TaskOutcomeStore(PalaceStore):
             "agent_role": agent_role,
             "related_task_id": related_task_id,
         }
-        return self.file_drawer(content=text, room="lessons", hall="hall_advice", metadata=meta)
+        return self.file_drawer(
+            content=text, room="lessons", hall="hall_advice",
+            metadata=meta, event_id=event_id,
+        )
 
     # ------------------------------------------------------------------
     # Query helpers

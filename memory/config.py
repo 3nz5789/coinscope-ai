@@ -22,6 +22,7 @@ Wing taxonomy for CoinScopeAI:
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Dict
 
 # ---------------------------------------------------------------------------
 # Defaults
@@ -102,6 +103,74 @@ HALLS = {
     "hall_diary":        "Agent diary entries",
 }
 
+# ---------------------------------------------------------------------------
+# Hall Strategy — which hall types are used in each wing/room
+# ---------------------------------------------------------------------------
+# This mapping is the authoritative reference for hall assignments.
+# Stores MUST use these halls; the base_store enforces this at write time.
+
+HALL_STRATEGY: Dict[str, Dict[str, str]] = {
+    # wing_trading
+    "wing_trading/signals":        "hall_events",
+    "wing_trading/entries":        "hall_decisions",
+    "wing_trading/exits":          "hall_events",
+    "wing_trading/analysis":       "hall_discoveries",
+    # wing_risk
+    "wing_risk/gate-checks":       "hall_events",
+    "wing_risk/drawdowns":         "hall_events",
+    "wing_risk/kill-switch":       "hall_events",
+    "wing_risk/rejections":        "hall_events",
+    "wing_risk/circuit-breaker":   "hall_events",
+    # wing_scanner
+    "wing_scanner/setups":         "hall_events",
+    "wing_scanner/performance":    "hall_facts",
+    "wing_scanner/configs":        "hall_preferences",
+    # wing_models
+    "wing_models/training-runs":   "hall_events",
+    "wing_models/param-changes":   "hall_decisions",
+    "wing_models/snapshots":       "hall_facts",
+    # wing_system
+    "wing_system/lifecycle":       "hall_events",
+    "wing_system/config-changes":  "hall_decisions",
+    "wing_system/deployments":     "hall_events",
+    "wing_system/regime-changes":  "hall_events",
+    # wing_dev
+    "wing_dev/architecture":       "hall_decisions",
+    "wing_dev/conventions":        "hall_preferences",
+    "wing_dev/bug-fixes":          "hall_advice",
+    "wing_dev/dependencies":       "hall_facts",
+    # wing_agent (shared)
+    "wing_agent/sessions":         "hall_events",
+    "wing_agent/decisions":        "hall_decisions",
+    "wing_agent/tasks":            "hall_events",
+    "wing_agent/lessons":          "hall_advice",
+    "wing_agent/knowledge":        "hall_facts",
+}
+
+# ---------------------------------------------------------------------------
+# Default retention periods (days) per wing.
+# -1 means indefinite (never pruned).
+# Summaries and lessons are kept indefinitely.
+# ---------------------------------------------------------------------------
+
+DEFAULT_RETENTION_DAYS: Dict[str, int] = {
+    "wing_trading":  90,
+    "wing_risk":     90,
+    "wing_scanner":  90,
+    "wing_models":   180,
+    "wing_system":   180,
+    "wing_dev":      -1,   # architecture knowledge is permanent
+    "wing_agent":    180,
+}
+
+# Rooms that are never pruned regardless of wing retention
+RETENTION_EXEMPT_ROOMS = {
+    "lessons",        # lessons learned are permanent
+    "architecture",   # ADRs are permanent
+    "conventions",    # coding standards are permanent
+    "knowledge",      # shared knowledge is permanent
+}
+
 
 @dataclass
 class MemoryConfig:
@@ -124,6 +193,29 @@ class MemoryConfig:
 
     # Knowledge graph database path (SQLite, inside palace dir)
     kg_db: str = ""
+
+    # --- Async write queue settings ---
+    # Max items in the write queue before dropping (fire-and-forget)
+    write_queue_size: int = field(
+        default_factory=lambda: int(os.environ.get("CSAI_MEMORY_QUEUE_SIZE", "10000"))
+    )
+
+    # --- Batch/flush settings ---
+    # Flush to ChromaDB every N seconds
+    flush_interval_seconds: float = field(
+        default_factory=lambda: float(os.environ.get("CSAI_MEMORY_FLUSH_INTERVAL", "5.0"))
+    )
+
+    # Flush when buffer reaches this many events
+    flush_batch_size: int = field(
+        default_factory=lambda: int(os.environ.get("CSAI_MEMORY_FLUSH_BATCH_SIZE", "50"))
+    )
+
+    # --- Retention settings ---
+    # Per-wing retention in days (-1 = indefinite)
+    retention_days: Dict[str, int] = field(
+        default_factory=lambda: dict(DEFAULT_RETENTION_DAYS)
+    )
 
     def __post_init__(self):
         Path(self.palace_dir).mkdir(parents=True, exist_ok=True)

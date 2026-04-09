@@ -1,33 +1,43 @@
 """
-CoinScopeAI Memory Module — MemPalace Integration
-====================================================
-Persistent decision-tracking and institutional memory for the CoinScopeAI
-trading system, built on MemPalace (ChromaDB + knowledge graph).
+CoinScopeAI Memory System — MemPalace Integration
+=====================================================
+AI-native memory layer for the CoinScopeAI trading engine.
 
-Wing structure::
-
-    wing_trading  — trade signals, entries, exits
-    wing_risk     — risk gate checks, drawdowns, kill switch events
-    wing_scanner  — pattern scanner history, setup performance
-    wing_models   — ML training runs, performance snapshots
-    wing_system   — engine lifecycle, regime changes, config changes
-    wing_dev      — architecture decisions, conventions, bug fixes
-    wing_agent    — per-agent sessions, diaries, tasks, lessons
-
-Usage::
+Quick start::
 
     from memory import MemoryManager
 
     mm = MemoryManager()
-    mm.trading.log_signal(symbol="BTCUSDT", signal="LONG", ...)
-    mm.risk.log_drawdown_event(drawdown_pct=0.05, ...)
-    mm.agents.start_session(agent_role="trading_agent", ...)
 
+    # Trading memory (non-blocking, fire-and-forget)
+    mm.trading.log_signal(symbol="BTCUSDT", signal="LONG", confidence=0.82,
+                          regime="trending", price=67000.0)
+
+    # Risk memory
+    mm.risk.log_drawdown_event(drawdown_pct=0.05, equity=9500, peak_equity=10000)
+
+    # Agent diary
+    mm.agents.write_diary("scanner_agent", "SESSION:...|scanned.BTC|★★★")
+
+    # Semantic search across all wings
     hits = mm.search("breakout signals on altcoins")
-    context = mm.wake_up(wing="wing_trading")
+
+    # Retention pruning
+    result = mm.prune(dry_run=True)
+
+    # Graceful shutdown (flush buffered events)
+    mm.shutdown()
+
+Production-readiness features:
+  1. Non-blocking async write queue — writes never block trading
+  2. Idempotency/dedup via event_id — retries are safe
+  3. Hall strategy enforcement — events go to the right hall
+  4. Batch/flush model — reduced ChromaDB overhead
+  5. Retention & pruning — disk never fills up silently
 """
 
 from .config import MemoryConfig
 from .manager import MemoryManager
 
 __all__ = ["MemoryConfig", "MemoryManager"]
+__version__ = "0.2.0"

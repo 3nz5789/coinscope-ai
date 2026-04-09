@@ -5,6 +5,11 @@ Logs pattern scanner history: which setups were detected, which worked
 on which pairs/timeframes, and scanner configuration changes.
 Filed into ``wing_scanner`` with rooms: setups, performance, configs.
 
+Hall strategy:
+  - setups      → hall_events      (timestamped setup detection events)
+  - performance → hall_facts       (verified setup outcome data)
+  - configs     → hall_preferences (scanner configuration settings)
+
 Supports queries like:
   "Which scanner configs under-performed in prior market regimes?"
   "What breakout setups worked on ETHUSDT in volatile regimes?"
@@ -30,6 +35,7 @@ class ScannerStore(PalaceStore):
         confidence: float,
         price: float = 0.0,
         details: str = "",
+        event_id: str = "",
     ) -> str:
         """Log a pattern setup detection."""
         now = datetime.now(timezone.utc)
@@ -51,7 +57,10 @@ class ScannerStore(PalaceStore):
             "confidence": confidence,
             "price": price,
         }
-        return self.file_drawer(content=text, room="setups", hall="hall_events", metadata=meta)
+        return self.file_drawer(
+            content=text, room="setups", hall="hall_events",
+            metadata=meta, event_id=event_id,
+        )
 
     def log_setup_outcome(
         self,
@@ -63,6 +72,7 @@ class ScannerStore(PalaceStore):
         pnl_pct: float = 0.0,
         hold_time_hours: float = 0.0,
         notes: str = "",
+        event_id: str = "",
     ) -> str:
         """Log the outcome of a previously detected setup."""
         now = datetime.now(timezone.utc)
@@ -85,13 +95,17 @@ class ScannerStore(PalaceStore):
             "pnl_pct": pnl_pct,
             "hold_time_hours": hold_time_hours,
         }
-        return self.file_drawer(content=text, room="performance", hall="hall_facts", metadata=meta)
+        return self.file_drawer(
+            content=text, room="performance", hall="hall_facts",
+            metadata=meta, event_id=event_id,
+        )
 
     def log_config(
         self,
         config_name: str,
         params: str,
         reasoning: str = "",
+        event_id: str = "",
     ) -> str:
         """Log a scanner configuration change."""
         now = datetime.now(timezone.utc)
@@ -103,7 +117,10 @@ class ScannerStore(PalaceStore):
             "event_type": "scanner_config",
             "config_name": config_name,
         }
-        return self.file_drawer(content=text, room="configs", hall="hall_preferences", metadata=meta)
+        return self.file_drawer(
+            content=text, room="configs", hall="hall_preferences",
+            metadata=meta, event_id=event_id,
+        )
 
     # ------------------------------------------------------------------
     # Query helpers

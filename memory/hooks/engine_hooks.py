@@ -11,6 +11,11 @@ These are designed to be called from:
   - PaperTradingEngine._on_regime_update()
   - PaperTradingEngine.start() / stop()
 
+All writes are **non-blocking**: they enqueue to a background writer
+thread and return immediately.  If the queue is full or ChromaDB is
+down, a warning is logged but trading operations are never blocked
+(best-effort memory guarantee).
+
 Usage:
     from memory.hooks import EngineMemoryHooks
 
@@ -24,6 +29,9 @@ Usage:
 
     # On engine start:
     hooks.on_engine_start(version="v2", symbols=["BTCUSDT", "ETHUSDT"])
+
+    # On graceful shutdown — flush remaining memory events:
+    hooks.shutdown()
 """
 
 import logging
@@ -38,13 +46,21 @@ logger = logging.getLogger("coinscopeai.memory.hooks")
 class EngineMemoryHooks:
     """
     Stateless hook class — instantiate once and call methods from
-    engine event handlers.  All writes are synchronous but fast
-    (ChromaDB upsert is typically <5ms).
+    engine event handlers.  All writes are non-blocking (enqueued to
+    a background writer thread).
+
+    Each method accepts an optional ``event_id`` parameter for
+    idempotency.  If the engine retries a callback, passing the same
+    event_id prevents duplicate drawers.
     """
 
     def __init__(self, config: Optional[MemoryConfig] = None):
         self.mm = MemoryManager(config)
         self._last_regimes: Dict[str, str] = {}
+
+    def shutdown(self):
+        """Flush remaining memory events on graceful engine shutdown."""
+        self.mm.shutdown()
 
     # ------------------------------------------------------------------
     # Signal events
@@ -60,9 +76,10 @@ class EngineMemoryHooks:
         strategy: str = "",
         reasoning: str = "",
         extra: Optional[Dict[str, Any]] = None,
+        event_id: str = "",
     ) -> str:
         """Called when the signal engine generates a signal."""
-        return self.mm.trade_decisions.log_signal(
+        return self.mm.trading.log_signal(
             symbol=symbol,
             signal=signal,
             confidence=confidence,
@@ -71,6 +88,7 @@ class EngineMemoryHooks:
             strategy=strategy,
             reasoning=reasoning,
             extra=extra,
+            event_id=event_id,
         )
 
     # ------------------------------------------------------------------
@@ -89,9 +107,10 @@ class EngineMemoryHooks:
         take_profit: float = 0.0,
         kelly_usd: float = 0.0,
         reasoning: str = "",
+        event_id: str = "",
     ) -> str:
         """Called when a new position is opened."""
-        return self.mm.trade_decisions.log_entry(
+        return self.mm.trading.log_entry(
             symbol=symbol,
             side=side,
             entry_price=entry_price,
@@ -102,6 +121,7 @@ class EngineMemoryHooks:
             take_profit=take_profit,
             kelly_usd=kelly_usd,
             reasoning=reasoning,
+            event_id=event_id,
         )
 
     def on_position_close(
@@ -115,9 +135,10 @@ class EngineMemoryHooks:
         reason: str = "",
         regime: str = "",
         reasoning: str = "",
+        event_id: str = "",
     ) -> str:
         """Called when a position is closed."""
-        return self.mm.trade_decisions.log_exit(
+        return self.mm.trading.log_exit(
             symbol=symbol,
             side=side,
             entry_price=entry_price,
@@ -127,6 +148,7 @@ class EngineMemoryHooks:
             reason=reason,
             regime=regime,
             reasoning=reasoning,
+            event_id=event_id,
         )
 
     # ------------------------------------------------------------------
@@ -144,9 +166,10 @@ class EngineMemoryHooks:
         open_positions: int,
         circuit_breaker_active: bool = False,
         circuit_breaker_reason: str = "",
+        event_id: str = "",
     ) -> str:
         """Called on every risk gate check."""
-        return self.mm.risk_events.log_risk_gate_check(
+        return self.mm.risk.log_risk_gate_check(
             symbol=symbol,
             passed=passed,
             equity=equity,
@@ -156,6 +179,7 @@ class EngineMemoryHooks:
             open_positions=open_positions,
             circuit_breaker_active=circuit_breaker_active,
             circuit_breaker_reason=circuit_breaker_reason,
+            event_id=event_id,
         )
 
     def on_rejection(
@@ -163,12 +187,14 @@ class EngineMemoryHooks:
         symbol: str,
         reason: str,
         order_details: str = "",
+        event_id: str = "",
     ) -> str:
         """Called when the safety gate rejects an order."""
-        return self.mm.risk_events.log_rejection(
+        return self.mm.risk.log_rejection(
             symbol=symbol,
             reason=reason,
             order_details=order_details,
+            event_id=event_id,
         )
 
     def on_kill_switch(
@@ -176,12 +202,14 @@ class EngineMemoryHooks:
         activated: bool,
         reason: str = "",
         equity: float = 0.0,
+        event_id: str = "",
     ) -> str:
         """Called when the kill switch is activated or deactivated."""
-        return self.mm.risk_events.log_kill_switch(
+        return self.mm.risk.log_kill_switch(
             activated=activated,
             reason=reason,
             equity=equity,
+            event_id=event_id,
         )
 
     def on_drawdown(
@@ -190,13 +218,15 @@ class EngineMemoryHooks:
         equity: float,
         peak_equity: float,
         trigger: str = "",
+        event_id: str = "",
     ) -> str:
         """Called when a significant drawdown threshold is crossed."""
-        return self.mm.risk_events.log_drawdown_event(
+        return self.mm.risk.log_drawdown_event(
             drawdown_pct=drawdown_pct,
             equity=equity,
             peak_equity=peak_equity,
             trigger=trigger,
+            event_id=event_id,
         )
 
     # ------------------------------------------------------------------
@@ -209,6 +239,7 @@ class EngineMemoryHooks:
         regime: str,
         confidence: float = 0.0,
         price: float = 0.0,
+        event_id: str = "",
     ) -> Optional[str]:
         """
         Called on every regime detection update.
@@ -217,12 +248,13 @@ class EngineMemoryHooks:
         """
         old = self._last_regimes.get(symbol, "")
         if old and old != regime:
-            doc_id = self.mm.system_events.log_regime_change(
+            doc_id = self.mm.system.log_regime_change(
                 symbol=symbol,
                 old_regime=old,
                 new_regime=regime,
                 confidence=confidence,
                 price=price,
+                event_id=event_id,
             )
             self._last_regimes[symbol] = regime
             return doc_id
@@ -238,23 +270,27 @@ class EngineMemoryHooks:
         version: str = "",
         symbols: Optional[List[str]] = None,
         config_summary: str = "",
+        event_id: str = "",
     ) -> str:
         """Called when the trading engine starts."""
-        return self.mm.system_events.log_engine_start(
+        return self.mm.system.log_engine_start(
             engine_version=version,
             symbols=",".join(symbols) if symbols else "",
             config_summary=config_summary,
+            event_id=event_id,
         )
 
     def on_engine_stop(
         self,
         reason: str = "",
         uptime_seconds: float = 0.0,
+        event_id: str = "",
     ) -> str:
         """Called when the trading engine stops."""
-        return self.mm.system_events.log_engine_stop(
+        return self.mm.system.log_engine_stop(
             reason=reason,
             uptime_seconds=uptime_seconds,
+            event_id=event_id,
         )
 
     # ------------------------------------------------------------------
@@ -266,10 +302,12 @@ class EngineMemoryHooks:
         metrics: Dict[str, float],
         model_name: str = "live_engine",
         symbol: str = "PORTFOLIO",
+        event_id: str = "",
     ) -> str:
         """Called periodically to capture performance metrics."""
-        return self.mm.ml_models.log_performance_snapshot(
+        return self.mm.models.log_performance_snapshot(
             model_name=model_name,
             symbol=symbol,
             metrics=metrics,
+            event_id=event_id,
         )

@@ -4,6 +4,13 @@ Risk Event Store — wing_risk
 Logs risk gate triggers, drawdown events, kill switch activations,
 circuit breaker trips, and safety rejections.
 Filed into ``wing_risk`` with rooms: gate-checks, drawdowns, kill-switch, rejections.
+
+Hall strategy:
+  - gate-checks     → hall_events  (timestamped risk gate pass/fail)
+  - drawdowns       → hall_events  (drawdown threshold events)
+  - kill-switch     → hall_events  (kill switch activations)
+  - rejections      → hall_events  (order rejection events)
+  - circuit-breaker → hall_events  (circuit breaker trips)
 """
 
 from datetime import datetime, timezone
@@ -29,6 +36,7 @@ class RiskEventStore(PalaceStore):
         circuit_breaker_active: bool = False,
         circuit_breaker_reason: str = "",
         context: str = "",
+        event_id: str = "",
     ) -> str:
         now = datetime.now(timezone.utc)
         status = "PASSED" if passed else "BLOCKED"
@@ -57,7 +65,10 @@ class RiskEventStore(PalaceStore):
         if circuit_breaker_reason:
             meta["circuit_breaker_reason"] = circuit_breaker_reason
 
-        return self.file_drawer(content=text, room="gate-checks", hall="hall_events", metadata=meta)
+        return self.file_drawer(
+            content=text, room="gate-checks", hall="hall_events",
+            metadata=meta, event_id=event_id,
+        )
 
     def log_drawdown_event(
         self,
@@ -66,6 +77,7 @@ class RiskEventStore(PalaceStore):
         peak_equity: float,
         trigger: str = "",
         context: str = "",
+        event_id: str = "",
     ) -> str:
         now = datetime.now(timezone.utc)
         text = (
@@ -85,7 +97,10 @@ class RiskEventStore(PalaceStore):
             "trigger": trigger,
             "importance": 5,
         }
-        return self.file_drawer(content=text, room="drawdowns", hall="hall_events", metadata=meta)
+        return self.file_drawer(
+            content=text, room="drawdowns", hall="hall_events",
+            metadata=meta, event_id=event_id,
+        )
 
     def log_kill_switch(
         self,
@@ -93,6 +108,7 @@ class RiskEventStore(PalaceStore):
         reason: str = "",
         equity: float = 0.0,
         context: str = "",
+        event_id: str = "",
     ) -> str:
         now = datetime.now(timezone.utc)
         action = "ACTIVATED" if activated else "DEACTIVATED"
@@ -111,7 +127,10 @@ class RiskEventStore(PalaceStore):
             "equity": equity,
             "importance": 5,
         }
-        return self.file_drawer(content=text, room="kill-switch", hall="hall_events", metadata=meta)
+        return self.file_drawer(
+            content=text, room="kill-switch", hall="hall_events",
+            metadata=meta, event_id=event_id,
+        )
 
     def log_rejection(
         self,
@@ -119,6 +138,7 @@ class RiskEventStore(PalaceStore):
         reason: str,
         order_details: str = "",
         context: str = "",
+        event_id: str = "",
     ) -> str:
         now = datetime.now(timezone.utc)
         text = f"[{now:%Y-%m-%d %H:%M UTC}] Order REJECTED for {symbol} | reason={reason}"
@@ -132,7 +152,10 @@ class RiskEventStore(PalaceStore):
             "symbol": symbol,
             "reason": reason,
         }
-        return self.file_drawer(content=text, room="rejections", hall="hall_events", metadata=meta)
+        return self.file_drawer(
+            content=text, room="rejections", hall="hall_events",
+            metadata=meta, event_id=event_id,
+        )
 
     # ------------------------------------------------------------------
     # Query helpers

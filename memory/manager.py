@@ -4,6 +4,13 @@ Memory Manager — Unified Interface to CoinScopeAI's MemPalace
 Ties together all stores, the L0-L3 memory stack, the knowledge graph,
 and the palace graph into a single entry point.
 
+Production-readiness features:
+  - Non-blocking writes via background writer thread
+  - Batch/flush model for reduced ChromaDB overhead
+  - Idempotency/dedup via event_id fields
+  - Hall strategy enforcement
+  - Retention & pruning policy
+
 Usage::
 
     from memory import MemoryManager
@@ -30,15 +37,28 @@ Usage::
 
     # Palace graph traversal
     connected = mm.traverse("regime-changes", max_hops=2)
+
+    # Retention pruning
+    result = mm.prune(dry_run=True)   # preview
+    result = mm.prune(dry_run=False)  # actually delete
+
+    # Graceful shutdown (flush remaining events)
+    mm.shutdown()
 """
 
 import logging
 import os
+from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, List, Optional
 
 import chromadb
 
-from .config import MemoryConfig, COLLECTION_NAME
+from .config import (
+    MemoryConfig,
+    COLLECTION_NAME,
+    DEFAULT_RETENTION_DAYS,
+    RETENTION_EXEMPT_ROOMS,
+)
 from .stores.trade_decisions import TradeDecisionStore
 from .stores.ml_models import MLModelStore
 from .stores.risk_events import RiskEventStore
@@ -61,6 +81,8 @@ class MemoryManager:
       - Knowledge graph for temporal fact tracking
       - Palace graph traversal for cross-wing discovery
       - Cross-wing semantic search
+      - Retention pruning
+      - Graceful shutdown with flush
     """
 
     def __init__(self, config: Optional[MemoryConfig] = None):
@@ -81,6 +103,30 @@ class MemoryManager:
         # ----- MemPalace native subsystems (lazy init) -----
         self._stack = None
         self._kg = None
+
+    # ==================================================================
+    # Lifecycle
+    # ==================================================================
+
+    def shutdown(self):
+        """
+        Graceful shutdown: flush all buffered memory events to ChromaDB.
+        Call this before process exit to ensure no events are lost.
+        """
+        logger.info("[MemPalace] Shutting down — flushing remaining events...")
+        # All stores share the same BackgroundWriter instance per palace_path,
+        # so shutting down any store's writer shuts down the shared writer.
+        try:
+            self.trading._writer.shutdown()
+        except Exception as e:
+            logger.warning("[MemPalace] Shutdown flush error: %s", e)
+
+    def flush(self):
+        """Force flush all buffered events to ChromaDB immediately."""
+        try:
+            self.trading.flush()
+        except Exception as e:
+            logger.warning("[MemPalace] Flush error: %s", e)
 
     # ==================================================================
     # L0-L3 Memory Stack (MemPalace native)
@@ -315,6 +361,115 @@ class MemoryManager:
         return hits
 
     # ==================================================================
+    # Retention & Pruning
+    # ==================================================================
+
+    def prune(self, dry_run: bool = True) -> Dict[str, Any]:
+        """
+        Delete drawers older than the configured retention period per wing.
+
+        Respects:
+          - Per-wing retention days from config.retention_days
+          - RETENTION_EXEMPT_ROOMS (lessons, architecture, conventions, knowledge)
+          - Wings with retention = -1 are never pruned
+
+        Args:
+            dry_run: If True, only report what would be deleted without
+                     actually deleting.  Default True for safety.
+
+        Returns:
+            Dict with summary: total_scanned, total_prunable, pruned_by_wing,
+            and (if dry_run) the list of drawer IDs that would be deleted.
+        """
+        col = self._get_collection()
+        if col is None:
+            return {"error": "ChromaDB collection not available"}
+
+        # Flush pending writes first so we have a complete picture
+        self.flush()
+
+        now = datetime.now(timezone.utc)
+        retention_days = self.config.retention_days
+
+        # Fetch all drawers
+        try:
+            all_results = col.get(
+                include=["metadatas"],
+                limit=100000,
+            )
+        except Exception as e:
+            return {"error": f"Failed to fetch drawers: {e}"}
+
+        ids = all_results.get("ids", [])
+        metas = all_results.get("metadatas", [])
+
+        total_scanned = len(ids)
+        prunable_ids: List[str] = []
+        pruned_by_wing: Dict[str, int] = {}
+
+        for doc_id, meta in zip(ids, metas):
+            wing = meta.get("wing", "")
+            room = meta.get("room", "")
+            filed_at_str = meta.get("filed_at", "")
+
+            # Skip exempt rooms
+            if room in RETENTION_EXEMPT_ROOMS:
+                continue
+
+            # Get retention for this wing
+            ret_days = retention_days.get(wing, -1)
+            if ret_days < 0:
+                continue  # indefinite retention
+
+            # Parse filed_at
+            if not filed_at_str:
+                continue
+            try:
+                filed_at = datetime.fromisoformat(filed_at_str)
+                if filed_at.tzinfo is None:
+                    filed_at = filed_at.replace(tzinfo=timezone.utc)
+            except (ValueError, TypeError):
+                continue
+
+            cutoff = now - timedelta(days=ret_days)
+            if filed_at < cutoff:
+                prunable_ids.append(doc_id)
+                pruned_by_wing[wing] = pruned_by_wing.get(wing, 0) + 1
+
+        result: Dict[str, Any] = {
+            "dry_run": dry_run,
+            "total_scanned": total_scanned,
+            "total_prunable": len(prunable_ids),
+            "pruned_by_wing": pruned_by_wing,
+            "retention_config": retention_days,
+            "exempt_rooms": list(RETENTION_EXEMPT_ROOMS),
+        }
+
+        if dry_run:
+            result["prunable_ids"] = prunable_ids[:100]  # cap preview
+            if len(prunable_ids) > 100:
+                result["note"] = f"Showing first 100 of {len(prunable_ids)} prunable IDs"
+        else:
+            # Actually delete
+            if prunable_ids:
+                try:
+                    # ChromaDB delete supports batch
+                    col.delete(ids=prunable_ids)
+                    result["deleted"] = len(prunable_ids)
+                    logger.info(
+                        "[MemPalace] Pruned %d drawers across %d wings",
+                        len(prunable_ids),
+                        len(pruned_by_wing),
+                    )
+                except Exception as e:
+                    result["error"] = f"Delete failed: {e}"
+                    result["deleted"] = 0
+            else:
+                result["deleted"] = 0
+
+        return result
+
+    # ==================================================================
     # Status & Taxonomy
     # ==================================================================
 
@@ -323,6 +478,16 @@ class MemoryManager:
         result = {
             "palace_path": self.config.palace_path,
             "stores": {},
+            "async_writer": {
+                "pending_events": self.trading._writer.pending_count,
+                "flush_interval_seconds": self.config.flush_interval_seconds,
+                "flush_batch_size": self.config.flush_batch_size,
+                "queue_size": self.config.write_queue_size,
+            },
+            "retention": {
+                "retention_days": self.config.retention_days,
+                "exempt_rooms": list(RETENTION_EXEMPT_ROOMS),
+            },
         }
         for name, store in self._all_stores().items():
             try:

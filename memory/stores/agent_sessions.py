@@ -51,6 +51,7 @@ class AgentSessionStore(PalaceStore):
         agent_role: str,
         objective: str,
         context: str = "",
+        event_id: str = "",
     ) -> str:
         session_id = _new_session_id()
         now = datetime.now(timezone.utc)
@@ -67,7 +68,10 @@ class AgentSessionStore(PalaceStore):
             "agent_role": agent_role,
             "objective": objective,
         }
-        self.file_drawer(content=text, room="sessions", hall="hall_events", metadata=meta)
+        self.file_drawer(
+            content=text, room="sessions", hall="hall_events",
+            metadata=meta, event_id=event_id,
+        )
         return session_id
 
     def log_event(
@@ -76,6 +80,7 @@ class AgentSessionStore(PalaceStore):
         agent_role: str,
         event: str,
         details: str = "",
+        event_id: str = "",
     ) -> str:
         now = datetime.now(timezone.utc)
         text = f"[{now:%Y-%m-%d %H:%M UTC}] [{agent_role}] {event}"
@@ -87,7 +92,10 @@ class AgentSessionStore(PalaceStore):
             "session_id": session_id,
             "agent_role": agent_role,
         }
-        return self.file_drawer(content=text, room="sessions", hall="hall_events", metadata=meta)
+        return self.file_drawer(
+            content=text, room="sessions", hall="hall_events",
+            metadata=meta, event_id=event_id,
+        )
 
     def log_decision(
         self,
@@ -96,6 +104,7 @@ class AgentSessionStore(PalaceStore):
         decision: str,
         reasoning: str = "",
         alternatives: str = "",
+        event_id: str = "",
     ) -> str:
         now = datetime.now(timezone.utc)
         text = f"[{now:%Y-%m-%d %H:%M UTC}] [{agent_role}] Decision: {decision}"
@@ -109,7 +118,10 @@ class AgentSessionStore(PalaceStore):
             "session_id": session_id,
             "agent_role": agent_role,
         }
-        return self.file_drawer(content=text, room="decisions", hall="hall_decisions", metadata=meta)
+        return self.file_drawer(
+            content=text, room="decisions", hall="hall_decisions",
+            metadata=meta, event_id=event_id,
+        )
 
     def end_session(
         self,
@@ -117,6 +129,7 @@ class AgentSessionStore(PalaceStore):
         agent_role: str,
         summary: str,
         artifacts: str = "",
+        event_id: str = "",
     ) -> str:
         now = datetime.now(timezone.utc)
         text = (
@@ -132,7 +145,10 @@ class AgentSessionStore(PalaceStore):
             "agent_role": agent_role,
             "summary": summary[:200],
         }
-        return self.file_drawer(content=text, room="sessions", hall="hall_events", metadata=meta)
+        return self.file_drawer(
+            content=text, room="sessions", hall="hall_events",
+            metadata=meta, event_id=event_id,
+        )
 
     # ------------------------------------------------------------------
     # Per-agent specialist diary (MemPalace native diary pattern)
@@ -143,11 +159,14 @@ class AgentSessionStore(PalaceStore):
         agent_name: str,
         entry: str,
         topic: str = "general",
+        event_id: str = "",
     ) -> str:
         """
-        Write to an agent's personal diary.  Each agent gets its own wing
-        (``wing_<agent_name>``) with a ``diary`` room — exactly matching
-        MemPalace's native diary_write pattern.
+        Write to an agent's personal diary (non-blocking).
+
+        Each agent gets its own wing (``wing_<agent_name>``) with a
+        ``diary`` room — exactly matching MemPalace's native diary_write
+        pattern.  The write is enqueued to the background writer.
 
         Use AAAK format for compression:
           "SESSION:2026-04-09|scanned.BTC.ETH.SOL|regime.flip.BTC.trending→volatile|★★★"
@@ -170,10 +189,12 @@ class AgentSessionStore(PalaceStore):
             "date": now.strftime("%Y-%m-%d"),
         }
 
-        self._col.upsert(
-            ids=[entry_id],
-            documents=[entry],
-            metadatas=[meta],
+        # Use non-blocking enqueue instead of direct self._col.upsert
+        self._enqueue_direct(
+            drawer_id=entry_id,
+            content=entry,
+            metadata=meta,
+            event_id=event_id,
         )
         return entry_id
 
@@ -214,6 +235,7 @@ class AgentSessionStore(PalaceStore):
         context: str,
         topic: str = "",
         importance: int = 3,
+        event_id: str = "",
     ) -> str:
         """
         Share context that other agents should know about.
@@ -228,7 +250,10 @@ class AgentSessionStore(PalaceStore):
             "topic": topic,
             "importance": importance,
         }
-        return self.file_drawer(content=text, room="knowledge", hall="hall_facts", metadata=meta)
+        return self.file_drawer(
+            content=text, room="knowledge", hall="hall_facts",
+            metadata=meta, event_id=event_id,
+        )
 
     # ------------------------------------------------------------------
     # Query helpers

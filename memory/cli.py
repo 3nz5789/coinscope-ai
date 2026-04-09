@@ -2,7 +2,7 @@
 """
 CoinScopeAI Memory CLI
 ========================
-Query and inspect the MemPalace from the command line.
+Query, inspect, and maintain the MemPalace from the command line.
 
 Usage::
 
@@ -20,6 +20,8 @@ Usage::
     python -m memory wake-up --wing wing_trading
     python -m memory status
     python -m memory export
+    python -m memory prune --dry-run
+    python -m memory prune --execute
 """
 
 import argparse
@@ -240,6 +242,62 @@ def cmd_export(args, mm: MemoryManager):
     print(f"Exported {len(records)} drawers to {output}")
 
 
+def cmd_prune(args, mm: MemoryManager):
+    """Prune old drawers based on retention policy."""
+    dry_run = not args.execute
+
+    if dry_run:
+        print(f"\n{'=' * 60}")
+        print("  Retention Pruning — DRY RUN (no data will be deleted)")
+        print(f"{'=' * 60}\n")
+    else:
+        print(f"\n{'=' * 60}")
+        print("  Retention Pruning — EXECUTING (data will be deleted)")
+        print(f"{'=' * 60}\n")
+
+    result = mm.prune(dry_run=dry_run)
+
+    if "error" in result:
+        print(f"  Error: {result['error']}\n")
+        return
+
+    # Print retention config
+    print("  Retention configuration:")
+    for wing, days in sorted(result.get("retention_config", {}).items()):
+        label = f"{days} days" if days >= 0 else "indefinite"
+        print(f"    {wing}: {label}")
+    print(f"  Exempt rooms: {', '.join(result.get('exempt_rooms', []))}")
+    print()
+
+    # Print summary
+    print(f"  Total drawers scanned: {result.get('total_scanned', 0)}")
+    print(f"  Total prunable:        {result.get('total_prunable', 0)}")
+    print()
+
+    pruned_by_wing = result.get("pruned_by_wing", {})
+    if pruned_by_wing:
+        print("  Breakdown by wing:")
+        for wing, count in sorted(pruned_by_wing.items()):
+            print(f"    {wing}: {count} drawers")
+        print()
+
+    if dry_run:
+        preview_ids = result.get("prunable_ids", [])
+        if preview_ids:
+            print(f"  Preview of prunable drawer IDs (first {len(preview_ids)}):")
+            for did in preview_ids[:20]:
+                print(f"    - {did}")
+            if len(preview_ids) > 20:
+                print(f"    ... and {len(preview_ids) - 20} more")
+        print()
+        print("  To actually delete, run: python -m memory prune --execute")
+    else:
+        deleted = result.get("deleted", 0)
+        print(f"  Deleted: {deleted} drawers")
+
+    print()
+
+
 # ------------------------------------------------------------------
 # Main
 # ------------------------------------------------------------------
@@ -247,7 +305,7 @@ def cmd_export(args, mm: MemoryManager):
 def main():
     parser = argparse.ArgumentParser(
         prog="csai-memory",
-        description="CoinScopeAI Memory — query and inspect the MemPalace",
+        description="CoinScopeAI Memory — query, inspect, and maintain the MemPalace",
     )
     sub = parser.add_subparsers(dest="command", help="Command")
 
@@ -309,6 +367,21 @@ def main():
     p = sub.add_parser("export", help="Export all drawers to JSON")
     p.add_argument("--output", default="memory_export.json", help="Output file")
 
+    # prune
+    p = sub.add_parser("prune", help="Prune old drawers based on retention policy")
+    p.add_argument(
+        "--dry-run",
+        action="store_true",
+        default=True,
+        help="Preview what would be deleted (default)",
+    )
+    p.add_argument(
+        "--execute",
+        action="store_true",
+        default=False,
+        help="Actually delete prunable drawers",
+    )
+
     args = parser.parse_args()
     if not args.command:
         parser.print_help()
@@ -330,6 +403,7 @@ def main():
         "wake-up": cmd_wake_up,
         "status": cmd_status,
         "export": cmd_export,
+        "prune": cmd_prune,
     }
 
     fn = commands.get(args.command)
@@ -337,6 +411,9 @@ def main():
         fn(args, mm)
     else:
         parser.print_help()
+
+    # Ensure graceful shutdown
+    mm.shutdown()
 
 
 if __name__ == "__main__":

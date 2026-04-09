@@ -4,6 +4,12 @@ System Event Store — wing_system
 Logs engine lifecycle, configuration changes, deployment events,
 and market regime transitions.
 Filed into ``wing_system`` with rooms: lifecycle, config-changes, deployments, regime-changes.
+
+Hall strategy:
+  - lifecycle       → hall_events    (engine start/stop events)
+  - config-changes  → hall_decisions (configuration change decisions)
+  - deployments     → hall_events    (deployment events)
+  - regime-changes  → hall_events    (market regime transition events)
 """
 
 from datetime import datetime, timezone
@@ -23,6 +29,7 @@ class SystemEventStore(PalaceStore):
         config_summary: str = "",
         symbols: str = "",
         context: str = "",
+        event_id: str = "",
     ) -> str:
         now = datetime.now(timezone.utc)
         text = f"[{now:%Y-%m-%d %H:%M UTC}] Engine STARTED"
@@ -40,13 +47,17 @@ class SystemEventStore(PalaceStore):
             "engine_version": engine_version,
             "symbols": symbols,
         }
-        return self.file_drawer(content=text, room="lifecycle", hall="hall_events", metadata=meta)
+        return self.file_drawer(
+            content=text, room="lifecycle", hall="hall_events",
+            metadata=meta, event_id=event_id,
+        )
 
     def log_engine_stop(
         self,
         reason: str = "",
         uptime_seconds: float = 0.0,
         context: str = "",
+        event_id: str = "",
     ) -> str:
         now = datetime.now(timezone.utc)
         text = f"[{now:%Y-%m-%d %H:%M UTC}] Engine STOPPED"
@@ -62,7 +73,10 @@ class SystemEventStore(PalaceStore):
             "reason": reason,
             "uptime_seconds": uptime_seconds,
         }
-        return self.file_drawer(content=text, room="lifecycle", hall="hall_events", metadata=meta)
+        return self.file_drawer(
+            content=text, room="lifecycle", hall="hall_events",
+            metadata=meta, event_id=event_id,
+        )
 
     def log_config_change(
         self,
@@ -71,6 +85,7 @@ class SystemEventStore(PalaceStore):
         old_value: str,
         new_value: str,
         reasoning: str = "",
+        event_id: str = "",
     ) -> str:
         now = datetime.now(timezone.utc)
         text = (
@@ -87,7 +102,10 @@ class SystemEventStore(PalaceStore):
             "old_value": old_value,
             "new_value": new_value,
         }
-        return self.file_drawer(content=text, room="config-changes", hall="hall_decisions", metadata=meta)
+        return self.file_drawer(
+            content=text, room="config-changes", hall="hall_decisions",
+            metadata=meta, event_id=event_id,
+        )
 
     def log_deployment(
         self,
@@ -95,6 +113,7 @@ class SystemEventStore(PalaceStore):
         environment: str = "",
         version: str = "",
         context: str = "",
+        event_id: str = "",
     ) -> str:
         now = datetime.now(timezone.utc)
         text = f"[{now:%Y-%m-%d %H:%M UTC}] Deployment: {action}"
@@ -111,7 +130,10 @@ class SystemEventStore(PalaceStore):
             "environment": environment,
             "version": version,
         }
-        return self.file_drawer(content=text, room="deployments", hall="hall_events", metadata=meta)
+        return self.file_drawer(
+            content=text, room="deployments", hall="hall_events",
+            metadata=meta, event_id=event_id,
+        )
 
     def log_regime_change(
         self,
@@ -121,6 +143,7 @@ class SystemEventStore(PalaceStore):
         confidence: float = 0.0,
         price: float = 0.0,
         context: str = "",
+        event_id: str = "",
     ) -> str:
         now = datetime.now(timezone.utc)
         text = (
@@ -141,7 +164,10 @@ class SystemEventStore(PalaceStore):
             "price": price,
             "importance": 4,
         }
-        return self.file_drawer(content=text, room="regime-changes", hall="hall_events", metadata=meta)
+        return self.file_drawer(
+            content=text, room="regime-changes", hall="hall_events",
+            metadata=meta, event_id=event_id,
+        )
 
     # ------------------------------------------------------------------
     # Query helpers
