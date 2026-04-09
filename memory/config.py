@@ -44,6 +44,10 @@ WINGS = {
     "system":   "wing_system",
     "dev":      "wing_dev",
     "agent":    "wing_agent",
+    "project":  "wing_project",
+    "user":     "wing_user",
+    "agents":   "wing_agents",
+    "assets":   "wing_assets",
 }
 
 # Room taxonomy per wing
@@ -82,6 +86,9 @@ ROOMS = {
         "conventions",   # coding standards, patterns
         "bug-fixes",     # bug fix records
         "dependencies",  # library choices
+        "facts",         # code conventions, file locations, API endpoints
+        "events",        # PRs merged, features built, bugs fixed
+        "discoveries",   # technical insights, performance findings
     ],
     "wing_agent": [
         "sessions",      # agent session start/end
@@ -89,6 +96,26 @@ ROOMS = {
         "tasks",         # task outcomes
         "lessons",       # lessons learned
         "knowledge",     # shared project knowledge
+    ],
+    "wing_project": [
+        "facts",         # confirmed decisions (pricing, tech stack)
+        "events",        # milestones, deployments, releases
+        "discoveries",   # lessons learned, post-mortems
+    ],
+    "wing_user": [
+        "facts",         # user name, timezone, communication style
+        "events",        # user requests, feedback
+        "discoveries",   # patterns in user preferences
+    ],
+    "wing_agents": [
+        "facts",         # which agents exist, roles, capabilities
+        "events",        # subtask outcomes, what each agent built
+        "discoveries",   # what worked, what didn't
+    ],
+    "wing_assets": [
+        "facts",         # dashboard URLs, GitHub repos, API keys, Stripe config
+        "events",        # deployments, URL changes
+        "discoveries",   # infrastructure insights
     ],
 }
 
@@ -145,6 +172,26 @@ HALL_STRATEGY: Dict[str, Dict[str, str]] = {
     "wing_agent/tasks":            "hall_events",
     "wing_agent/lessons":          "hall_advice",
     "wing_agent/knowledge":        "hall_facts",
+    # wing_project
+    "wing_project/facts":          "hall_facts",
+    "wing_project/events":         "hall_events",
+    "wing_project/discoveries":    "hall_discoveries",
+    # wing_dev (Scoopy additions)
+    "wing_dev/facts":              "hall_facts",
+    "wing_dev/events":             "hall_events",
+    "wing_dev/discoveries":        "hall_discoveries",
+    # wing_user
+    "wing_user/facts":             "hall_facts",
+    "wing_user/events":            "hall_events",
+    "wing_user/discoveries":       "hall_discoveries",
+    # wing_agents
+    "wing_agents/facts":           "hall_facts",
+    "wing_agents/events":          "hall_events",
+    "wing_agents/discoveries":     "hall_discoveries",
+    # wing_assets
+    "wing_assets/facts":           "hall_facts",
+    "wing_assets/events":          "hall_events",
+    "wing_assets/discoveries":     "hall_discoveries",
 }
 
 # ---------------------------------------------------------------------------
@@ -161,6 +208,10 @@ DEFAULT_RETENTION_DAYS: Dict[str, int] = {
     "wing_system":   180,
     "wing_dev":      -1,   # architecture knowledge is permanent
     "wing_agent":    180,
+    "wing_project":  -1,   # project knowledge is permanent
+    "wing_user":     -1,   # user knowledge is permanent
+    "wing_agents":   -1,   # agent knowledge is permanent
+    "wing_assets":   -1,   # asset knowledge is permanent
 }
 
 # Rooms that are never pruned regardless of wing retention
