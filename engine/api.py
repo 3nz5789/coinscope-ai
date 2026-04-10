@@ -16,14 +16,13 @@ import sys
 import os
 import time
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from storage.trade_journal import TradeJournal
-from alerts.scale_up_manager import ScaleUpManager
+from engine.integrations.trade_journal import TradeJournal
+from engine.core.scale_up_manager import ScaleUpManager
 
 app = FastAPI(title="CoinScopeAI Engine API", version="1.0.0")
 
@@ -53,7 +52,7 @@ async def scan(
 ):
     """Trigger live market scan. Returns signals for all requested pairs."""
     try:
-        from live.master_orchestrator import CoinScopeOrchestrator
+        from engine.core.master_orchestrator import CoinScopeOrchestrator
 
         pair_list = [p.strip() for p in pairs.split(",")]
         # BUG-3 FIX: pass pairs via constructor so run_scan() uses self.pairs
@@ -102,7 +101,7 @@ async def get_regime(symbol: str):
         import pandas as pd
         import numpy as np
 
-        from intelligence.hmm_regime_detector import EnsembleRegimeDetector
+        from risk_management.hmm_regime_detector import EnsembleRegimeDetector
 
         exchange = ccxt.binance({"enableRateLimit": True})
         sym = symbol.upper().replace("-", "/")

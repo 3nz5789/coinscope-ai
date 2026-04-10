@@ -3,27 +3,29 @@
 from .models import (
     Exchange,
     Side,
-    ConnectionState,
-    MarkPrice,
-    OrderBook,
+    L2OrderBook,
     OrderBookLevel,
     Trade,
     FundingRate,
     OpenInterest,
+    ConnectionState,
+    MarkPrice,
     Ticker,
     ConnectionMetrics,
-    ScanSignal,
     EventType,
     MarketEvent,
+    ScanSignal,
+    OrderBook,
 )
 from .base import BaseExchangeClient, EventBus, RateLimiter
 from .aggregator import Aggregator
 
 __all__ = [
-    "Exchange", "Side", "ConnectionState",
-    "MarkPrice", "OrderBook", "OrderBookLevel", "Trade",
-    "FundingRate", "OpenInterest", "Ticker",
-    "ConnectionMetrics", "ScanSignal", "EventType", "MarketEvent",
+    "Exchange", "Side",
+    "L2OrderBook", "OrderBook", "OrderBookLevel", "Trade",
+    "FundingRate", "OpenInterest",
+    "ConnectionState", "MarkPrice", "Ticker", "ConnectionMetrics",
+    "EventType", "MarketEvent", "ScanSignal",
     "BaseExchangeClient", "EventBus", "RateLimiter",
     "Aggregator",
 ]

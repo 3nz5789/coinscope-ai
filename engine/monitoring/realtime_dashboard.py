@@ -5,18 +5,15 @@ Displays live trading status, performance metrics, and alerts.
 """
 
 import os
-import sys
 import json
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
 import logging
 
-# Add parent directory to path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from storage.trade_journal import TradeJournal
-from monitoring.pair_monitor import PairMonitor
+from engine.integrations.trade_journal import TradeJournal
+from engine.core.pair_monitor import PairMonitor
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("Dashboard")

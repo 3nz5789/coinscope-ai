@@ -347,3 +347,79 @@ class AlphaGeneratorConfig:
     min_data_points: int = 5
     decay_factor: float = 0.94  # exponential decay for weighting
     extra: Dict[str, Any] = field(default_factory=dict)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Backwards-compatibility stubs
+# (classes that were removed/renamed but are still referenced by tests/imports)
+# ─────────────────────────────────────────────────────────────────────────────
+import enum as _enum_bc
+
+
+class ConnectionState(_enum_bc.Enum):
+    DISCONNECTED = "disconnected"
+    CONNECTING = "connecting"
+    CONNECTED = "connected"
+    RECONNECTING = "reconnecting"
+
+
+@dataclass
+class MarkPrice:
+    symbol: str
+    price: float
+    timestamp: float = 0.0
+    exchange: "Exchange" = None
+
+
+@dataclass
+class Ticker:
+    symbol: str
+    bid: float = 0.0
+    ask: float = 0.0
+    last: float = 0.0
+    volume: float = 0.0
+    timestamp: float = 0.0
+    exchange: "Exchange" = None
+
+
+@dataclass
+class ConnectionMetrics:
+    exchange: "Exchange" = None
+    connected: bool = False
+    latency_ms: float = 0.0
+    messages_received: int = 0
+    errors: int = 0
+    reconnect_count: int = 0
+
+
+class EventType(_enum_bc.Enum):
+    TRADE = "trade"
+    ORDER_BOOK = "order_book"
+    MARK_PRICE = "mark_price"
+    TICKER = "ticker"
+    FUNDING_RATE = "funding_rate"
+    OPEN_INTEREST = "open_interest"
+    LIQUIDATION = "liquidation"
+
+
+@dataclass
+class MarketEvent:
+    event_type: "EventType" = None
+    exchange: "Exchange" = None
+    symbol: str = ""
+    data: Any = None
+    timestamp: float = 0.0
+
+
+@dataclass
+class ScanSignal:
+    symbol: str = ""
+    signal: str = "NEUTRAL"
+    score: float = 0.0
+    regime: str = ""
+    timestamp: float = 0.0
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+
+# Alias: L2OrderBook was previously named OrderBook
+OrderBook = L2OrderBook
