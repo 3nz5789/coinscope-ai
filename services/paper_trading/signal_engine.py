@@ -348,17 +348,17 @@ class MLSignalEngine:
         """
         if self._feature_engine is None:
             try:
-                from ai.features.engine_v3 import V3FeatureEngine
+                from ml_models.training.features.engine_v3 import V3FeatureEngine
                 self._feature_engine = V3FeatureEngine()
                 logger.info("Using V3FeatureEngine (Phase 2 alpha) for feature extraction")
             except ImportError:
                 try:
-                    from ai.features.engine_v2 import LongTFFeatureEngine
+                    from ml_models.training.features.engine_v2 import LongTFFeatureEngine
                     self._feature_engine = LongTFFeatureEngine()
                     logger.info("Using LongTFFeatureEngine (v2) for feature extraction")
                 except ImportError:
                     try:
-                        from ai.features.engine import FeatureEngine
+                        from ml_models.training.features.engine import FeatureEngine
                         self._feature_engine = FeatureEngine()
                         logger.warning(
                             "V3/V2 engines not available, falling back to FeatureEngine (v1). "
