@@ -377,3 +377,6 @@ if __name__ == "__main__":
         data_dir=args.data_dir,
         exchanges=args.exchanges,
     )
+
+# Backwards-compatibility alias
+StreamRecorder = RecordingDaemon

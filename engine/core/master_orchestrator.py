@@ -11,23 +11,20 @@ Coordinates:
 """
 
 import os
-import sys
 import time
 import ccxt
 import pandas as pd
 import numpy as np
 from datetime import datetime
 
-# Adjust sys.path for module imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from core.scoring_fixed import FixedScorer
-from core.risk_gate import RiskGate
-from core.multi_timeframe_filter import MultiTimeframeFilter
-from intelligence.hmm_regime_detector import EnsembleRegimeDetector
-from intelligence.kelly_position_sizer import KellyRiskController
-from intelligence.finbert_sentiment_filter import MockSentimentFilter
-from intelligence.whale_signal_filter import WhaleSignalFilter
+from engine.signals.scoring_fixed import FixedScorer
+from risk_management.risk_gate import RiskGate
+from engine.signals.multi_timeframe_filter import MultiTimeframeFilter
+from risk_management.hmm_regime_detector import EnsembleRegimeDetector
+from risk_management.kelly_position_sizer import KellyRiskController
+from engine.signals.finbert_sentiment_filter import MockSentimentFilter
+from engine.signals.whale_signal_filter import WhaleSignalFilter
 
 PAIRS = ["BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT", "TAO/USDT"]
 TIMEFRAME = "4h"

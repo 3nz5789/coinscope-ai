@@ -5,17 +5,14 @@ Automatically exports trading data to Notion-compatible JSON
 """
 
 import os
-import sys
 import time
 from datetime import datetime
 import logging
 
-# Adjust sys.path for module imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from live.master_orchestrator import CoinScopeOrchestrator
-from integrations.notion_simple_integration import SimpleNotionIntegration
-from storage.trade_journal import TradeJournal
+from engine.core.master_orchestrator import CoinScopeOrchestrator
+from engine.integrations.notion_simple_integration import SimpleNotionIntegration
+from engine.integrations.trade_journal import TradeJournal
 
 logging.basicConfig(
     level=logging.INFO,
