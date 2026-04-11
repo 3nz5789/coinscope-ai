@@ -48,6 +48,7 @@ from .alerting import TelegramAlerter
 from .config import PaperTradingConfig, TradingConfig
 from .exchange_client import BinanceFuturesTestnetClient, ExchangeError
 from .order_manager import ManagedOrder, OrderManager
+from .maker_execution import MakerExecutor, MakerExecutionResult
 from .safety import KillSwitch, SafetyGate
 from .signal_engine import MLSignalEngine, TradingSignal
 from .ws_client import BinanceFuturesWebSocket, KlineEvent
@@ -227,6 +228,10 @@ class PaperTradingEngineV2:
         self._safety = SafetyGate(self._config.trading, self._kill_switch)
         self._order_manager = OrderManager(
             self._exchange, self._safety, self._config.trading,
+        )
+        self._maker_executor = MakerExecutor(
+            order_manager=self._order_manager,
+            exchange=self._exchange,
         )
         self._signal_engine = MLSignalEngine(
             min_confidence=self._config.trading.min_confidence,
@@ -690,13 +695,24 @@ class PaperTradingEngineV2:
             return
 
         # ── Submit order (through safety gate) ────────────────
-        success, order = self._order_manager.submit_order(**order_params)
-
-        if success:
+        exec_result = self._maker_executor.execute(
+            symbol=order_params["symbol"],
+            side=order_params["side"],
+            quantity=order_params["quantity"],
+            leverage=order_params["leverage"],
+            stop_loss=order_params["stop_loss"],
+            take_profit=order_params["take_profit"],
+            signal_confidence=order_params["signal_confidence"],
+            signal_edge=order_params["signal_edge"],
+        )
+        if exec_result.success:
             self._alerter.order_submitted({
-                **order.to_dict(),
+                **(exec_result.order.to_dict() if exec_result.order else {}),
                 "alpha_context": alpha_ctx,
                 "regime": signal_obj.regime,
+                "execution_strategy": exec_result.strategy.value,
+                "slippage_saved_bps": exec_result.slippage_saved_bps,
+                "fill_latency_ms": exec_result.fill_latency_ms,
             })
 
     def _handle_fill(self, order: ManagedOrder):
@@ -923,6 +939,7 @@ class PaperTradingEngineV2:
             "active_alphas": self._alpha_ctx.get_all(),
             "spreads": self._spread_tracker.get_all(),
             "eventbus": self._bus.get_stats() if self._bus else {},
+            "maker_stats": self._maker_executor.stats,
         })
 
     def _send_daily_summary(self):
@@ -946,6 +963,7 @@ class PaperTradingEngineV2:
             "alpha_signals_received": self._alpha_signals_received,
             "regime_updates_received": self._regime_updates_received,
             "kill_switch": self._kill_switch.is_active,
+            "maker_stats": self._maker_executor.stats,
         })
 
     def _save_state(self):
@@ -993,4 +1011,5 @@ class PaperTradingEngineV2:
                 "spreads": self._spread_tracker.get_all(),
                 "bus_stats": self._bus.get_stats() if self._bus else {},
             },
+            "maker_stats": self._maker_executor.stats,
         }
