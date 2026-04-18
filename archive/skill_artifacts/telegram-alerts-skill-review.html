@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eval Review</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600&family=Lora:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" integrity="sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT" crossorigin="anonymous"></script>
+  <style>
+    :root {
+      --bg: #faf9f5;
+      --surface: #ffffff;
+      --border: #e8e6dc;
+      --text: #141413;
+      --text-muted: #b0aea5;
+      --accent: #d97757;
+      --accent-hover: #c4613f;
+      --green: #788c5d;
+      --green-bg: #eef2e8;
+      --red: #c44;
+      --red-bg: #fceaea;
+      --header-bg: #141413;
+      --header-text: #faf9f5;
+      --radius: 6px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Lora', Georgia, serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ---- Header ---- */
+    .header {
+      background: var(--header-bg);
+      color: var(--header-text);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .header h1 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+    .header .instructions {
+      font-size: 0.8rem;
+      opacity: 0.7;
+      margin-top: 0.25rem;
+    }
+    .header .progress {
+      font-size: 0.875rem;
+      opacity: 0.8;
+      text-align: right;
+    }
+
+    /* ---- Main content ---- */
+    .main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    /* ---- Sections ---- */
+    .section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      flex-shrink: 0;
+    }
+    .section-header {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.75rem 1rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .section-body {
+      padding: 1rem;
+    }
+
+    /* ---- Config badge ---- */
+    .config-badge {
+      display: inline-block;
+      padding: 0.2rem 0.625rem;
+      border-radius: 9999px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-left: 0.75rem;
+      vertical-align: middle;
+    }
+    .config-badge.config-primary {
+      background: rgba(33, 150, 243, 0.12);
+      color: #1976d2;
+    }
+    .config-badge.config-baseline {
+      background: rgba(255, 193, 7, 0.15);
+      color: #f57f17;
+    }
+
+    /* ---- Prompt ---- */
+    .prompt-text {
+      white-space: pre-wrap;
+      font-size: 0.9375rem;
+      line-height: 1.6;
+    }
+
+    /* ---- Outputs ---- */
+    .output-file {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .output-file + .output-file {
+      margin-top: 1rem;
+    }
+    .output-file-header {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .output-file-header .dl-btn {
+      font-size: 0.7rem;
+      color: var(--accent);
+      text-decoration: none;
+      cursor: pointer;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-weight: 500;
+      opacity: 0.8;
+    }
+    .output-file-header .dl-btn:hover {
+      opacity: 1;
+      text-decoration: underline;
+    }
+    .output-file-content {
+      padding: 0.75rem;
+      overflow-x: auto;
+    }
+    .output-file-content pre {
+      font-size: 0.8125rem;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+    }
+    .output-file-content img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 4px;
+    }
+    .output-file-content iframe {
+      width: 100%;
+      height: 600px;
+      border: none;
+    }
+    .output-file-content table {
+      border-collapse: collapse;
+      font-size: 0.8125rem;
+      width: 100%;
+    }
+    .output-file-content table td,
+    .output-file-content table th {
+      border: 1px solid var(--border);
+      padding: 0.375rem 0.5rem;
+      text-align: left;
+    }
+    .output-file-content table th {
+      background: var(--bg);
+      font-weight: 600;
+    }
+    .output-file-content .download-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.875rem;
+      cursor: pointer;
+    }
+    .output-file-content .download-link:hover {
+      background: var(--border);
+    }
+    .empty-state {
+      color: var(--text-muted);
+      font-style: italic;
+      padding: 2rem;
+      text-align: center;
+    }
+
+    /* ---- Feedback ---- */
+    .prev-feedback {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.625rem 0.75rem;
+      margin-top: 0.75rem;
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .prev-feedback-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.25rem;
+      color: var(--text-muted);
+    }
+    .feedback-textarea {
+      width: 100%;
+      min-height: 100px;
+      padding: 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 0.9375rem;
+      line-height: 1.5;
+      resize: vertical;
+      color: var(--text);
+    }
+    .feedback-textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+    .feedback-status {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+      min-height: 1.1em;
+    }
+
+    /* ---- Grades (collapsible) ---- */
+    .grades-toggle {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+    .grades-toggle:hover {
+      color: var(--accent);
+    }
+    .grades-toggle .arrow {
+      margin-right: 0.5rem;
+      transition: transform 0.15s;
+      font-size: 0.75rem;
+    }
+    .grades-toggle .arrow.open {
+      transform: rotate(90deg);
+    }
+    .grades-content {
+      display: none;
+      margin-top: 0.75rem;
+    }
+    .grades-content.open {
+      display: block;
+    }
+    .grades-summary {
+      font-size: 0.875rem;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .grade-badge {
+      display: inline-block;
+      padding: 0.125rem 0.5rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .grade-pass { background: var(--green-bg); color: var(--green); }
+    .grade-fail { background: var(--red-bg); color: var(--red); }
+    .assertion-list {
+      list-style: none;
+    }
+    .assertion-item {
+      padding: 0.625rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.8125rem;
+    }
+    .assertion-item:last-child { border-bottom: none; }
+    .assertion-status {
+      font-weight: 600;
+      margin-right: 0.5rem;
+    }
+    .assertion-status.pass { color: var(--green); }
+    .assertion-status.fail { color: var(--red); }
+    .assertion-evidence {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      margin-top: 0.25rem;
+      padding-left: 1.5rem;
+    }
+
+    /* ---- View tabs ---- */
+    .view-tabs {
+      display: flex;
+      gap: 0;
+      padding: 0 2rem;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .view-tab {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.625rem 1.25rem;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      background: none;
+      color: var(--text-muted);
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+    }
+    .view-tab:hover { color: var(--text); }
+    .view-tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+    .view-panel { display: none; }
+    .view-panel.active { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+
+    /* ---- Benchmark view ---- */
+    .benchmark-view {
+      padding: 1.5rem 2rem;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .benchmark-table {
+      border-collapse: collapse;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 0.8125rem;
+      width: 100%;
+      margin-bottom: 1.5rem;
+    }
+    .benchmark-table th, .benchmark-table td {
+      padding: 0.625rem 0.75rem;
+      text-align: left;
+      border: 1px solid var(--border);
+    }
+    .benchmark-table th {
+      font-family: 'Poppins', sans-serif;
+      background: var(--header-bg);
+      color: var(--header-text);
+      font-weight: 500;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .benchmark-table tr:hover { background: var(--bg); }
+    .benchmark-table tr.benchmark-row-with { background: rgba(33, 150, 243, 0.06); }
+    .benchmark-table tr.benchmark-row-without { background: rgba(255, 193, 7, 0.06); }
+    .benchmark-table tr.benchmark-row-with:hover { background: rgba(33, 150, 243, 0.12); }
+    .benchmark-table tr.benchmark-row-without:hover { background: rgba(255, 193, 7, 0.12); }
+    .benchmark-table tr.benchmark-row-avg { font-weight: 600; border-top: 2px solid var(--border); }
+    .benchmark-table tr.benchmark-row-avg.benchmark-row-with { background: rgba(33, 150, 243, 0.12); }
+    .benchmark-table tr.benchmark-row-avg.benchmark-row-without { background: rgba(255, 193, 7, 0.12); }
+    .benchmark-delta-positive { color: var(--green); font-weight: 600; }
+    .benchmark-delta-negative { color: var(--red); font-weight: 600; }
+    .benchmark-notes {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+    }
+    .benchmark-notes h3 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.875rem;
+      margin-bottom: 0.75rem;
+    }
+    .benchmark-notes ul {
+      list-style: disc;
+      padding-left: 1.25rem;
+    }
+    .benchmark-notes li {
+      font-size: 0.8125rem;
+      line-height: 1.6;
+      margin-bottom: 0.375rem;
+    }
+    .benchmark-empty {
+      color: var(--text-muted);
+      font-style: italic;
+      text-align: center;
+      padding: 3rem;
+    }
+
+    /* ---- Navigation ---- */
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      flex-shrink: 0;
+    }
+    .nav-btn {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.5rem 1.25rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text);
+      transition: all 0.15s;
+    }
+    .nav-btn:hover:not(:disabled) {
+      background: var(--bg);
+      border-color: var(--text-muted);
+    }
+    .nav-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .done-btn {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.5rem 1.5rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+    .done-btn:hover {
+      background: var(--bg);
+      border-color: var(--text-muted);
+    }
+    .done-btn.ready {
+      border: none;
+      background: var(--accent);
+      color: white;
+      font-weight: 600;
+    }
+    .done-btn.ready:hover {
+      background: var(--accent-hover);
+    }
+    /* ---- Done overlay ---- */
+    .done-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 100;
+      justify-content: center;
+      align-items: center;
+    }
+    .done-overlay.visible {
+      display: flex;
+    }
+    .done-card {
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 2rem 3rem;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 500px;
+    }
+    .done-card h2 {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .done-card p {
+      color: var(--text-muted);
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+    .done-card .btn-row {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+    }
+    .done-card button {
+      padding: 0.5rem 1.25rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      cursor: pointer;
+      font-size: 0.875rem;
+    }
+    .done-card button:hover {
+      background: var(--bg);
+    }
+    /* ---- Toast ---- */
+    .toast {
+      position: fixed;
+      bottom: 5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--header-bg);
+      color: var(--header-text);
+      padding: 0.625rem 1.25rem;
+      border-radius: var(--radius);
+      font-size: 0.875rem;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+      z-index: 200;
+    }
+    .toast.visible {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <div id="app" style="height:100vh; display:flex; flex-direction:column;">
+    <div class="header">
+      <div>
+        <h1>Eval Review: <span id="skill-name"></span></h1>
+        <div class="instructions">Review each output and leave feedback below. Navigate with arrow keys or buttons. When done, copy feedback and paste into Claude Code.</div>
+      </div>
+      <div class="progress" id="progress"></div>
+    </div>
+
+    <!-- View tabs (only shown when benchmark data exists) -->
+    <div class="view-tabs" id="view-tabs" style="display:none;">
+      <button class="view-tab active" onclick="switchView('outputs')">Outputs</button>
+      <button class="view-tab" onclick="switchView('benchmark')">Benchmark</button>
+    </div>
+
+    <!-- Outputs panel (qualitative review) -->
+    <div class="view-panel active" id="panel-outputs">
+    <div class="main">
+      <!-- Prompt -->
+      <div class="section">
+        <div class="section-header">Prompt <span class="config-badge" id="config-badge" style="display:none;"></span></div>
+        <div class="section-body">
+          <div class="prompt-text" id="prompt-text"></div>
+        </div>
+      </div>
+
+      <!-- Outputs -->
+      <div class="section">
+        <div class="section-header">Output</div>
+        <div class="section-body" id="outputs-body">
+          <div class="empty-state">No output files found</div>
+        </div>
+      </div>
+
+      <!-- Previous Output (collapsible) -->
+      <div class="section" id="prev-outputs-section" style="display:none;">
+        <div class="section-header">
+          <div class="grades-toggle" onclick="togglePrevOutputs()">
+            <span class="arrow" id="prev-outputs-arrow">&#9654;</span>
+            Previous Output
+          </div>
+        </div>
+        <div class="grades-content" id="prev-outputs-content"></div>
+      </div>
+
+      <!-- Grades (collapsible) -->
+      <div class="section" id="grades-section" style="display:none;">
+        <div class="section-header">
+          <div class="grades-toggle" onclick="toggleGrades()">
+            <span class="arrow" id="grades-arrow">&#9654;</span>
+            Formal Grades
+          </div>
+        </div>
+        <div class="grades-content" id="grades-content"></div>
+      </div>
+
+      <!-- Feedback -->
+      <div class="section">
+        <div class="section-header">Your Feedback</div>
+        <div class="section-body">
+          <textarea
+            class="feedback-textarea"
+            id="feedback"
+            placeholder="What do you think of this output? Any issues, suggestions, or things that look great?"
+          ></textarea>
+          <div class="feedback-status" id="feedback-status"></div>
+          <div class="prev-feedback" id="prev-feedback" style="display:none;">
+            <div class="prev-feedback-label">Previous feedback</div>
+            <div id="prev-feedback-text"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav" id="outputs-nav">
+      <button class="nav-btn" id="prev-btn" onclick="navigate(-1)">&#8592; Previous</button>
+      <button class="done-btn" id="done-btn" onclick="showDoneDialog()">Submit All Reviews</button>
+      <button class="nav-btn" id="next-btn" onclick="navigate(1)">Next &#8594;</button>
+    </div>
+    </div><!-- end panel-outputs -->
+
+    <!-- Benchmark panel (quantitative stats) -->
+    <div class="view-panel" id="panel-benchmark">
+      <div class="benchmark-view" id="benchmark-content">
+        <div class="benchmark-empty">No benchmark data available. Run a benchmark to see quantitative results here.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Done overlay -->
+  <div class="done-overlay" id="done-overlay">
+    <div class="done-card">
+      <h2>Review Complete</h2>
+      <p>Your feedback has been saved. Go back to your Claude Code session and tell Claude you're done reviewing.</p>
+      <div class="btn-row">
+        <button onclick="closeDoneDialog()">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ---- Embedded data (injected by generate_review.py) ----
+    const EMBEDDED_DATA = {"skill_name": "telegram-trading-alerts", "runs": [{"id": "eval-1-with_skill", "prompt": "I'm building a Telegram bot that monitors Binance USDT perpetuals and sends alerts when there's a large liquidation cascade. My current code listens to the forceOrder WebSocket stream and sends a Telegram message for every single event. In my test group I'm seeing messages flood in during volatile periods and Telegram starts throwing errors. What's the right architecture here \u2014 should I be batching, filtering, debouncing? How do I handle the Telegram rate limit errors properly without dropping important alerts?", "eval_id": 1, "outputs": [{"name": "response.md", "type": "text", "content": "# Telegram Liquidation Alert Bot: Rate Limiting & Architecture\n\nYour instinct is correct \u2014 **blasting one message per WebSocket event to a group will always hit Telegram's rate limits**. The problem isn't your logic; it's your architecture. Here's how to fix it.\n\n## The Immediate Problem\n\nTelegram enforces **1 message/second per chat (strict)**. During volatile markets, the `forceOrder` stream fires liquidations at 10\u2013100+ per second. You can't send that many messages to a group without hitting `RetryAfter` errors. The framework doesn't drop these automatically; it throws an exception and your bot either crashes or retries blindly, both bad.\n\n## The Right Architecture: Priority Queue + Per-Chat Dispatcher\n\nReplace your single message-per-event pattern with this:\n\n```\n\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502  forceOrder Stream    \u2502  raw liquidation events\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n          \u2502 put(priority=0)\n          \u25bc\n\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502  asyncio.PriorityQueue   \u2502  HIGH: cascades (multi-liq in <1s)\n\u2502  + overflow detection    \u2502  MED: single liquidations\n\u2502                          \u2502  LOW: status updates\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n          \u2502 get()\n          \u25bc\n\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502  Dispatcher (per-chat)\u2502  respects 1msg/sec limit\n\u2502  + RetryAfter handler \u2502  honors retry_after exactly\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n          \u2502\n          \u25bc\n\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502  Telegram Bot API     \u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n```\n\n### Implementation: Async Pipeline\n\n```python\nimport asyncio\nimport logging\nfrom datetime import datetime, timedelta\nfrom typing import Optional, Dict\nfrom telegram import Bot\nfrom telegram.error import RetryAfter\n\nlogger = logging.getLogger(__name__)\n\nclass AlertDispatcher:\n    \"\"\"One instance per chat. Enforces 1 msg/sec limit with RetryAfter handling.\"\"\"\n\n    def __init__(self, bot: Bot, chat_id: int, ops_chat_id: int):\n        self.bot = bot\n        self.chat_id = chat_id\n        self.ops_chat_id = ops_chat_id\n        self.queue = asyncio.PriorityQueue()\n        self.last_sent_time = 0\n        self.running = True\n\n        # Metrics for observability\n        self.sent_count = 0\n        self.dropped_count = 0\n        self.retry_count = 0\n        self.peak_queue_size = 0\n\n    async def enqueue(self, text: str, priority: int = 1, timestamp: Optional[float] = None):\n        \"\"\"\n        Put an alert in the queue.\n\n        priority:\n          0 = HIGH (liquidation cascade)\n          1 = MED (single liquidation)\n          2 = LOW (periodic status)\n        \"\"\"\n        if timestamp is None:\n            timestamp = datetime.utcnow().timestamp()\n\n        try:\n            # Queue size enforcement: drop LOW priority on overflow\n            if self.queue.qsize() > 100:\n                if priority >= 2:  # LOW\n                    logger.warning(f\"Queue full ({self.queue.qsize()}), dropping LOW priority alert\")\n                    self.dropped_count += 1\n                    return\n\n            await self.queue.put((priority, timestamp, text))\n\n            # Track peak\n            current_size = self.queue.qsize()\n            if current_size > self.peak_queue_size:\n                self.peak_queue_size = current_size\n                if current_size > 50:\n                    logger.warning(f\"Queue depth: {current_size}\")\n        except Exception as e:\n            logger.error(f\"Failed to enqueue alert: {e}\")\n\n    async def dispatch_worker(self):\n        \"\"\"\n        Main dispatcher loop: pull from queue and send, respecting rate limits.\n        Never drops messages silently.\n        \"\"\"\n        while self.running:\n            try:\n                # Get next message (blocks until available)\n                priority, timestamp, text = await self.queue.get()\n\n                # Rate limit: 1 message per second\n                elapsed = datetime.utcnow().timestamp() - self.last_sent_time\n                if elapsed < 1.0:\n                    await asyncio.sleep(1.0 - elapsed)\n\n                # Send with retry logic\n                await self._send_with_retry(text, max_retries=3)\n\n                self.last_sent_time = datetime.utcnow().timestamp()\n                self.sent_count += 1\n\n                self.queue.task_done()\n\n            except asyncio.CancelledError:\n                logger.info(\"Dispatcher cancelled\")\n                break\n            except Exception as e:\n                logger.error(f\"Dispatcher error: {e}\", exc_info=True)\n                await asyncio.sleep(1)\n\n    async def _send_with_retry(self, text: str, max_retries: int = 3):\n        \"\"\"Send message with RetryAfter handling.\"\"\"\n        for attempt in range(max_retries):\n            try:\n                await self.bot.send_message(\n                    chat_id=self.chat_id,\n                    text=text,\n                    parse_mode=\"HTML\"\n                )\n                return  # Success\n\n            except RetryAfter as e:\n                # Telegram said \"wait N seconds before retrying\"\n                wait_seconds = e.retry_after\n                logger.warning(\n                    f\"RetryAfter: sleeping {wait_seconds}s \"\n                    f\"(attempt {attempt + 1}/{max_retries})\"\n                )\n                self.retry_count += 1\n\n                # Honor the exact value Telegram gave us\n                await asyncio.sleep(wait_seconds)\n                # Continue to next iteration of loop for retry\n\n            except Exception as e:\n                logger.error(f\"Send failed: {type(e).__name__}: {e}\")\n                if attempt < max_retries - 1:\n                    # Exponential backoff for other errors\n                    backoff = 2 ** attempt\n                    logger.info(f\"Retrying in {backoff}s\")\n                    await asyncio.sleep(backoff)\n                else:\n                    # Last attempt failed \u2014 alert ops\n                    await self._send_error_notification(\n                        f\"Failed to send alert after {max_retries} attempts: {e}\"\n                    )\n                    raise\n\n    async def _send_error_notification(self, message: str):\n        \"\"\"Send error to ops chat (doesn't respect message limit).\"\"\"\n        try:\n            await self.bot.send_message(\n                chat_id=self.ops_chat_id,\n                text=f\"<b>Alert delivery error:</b>\\n{message}\",\n                parse_mode=\"HTML\"\n            )\n        except Exception as e:\n            logger.critical(f\"Failed to notify ops: {e}\")\n\n    async def status(self) -> Dict:\n        \"\"\"Return metrics for /status command.\"\"\"\n        return {\n            \"queue_depth\": self.queue.qsize(),\n            \"peak_queue_size\": self.peak_queue_size,\n            \"sent\": self.sent_count,\n            \"dropped\": self.dropped_count,\n            \"retries\": self.retry_count,\n        }\n\n\nclass LiquidationMonitor:\n    \"\"\"Listens to forceOrder stream and decides what gets queued.\"\"\"\n\n    def __init__(self, dispatcher: AlertDispatcher):\n        self.dispatcher = dispatcher\n        self.liquidations_window = []  # Track liquidations in last N seconds\n        self.window_seconds = 2\n\n        # Cooldown tracking to avoid duplicate alerts for same symbol\n        self.cooldowns: Dict[str, float] = {}\n        self.cooldown_seconds = 5\n\n    async def on_force_order(self, event: Dict):\n        \"\"\"\n        Called by WebSocket handler on each forceOrder event.\n        Decides: should this trigger an alert? At what priority?\n        \"\"\"\n        symbol = event.get(\"s\", \"UNKNOWN\")\n        side = event.get(\"S\", \"UNKNOWN\")\n        price = float(event.get(\"p\", 0))\n        quantity = float(event.get(\"q\", 0))\n\n        # Rough USD value (assumes quantity is in coins, price in USDT)\n        usd_value = price * quantity\n\n        # Simple cascade detection: count liquidations in last 2 seconds\n        now = datetime.utcnow().timestamp()\n\n        # Trim old events from window\n        self.liquidations_window = [\n            ts for ts in self.liquidations_window\n            if now - ts < self.window_seconds\n        ]\n\n        self.liquidations_window.append(now)\n\n        # Decide priority\n        if len(self.liquidations_window) >= 5:\n            # Cascade: 5+ liquidations in 2 seconds\n            priority = 0  # HIGH\n            alert_text = (\n                f\"<b>LIQUIDATION CASCADE</b>\\n\"\n                f\"{symbol} {side}\\n\"\n                f\"${usd_value:,.0f} | \"\n                f\"{len(self.liquidations_window)} liq in {self.window_seconds}s\"\n            )\n        else:\n            # Single liquidation, check cooldown\n            last_alert_time = self.cooldowns.get(symbol, 0)\n            if now - last_alert_time < self.cooldown_seconds:\n                # Cooldown active \u2014 skip this one\n                return\n\n            self.cooldowns[symbol] = now\n\n            if usd_value > 100_000:\n                priority = 1  # MED\n            else:\n                priority = 2  # LOW\n\n            alert_text = f\"{symbol} {side} ${usd_value:,.0f}\"\n\n        await self.dispatcher.enqueue(alert_text, priority=priority)\n\n\n# Main setup\nasync def run_bot():\n    from telegram.ext import Application\n\n    token = os.getenv(\"TELEGRAM_BOT_TOKEN\")\n    trading_chat_id = int(os.getenv(\"TRADING_CHAT_ID\"))\n    ops_chat_id = int(os.getenv(\"OPS_CHAT_ID\"))\n\n    application = Application.builder().token(token).build()\n    bot = application.bot\n\n    # One dispatcher per chat\n    dispatcher = AlertDispatcher(bot, trading_chat_id, ops_chat_id)\n    monitor = LiquidationMonitor(dispatcher)\n\n    # Start the dispatcher worker\n    dispatcher_task = asyncio.create_task(dispatcher.dispatch_worker())\n\n    # Start WebSocket listener (your own code)\n    ws_task = asyncio.create_task(listen_binance_forceorder(monitor.on_force_order))\n\n    # Add /status command handler\n    async def status_command(update, context):\n        metrics = await dispatcher.status()\n        msg = (\n            f\"<b>Alert System Status</b>\\n\"\n            f\"Queue: {metrics['queue_depth']} (peak: {metrics['peak_queue_size']})\\n\"\n            f\"Sent: {metrics['sent']}\\n\"\n            f\"Dropped: {metrics['dropped']}\\n\"\n            f\"Retries: {metrics['retries']}\"\n        )\n        await context.bot.send_message(chat_id=update.effective_chat.id, text=msg, parse_mode=\"HTML\")\n\n    application.add_handler(CommandHandler(\"status\", status_command))\n\n    # Run until interrupted\n    async with application:\n        await application.initialize()\n        await application.start()\n        try:\n            await asyncio.gather(dispatcher_task, ws_task)\n        finally:\n            await application.stop()\n```\n\n## Key Design Decisions Explained\n\n### 1. **Per-Chat Rate Limiter**\n- Each chat gets its own dispatcher with independent rate tracking.\n- You track `last_sent_time` locally; no locks needed.\n- Scales cleanly to multiple groups.\n\n### 2. **Priority Queue**\n- HIGH (0): liquidation cascades \u2014 these jump the queue and get sent immediately (within rate limit).\n- MED (1): single liquidations above a threshold.\n- LOW (2): status updates, periodic signals.\n- Equal-priority messages are FIFO by timestamp.\n\n### 3. **RetryAfter Handling (Critical)**\n- Telegram's `RetryAfter` exception includes `retry_after`, the exact number of seconds to wait.\n- **Do not use a fixed sleep.** Honor the value exactly.\n- Retry immediately after the wait; never drop the message.\n- Log every `RetryAfter` so you can see patterns (e.g., \"we hit the limit 10 times in 5 minutes\").\n\n### 4. **Cascade Detection**\n- Track liquidations in a rolling 2\u2013second window.\n- If you see 5+ liquidations in 2 seconds, that's a cascade \u2014 priority 0.\n- This prevents flooding: instead of 10 separate messages, you send one aggregated message.\n\n### 5. **Cooldown Per Symbol**\n- After alerting on `BTCUSDT`, don't alert again for 5 seconds.\n- Prevents redundant messages during volatile conditions.\n- Adjust the window based on your alert frequency preferences.\n\n### 6. **Graceful Overflow**\n- Queue size limit: 100 pending messages.\n- If the queue fills, drop LOW priority alerts only (not HIGH).\n- Log the drop so you know it happened.\n- Adjust the limit based on your tolerance; 100 is conservative.\n\n## What to Do With Telegram API Errors\n\n| Error | What it means | Fix |\n|-------|---------------|-----|\n| `RetryAfter` | Rate limited. Telegram says \"wait N seconds\". | Sleep for exactly `retry_after` seconds, then retry. Never drop. |\n| `Forbidden` / `ChatNotFound` | Chat was deleted, or bot was removed. | Remove that chat from your dispatcher map. Alert ops. Don't retry. |\n| `BadRequest` | Message formatting issue (invalid parse_mode, bad HTML). | Fix the message template. Log the raw text so you can debug. |\n| `NetworkError` / timeout | Network glitch. | Retry with exponential backoff (1s, 2s, 4s, 8s). |\n\nAlways log the error to a file or ops channel. Silent failures are the worst debugging nightmare.\n\n## Filtering & Debouncing Strategy\n\nYou have three levers:\n\n**1. Signal-level filtering (in the monitor)**\n- Only queue liquidations above a USD threshold (e.g., $50k+).\n- Only queue liquidations on symbols you're tracking.\n- Ignore liquidations on illiquid symbols (low volume, wide spreads).\n\n**2. Cooldown deduplication (per symbol)**\n- As shown above: don't alert on the same symbol more than once per 5 seconds.\n- Track per signal type if you have multiple alert rules.\n\n**3. Cascade aggregation**\n- Batch liquidations into a single message: \"5 liquidations in 2 seconds on BTC, ETH, SOL\".\n- Much cleaner than spamming.\n\n## Testing Your Rate Limit Handling\n\nBefore deploying:\n\n```python\n# Test 1: Simulate message floods\nasync def test_flood():\n    dispatcher = AlertDispatcher(bot, chat_id, ops_chat_id)\n    asyncio.create_task(dispatcher.dispatch_worker())\n\n    # Enqueue 50 messages rapidly\n    for i in range(50):\n        await dispatcher.enqueue(f\"Alert {i}\", priority=1)\n\n    # Should take ~50 seconds to send (1 msg/sec)\n    # Watch that no messages are lost and RetryAfter is honored\n\n# Test 2: Monkey-patch Telegram API to throw RetryAfter\n# (Simulate rate limiting)\nasync def mock_send_with_retry(text, max_retries):\n    for i in range(max_retries):\n        if i < 2:\n            raise RetryAfter(retry_after=1)\n        # Third attempt succeeds\n        return\n\n# Replace dispatcher._send_with_retry and run your flood test\n```\n\n## Production Checklist\n\n- [ ] `RetryAfter` caught and `retry_after` is respected (not a fixed sleep)\n- [ ] Queue has a max size (100+); overflow drops LOW priority only\n- [ ] Errors logged to a file and also sent to an ops Telegram chat\n- [ ] Metrics (`sent_count`, `dropped_count`, `peak_queue_size`) tracked and reported on `/status`\n- [ ] Cascade detection working (verify with manual test on a test group)\n- [ ] Cooldown prevents duplicate alerts within your threshold\n- [ ] WebSocket reconnect has exponential backoff + jitter (not in this snippet, but critical)\n- [ ] Secrets (bot token, chat IDs) come from env vars, not hardcoded\n- [ ] Code handles the case where the queue is stalled (add a heartbeat/timeout monitor)\n\n## One More Thing: Heartbeat\n\nIf the dispatcher ever gets stuck (bug in send logic, deadlock), your alerts won't flow. Add a background task that checks if the queue is growing unbounded:\n\n```python\nasync def queue_monitor(dispatcher):\n    while True:\n        await asyncio.sleep(10)\n        size = dispatcher.queue.qsize()\n        if size > 200:\n            logger.critical(f\"Queue backlog: {size}. Dispatcher may be stuck.\")\n            # Send alert to ops\n```\n\nThis catches stalls before they become a real problem.\n\n---\n\n**TL;DR**: Use a priority queue + per-chat dispatcher + proper `RetryAfter` handling. Detect cascades and deduplicate per symbol. Test your rate limit recovery before deploying. You'll go from \"message flood errors\" to a clean, scalable alert system.\n"}], "grading": {"expectations": [{"text": "Mentions Telegram's 1 message/second per chat limit", "passed": true, "evidence": "Response explicitly states: 'Telegram enforces 1 message/second per chat (strict)' in the Immediate Problem section."}, {"text": "Explains RetryAfter exception handling and the importance of using the retry_after value (not a fixed sleep)", "passed": true, "evidence": "Dedicated 'RetryAfter Handling (Critical)' section states 'Do not use a fixed sleep. Honor the value exactly.' Code shows 'await asyncio.sleep(wait_seconds)' where wait_seconds = e.retry_after."}, {"text": "Recommends batching or aggregating liquidation events rather than one message per forceOrder event", "passed": true, "evidence": "LiquidationMonitor shows cascade detection (5+ liquidations in 2s window), cooldown per symbol, and the explicit recommendation: 'instead of 10 separate messages, you send one aggregated message.'"}, {"text": "Suggests a priority queue or similar mechanism to preserve high-urgency alerts", "passed": true, "evidence": "asyncio.PriorityQueue is the centrepiece of the architecture. Three tiers: priority 0 (HIGH: cascades), priority 1 (MED: single liquidations), priority 2 (LOW: status updates)."}, {"text": "Addresses the group vs private chat rate limit difference (20/min for groups)", "passed": false, "evidence": "Response only states the 1 msg/s per-chat limit. The 20 messages/minute group cap is not mentioned. The skill documentation lists it, but the response did not surface this distinction."}], "summary": {"passed": 4, "failed": 1, "total": 5, "pass_rate": 0.8}, "execution_metrics": {"total_tool_calls": 7, "total_steps": 1, "errors_encountered": 0, "output_chars": 16201}, "timing": {"executor_duration_seconds": 62.7, "total_duration_seconds": 62.7}, "claims": [{"claim": "RetryAfter exception includes the exact seconds to wait as retry_after attribute", "type": "factual", "verified": true, "evidence": "This is accurate \u2014 python-telegram-bot's RetryAfter exception does have a retry_after attribute."}, {"claim": "Queue size limit of 100 is conservative", "type": "quality", "verified": true, "evidence": "100 pending messages with 1 msg/s throughput means ~100s of backlog \u2014 reasonable for volatile markets."}], "user_notes_summary": {"uncertainties": [], "needs_review": [], "workarounds": []}, "eval_feedback": {"suggestions": [{"assertion": "Addresses the group vs private chat rate limit difference (20/min for groups)", "reason": "This assertion checks a useful distinction but it may be too narrow \u2014 the 20/min group cap is less commonly documented and the response otherwise covers rate limiting thoroughly. Consider replacing with an assertion that checks whether the backoff logic handles jitter to avoid reconnect storms."}], "overall": "Strong response. The missing group rate limit is a real gap but minor. Consider adding a jitter assertion."}}}, {"id": "eval-1-without_skill", "prompt": "I'm building a Telegram bot that monitors Binance USDT perpetuals and sends alerts when there's a large liquidation cascade. My current code listens to the forceOrder WebSocket stream and sends a Telegram message for every single event. In my test group I'm seeing messages flood in during volatile periods and Telegram starts throwing errors. What's the right architecture here \u2014 should I be batching, filtering, debouncing? How do I handle the Telegram rate limit errors properly without dropping important alerts?", "eval_id": 1, "outputs": [{"name": "response.md", "type": "text", "content": "# Architecture for a Robust Binance Liquidation Alert Bot\n\nYour observation is spot-on: raw event streaming without filtering or rate-limiting creates an unsustainable message flood. This response covers the complete architecture you need, from WebSocket handling through Telegram delivery with proper error resilience.\n\n## The Problem with Your Current Approach\n\nWhen markets are volatile, Binance's forceOrder stream fires liquidation events continuously. Sending every event directly to Telegram hits multiple walls:\n\n1. **Telegram rate limits**: 30 messages per second per bot (burst), ~1 message per chat per second sustained\n2. **Message deduplication**: Users see the same price levels repeatedly in milliseconds\n3. **Alert fatigue**: Hundreds of messages obscure genuinely dangerous cascades\n4. **Network backlog**: Slow Telegram API responses queue up WebSocket messages indefinitely\n\n## Recommended Architecture: Event Aggregation Pattern\n\nRather than choose between batching, filtering, or debouncing, combine all three in a layered approach:\n\n### Layer 1: Real-Time Event Collection (WebSocket Handler)\n\n```python\nfrom collections import defaultdict\nfrom datetime import datetime, timedelta\nimport asyncio\nimport json\n\nclass LiquidationAggregator:\n    def __init__(self, window_seconds=5):\n        self.window_seconds = window_seconds\n        self.liquidations = defaultdict(list)  # symbol -> events\n        self.last_flush = datetime.now()\n\n    def add_event(self, event):\n        \"\"\"Add liquidation event to current window\"\"\"\n        symbol = event['symbol']\n        self.liquidations[symbol].append({\n            'price': float(event['executionPrice']),\n            'quantity': float(event['executionQty']),\n            'side': event['side'],\n            'timestamp': event['transactionTime']\n        })\n\n    def should_flush(self):\n        \"\"\"Trigger alert batch if window elapsed or cascade detected\"\"\"\n        elapsed = (datetime.now() - self.last_flush).total_seconds()\n\n        # Always flush on time window\n        if elapsed >= self.window_seconds:\n            return True\n\n        # Cascade detection: 5+ liquidations on same side in 1 second\n        for symbol, events in self.liquidations.items():\n            if len(events) >= 5:\n                recent = [e for e in events if\n                         e['timestamp'] > (datetime.now().timestamp() - 1) * 1000]\n                if len(recent) >= 5:\n                    return True\n\n        return False\n\n    def get_and_reset(self):\n        \"\"\"Extract aggregated data and reset window\"\"\"\n        result = dict(self.liquidations)\n        self.liquidations.clear()\n        self.last_flush = datetime.now()\n        return result\n```\n\n### Layer 2: Smart Filtering\n\nFilter events before aggregation to reduce noise:\n\n```python\nclass LiquidationFilter:\n    def __init__(self, min_usdt_notional=50000):\n        self.min_usdt_notional = min_usdt_notional\n        self.symbol_blacklist = set()  # Filter low-volume pairs\n\n    def passes_filter(self, event):\n        \"\"\"Return True if event meets criteria\"\"\"\n        symbol = event['symbol']\n\n        # Skip blacklisted symbols\n        if symbol in self.symbol_blacklist:\n            return False\n\n        # Minimum notional value (price \u00d7 qty)\n        notional = float(event['executionPrice']) * float(event['executionQty'])\n        if notional < self.min_usdt_notional:\n            return False\n\n        # Skip stablecoins being liquidated\n        if 'USDT' in symbol and symbol != 'USDT':\n            return False\n\n        return True\n```\n\n### Layer 3: Rate-Limited Telegram Delivery\n\nHandle Telegram's rate limits with exponential backoff and retry logic:\n\n```python\nimport aiohttp\nfrom tenacity import (\n    retry,\n    stop_after_attempt,\n    wait_exponential,\n    retry_if_exception_type\n)\n\nclass TelegramSender:\n    def __init__(self, bot_token, chat_id, rate_limit_per_second=1):\n        self.bot_token = bot_token\n        self.chat_id = chat_id\n        self.rate_limit_per_second = rate_limit_per_second\n        self.last_message_time = 0\n        self.session = None\n\n    async def init(self):\n        \"\"\"Initialize async session\"\"\"\n        self.session = aiohttp.ClientSession()\n\n    async def close(self):\n        \"\"\"Cleanup session\"\"\"\n        if self.session:\n            await self.session.close()\n\n    @retry(\n        stop=stop_after_attempt(3),\n        wait=wait_exponential(multiplier=1, min=1, max=10),\n        retry=retry_if_exception_type(aiohttp.ClientError),\n        reraise=True\n    )\n    async def _send_with_retry(self, text):\n        \"\"\"Send message with automatic retry on transient errors\"\"\"\n\n        # Respect rate limit\n        elapsed = time.time() - self.last_message_time\n        wait_time = (1.0 / self.rate_limit_per_second) - elapsed\n        if wait_time > 0:\n            await asyncio.sleep(wait_time)\n\n        url = f\"https://api.telegram.org/bot{self.bot_token}/sendMessage\"\n        payload = {\n            'chat_id': self.chat_id,\n            'text': text,\n            'parse_mode': 'HTML'\n        }\n\n        try:\n            async with self.session.post(url, json=payload, timeout=10) as resp:\n                if resp.status == 429:\n                    # Rate limited - extract retry-after header\n                    retry_after = int(resp.headers.get('Retry-After', 30))\n                    raise TelegramRateLimitError(f\"Rate limited, retry after {retry_after}s\")\n\n                if resp.status != 200:\n                    data = await resp.json()\n                    raise TelegramApiError(f\"Telegram API error: {data}\")\n\n                self.last_message_time = time.time()\n                return await resp.json()\n\n        except asyncio.TimeoutError:\n            raise aiohttp.ClientError(\"Timeout sending to Telegram\")\n\n    async def send_alert(self, text):\n        \"\"\"Queue and send alert with error handling\"\"\"\n        try:\n            return await self._send_with_retry(text)\n        except TelegramRateLimitError as e:\n            logging.warning(f\"Rate limited: {e}. Will retry in background.\")\n            # Queue for retry instead of blocking\n            asyncio.create_task(self._retry_later(text, int(e.retry_after) + 1))\n            return None\n        except Exception as e:\n            logging.error(f\"Failed to send alert: {e}\", exc_info=True)\n            return None\n\n    async def _retry_later(self, text, delay_seconds):\n        \"\"\"Background retry after delay\"\"\"\n        await asyncio.sleep(delay_seconds)\n        try:\n            await self._send_with_retry(text)\n        except Exception as e:\n            logging.error(f\"Retry failed: {e}\")\n\nclass TelegramRateLimitError(Exception):\n    def __init__(self, message, retry_after=30):\n        super().__init__(message)\n        self.retry_after = retry_after\n\nclass TelegramApiError(Exception):\n    pass\n```\n\n### Layer 4: Message Formatting and Aggregation\n\nFormat aggregated events into readable, actionable alerts:\n\n```python\ndef format_liquidation_batch(aggregated_events):\n    \"\"\"Convert aggregated events to formatted message\"\"\"\n\n    messages = []\n\n    for symbol, events in sorted(aggregated_events.items()):\n        if not events:\n            continue\n\n        # Calculate summary statistics\n        buy_liquidations = [e for e in events if e['side'] == 'Buy']\n        sell_liquidations = [e for e in events if e['side'] == 'Sell']\n\n        buy_qty = sum(e['quantity'] for e in buy_liquidations)\n        sell_qty = sum(e['quantity'] for e in sell_liquidations)\n\n        avg_buy_price = (sum(e['price'] * e['quantity'] for e in buy_liquidations) / buy_qty\n                         if buy_qty > 0 else 0)\n        avg_sell_price = (sum(e['price'] * e['quantity'] for e in sell_liquidations) / sell_qty\n                          if sell_qty > 0 else 0)\n\n        # Build message\n        msg = f\"<b>{symbol}</b>\\n\"\n\n        if buy_liquidations:\n            msg += f\"\ud83d\udd34 <b>LIQUIDATIONS</b> (Long Closures)\\n\"\n            msg += f\"   Qty: {buy_qty:.4f} @ ${avg_buy_price:.2f}\\n\"\n            msg += f\"   Count: {len(buy_liquidations)}\\n\"\n\n        if sell_liquidations:\n            msg += f\"\ud83d\udfe2 <b>LIQUIDATIONS</b> (Short Closures)\\n\"\n            msg += f\"   Qty: {sell_qty:.4f} @ ${avg_sell_price:.2f}\\n\"\n            msg += f\"   Count: {len(sell_liquidations)}\\n\"\n\n        total_notional = (buy_qty * avg_buy_price) + (sell_qty * avg_sell_price)\n        msg += f\"\\n\ud83d\udcb0 Total: ${total_notional:,.0f}\\n\"\n\n        messages.append(msg)\n\n    if not messages:\n        return None\n\n    # Combine multiple symbols if they fit in one message (4096 char limit)\n    combined = \"\\n\".join(messages)\n    if len(combined) <= 4000:\n        return combined\n\n    # Split into multiple messages if needed\n    return messages\n\nasync def send_formatted_alerts(telegram_sender, alerts):\n    \"\"\"Send alerts with proper formatting and rate limiting\"\"\"\n\n    if isinstance(alerts, str):\n        alerts = [alerts]\n\n    for alert_text in alerts:\n        await telegram_sender.send_alert(alert_text)\n        await asyncio.sleep(0.5)  # Stagger multi-message batches\n```\n\n### Layer 5: Complete Integration\n\nWire everything together in your main bot:\n\n```python\nimport asyncio\nimport json\nimport logging\nimport time\nimport websockets\n\nlogging.basicConfig(level=logging.INFO)\nlogger = logging.getLogger(__name__)\n\nclass BinanceLiquidationBot:\n    def __init__(self, bot_token, chat_id, symbols):\n        self.bot_token = bot_token\n        self.chat_id = chat_id\n        self.symbols = symbols\n\n        self.aggregator = LiquidationAggregator(window_seconds=5)\n        self.filter = LiquidationFilter(min_usdt_notional=50000)\n        self.telegram = TelegramSender(bot_token, chat_id, rate_limit_per_second=1)\n\n    async def start(self):\n        \"\"\"Start bot components\"\"\"\n        await self.telegram.init()\n\n        # Start WebSocket listener and alert flush loop concurrently\n        await asyncio.gather(\n            self._listen_websocket(),\n            self._flush_alerts_loop()\n        )\n\n    async def _listen_websocket(self):\n        \"\"\"Connect to Binance WebSocket and listen for liquidations\"\"\"\n\n        # Subscribe to forceOrder stream for multiple symbols\n        streams = [f\"{symbol.lower()}@forceOrder\" for symbol in self.symbols]\n        stream_url = f\"wss://stream.binance.com:9443/stream?streams={''.join(streams)}\"\n\n        while True:\n            try:\n                async with websockets.connect(stream_url) as ws:\n                    logger.info(\"Connected to Binance liquidation stream\")\n\n                    async for message in ws:\n                        try:\n                            data = json.loads(message)\n\n                            # Extract forceOrder event\n                            if 'data' in data and 'o' in data['data']:\n                                event = data['data']['o']\n\n                                # Apply filtering\n                                if self.filter.passes_filter(event):\n                                    self.aggregator.add_event(event)\n\n                        except json.JSONDecodeError:\n                            logger.error(f\"Invalid JSON: {message}\")\n                        except KeyError as e:\n                            logger.warning(f\"Unexpected message format: {e}\")\n\n            except websockets.exceptions.WebSocketException as e:\n                logger.error(f\"WebSocket error: {e}. Reconnecting in 5s...\")\n                await asyncio.sleep(5)\n            except Exception as e:\n                logger.error(f\"Unexpected error: {e}\", exc_info=True)\n                await asyncio.sleep(5)\n\n    async def _flush_alerts_loop(self):\n        \"\"\"Periodically check and flush aggregated alerts\"\"\"\n\n        while True:\n            try:\n                await asyncio.sleep(1)  # Check every second\n\n                if self.aggregator.should_flush():\n                    events = self.aggregator.get_and_reset()\n                    alerts = format_liquidation_batch(events)\n\n                    if alerts:\n                        await send_formatted_alerts(self.telegram, alerts)\n                        logger.info(f\"Sent alert batch with {len(events)} symbols\")\n\n            except Exception as e:\n                logger.error(f\"Error in flush loop: {e}\", exc_info=True)\n\n# Usage\nasync def main():\n    bot = BinanceLiquidationBot(\n        bot_token=\"YOUR_BOT_TOKEN\",\n        chat_id=\"YOUR_CHAT_ID\",\n        symbols=['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'SOLSDT']\n    )\n\n    try:\n        await bot.start()\n    except KeyboardInterrupt:\n        logger.info(\"Shutting down...\")\n        await bot.telegram.close()\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n```\n\n## Key Design Decisions Explained\n\n### 1. Why Aggregation Over Individual Messages?\n\nEach liquidation event is noise. Patterns of liquidations are signals. By aggregating over 5-second windows, you:\n- Reduce Telegram message volume by 10-100x\n- Reveal cascade patterns (multiple large liquidations on same side)\n- Let users scan one message instead of scrolling 50\n\n### 2. Why Exponential Backoff for Rate Limits?\n\nTelegram enforces strict rate limits. When hit:\n- **Immediate retry**: Guarantees failure again\n- **Fixed delay**: Can waste time waiting longer than necessary\n- **Exponential backoff**: 1s, 2s, 4s, 8s... respects limits while recovering fast\n\nThe `tenacity` library handles this automatically. On 429 response, it extracts the `Retry-After` header and waits exactly that long.\n\n### 3. Why Separate Filtering?\n\nNotional value filtering prevents alerts on:\n- Tiny liquidations (100 SHIB at $0.01 = noise)\n- Low-volume alt pairs (no actionable data)\n- Stablecoin liquidations (irrelevant to trading)\n\nAdjust `min_usdt_notional` based on your risk tolerance. Start at $50k, tune down if you miss real moves.\n\n### 4. Why Queue Failed Messages?\n\nWhen rate-limited, don't block the WebSocket listener. Instead:\n- Log the rate-limit event\n- Queue a background retry task\n- Continue collecting new liquidations\n- Send retry when window opens\n\nThis preserves real-time data collection while respecting API limits.\n\n## Error Handling Strategy\n\nYour three failure modes and solutions:\n\n| Failure | Cause | Solution |\n|---------|-------|----------|\n| **WebSocket drops** | Network, Binance restart | Auto-reconnect with exponential backoff |\n| **Telegram rate limit (429)** | Too many messages | Queue retry using Retry-After header |\n| **Telegram API error (4xx/5xx)** | Invalid request or server issue | Log and skip, don't block stream |\n\nNever drop alerts based on Telegram errors\u2014they're downstream. Keep the WebSocket alive and decouple message sending from event collection.\n\n## Deployment Checklist\n\n- [ ] Set `min_usdt_notional` to your institution's minimum alert threshold\n- [ ] Configure symbols list to match your watchlist\n- [ ] Test with dry-run first (disable Telegram, print to console)\n- [ ] Set up logging/monitoring (CloudWatch, Sentry, etc.)\n- [ ] Store bot token in environment variables, never hardcode\n- [ ] Monitor queue depth if aggregation is backlogging\n- [ ] Set message parse_mode='HTML' for readable formatting\n\n## Monitoring and Tuning\n\nTrack these metrics:\n\n```python\nclass BotMetrics:\n    def __init__(self):\n        self.events_received = 0\n        self.events_filtered = 0\n        self.messages_sent = 0\n        self.rate_limit_hits = 0\n        self.websocket_reconnects = 0\n\n    def report(self):\n        filter_rate = self.events_filtered / max(1, self.events_received)\n        logger.info(f\"Events: {self.events_received} | Filtered: {filter_rate:.1%} | \"\n                   f\"Messages: {self.messages_sent} | Rate limits: {self.rate_limit_hits}\")\n```\n\nAlert if:\n- **Filter rate > 95%**: Your thresholds are too high\n- **Rate limit hits > 1/hour**: Aggregation window too short\n- **WebSocket reconnects > 1/hour**: Network or Binance issues\n\n## Summary\n\nYour architecture should:\n\n1. **Collect** all liquidation events in real-time (WebSocket)\n2. **Filter** by notional value and symbol relevance\n3. **Aggregate** into time windows (5 seconds recommended)\n4. **Format** into readable batch messages\n5. **Send** with rate-limit aware retry logic\n6. **Queue** failed sends instead of dropping them\n\nThis approach handles the Telegram rate limits, eliminates alert fatigue, and preserves important cascade signals. The separation of concerns (collection \u2192 filtering \u2192 aggregation \u2192 delivery) makes it easy to tune each layer independently.\n"}], "grading": {"expectations": [{"text": "Mentions Telegram's 1 message/second per chat limit", "passed": true, "evidence": "Response states: '~1 message per chat per second sustained' in the problem analysis section."}, {"text": "Explains RetryAfter exception handling and the importance of using the retry_after value (not a fixed sleep)", "passed": true, "evidence": "Response shows 429 status handling extracting Retry-After header: 'retry_after = int(resp.headers.get(\"Retry-After\", 30))'. However, it uses the tenacity library with wait_exponential rather than directly honoring retry_after \u2014 it falls back to a default of 30s which could be wrong. The custom TelegramRateLimitError class partially addresses this."}, {"text": "Recommends batching or aggregating liquidation events rather than one message per forceOrder event", "passed": true, "evidence": "LiquidationAggregator aggregates into 5-second windows and formats multi-symbol batches into single messages."}, {"text": "Suggests a priority queue or similar mechanism to preserve high-urgency alerts", "passed": false, "evidence": "No priority queue is present. The TelegramSender has retry logic, but there is no mechanism to prioritize cascade alerts over routine status messages. All alerts go through the same pipeline regardless of urgency."}, {"text": "Addresses the group vs private chat rate limit difference (20/min for groups)", "passed": false, "evidence": "Group vs private chat rate limit distinction is not mentioned anywhere in the response."}], "summary": {"passed": 3, "failed": 2, "total": 5, "pass_rate": 0.6}, "execution_metrics": {"total_tool_calls": 4, "total_steps": 1, "errors_encountered": 0, "output_chars": 16444}, "timing": {"executor_duration_seconds": 48.5, "total_duration_seconds": 48.5}, "claims": [{"claim": "tenacity handles Retry-After automatically", "type": "factual", "verified": false, "evidence": "tenacity's built-in wait strategies (wait_exponential) do not automatically read Telegram's Retry-After header. The custom TelegramRateLimitError is raised but doesn't integrate with tenacity's wait \u2014 it just queues a background retry. This is misleading."}, {"claim": "Using aiohttp directly for Telegram API calls", "type": "process", "verified": true, "evidence": "Code uses aiohttp.ClientSession for raw HTTP instead of a Telegram SDK. This works but adds boilerplate and skips SDK-level error handling."}], "user_notes_summary": {"uncertainties": [], "needs_review": ["tenacity claim about Retry-After handling is inaccurate"], "workarounds": []}, "eval_feedback": {"suggestions": [], "overall": "Solid response but missing priority queue concept and has a factual inaccuracy about tenacity's Retry-After behavior."}}}, {"id": "eval-2-with_skill", "prompt": "I want my Telegram trading bot to let users customize their own alert preferences \u2014 things like which symbols to watch, minimum liquidation size to get notified about, whether they want RSI alerts or just liquidation alerts, and whether they want chart images attached. I have about 50 users right now but might grow to a few thousand. What's the right way to store and manage per-user preferences, and how should I design the Telegram command interface so users can actually change their own settings without bothering me?", "eval_id": 2, "outputs": [{"name": "response.md", "type": "text", "content": "# Telegram Trading Bot: Per-User Preferences Architecture & Interface Design\n\n## Storage Strategy: Pick Your Layer by Current Scale\n\nYou're at 50 users and thinking about scaling to thousands. The right store depends on your infrastructure and growth trajectory.\n\n### 1. SQLite (50\u2013500 users, single-server deployment)\n\n**Schema:**\n```python\nCREATE TABLE user_preferences (\n    user_id INTEGER PRIMARY KEY,\n    symbols TEXT NOT NULL,  -- JSON list or comma-separated\n    alert_types TEXT NOT NULL,  -- \"liquidation,rsi_extreme,funding\"\n    min_liquidation_usd REAL DEFAULT 10000,\n    chart_enabled INTEGER DEFAULT 1,\n    rsi_alert_enabled INTEGER DEFAULT 1,\n    rsi_overbought REAL DEFAULT 75,\n    rsi_oversold REAL DEFAULT 25,\n    timezone TEXT DEFAULT 'UTC',\n    muted_until TIMESTAMP,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);\n```\n\n**Why:** Transactional, ACID-compliant, zero DevOps overhead. Use a connection pool (`sqlite3` or `aiosqlite` for async).\n\n**Gotcha:** SQLite is not suitable for concurrent writes from multiple processes. If you run multiple bot instances behind a load balancer, you'll get SQLITE_BUSY errors. Move to the next tier.\n\n### 2. Redis (500\u20135000 users, or if you're already running Redis for other services)\n\nStore as a hash per user:\n\n```python\n# In Redis: HSET user:123456789 symbols \"BTCUSDT,ETHUSDT\" alert_types \"liquidation,rsi\" ...\n# Expires keys after 90 days of inactivity to auto-cleanup dormant users\n\nuser_data = {\n    \"symbols\": \"BTCUSDT,ETHUSDT\",\n    \"alert_types\": \"liquidation,rsi_extreme\",\n    \"min_liquidation_usd\": \"10000\",\n    \"chart_enabled\": \"1\",\n    \"rsi_alert_enabled\": \"1\",\n    \"rsi_overbought\": \"75\",\n    \"rsi_oversold\": \"25\",\n    \"timezone\": \"UTC\",\n    \"muted_until\": \"None\"\n}\n```\n\n**Why:** Fast atomic updates, TTL support for auto-cleanup, multi-instance safe. Perfect for session-like data.\n\n**Gotcha:** If your bot crashes, you lose in-memory state. Always persist critical settings back to disk (daily snapshot to SQLite or S3) so you can recover.\n\n### 3. PostgreSQL (2000+ users, production multi-tenant systems)\n\nStandard relational table, but with connection pooling and prepared statements:\n\n```sql\nCREATE TABLE user_preferences (\n    user_id BIGINT PRIMARY KEY,\n    symbols JSONB,\n    alert_types JSONB,\n    min_liquidation_usd NUMERIC(12, 2),\n    chart_enabled BOOLEAN DEFAULT true,\n    rsi_alert_enabled BOOLEAN DEFAULT true,\n    rsi_overbought NUMERIC(5, 2) DEFAULT 75,\n    rsi_oversold NUMERIC(5, 2) DEFAULT 25,\n    timezone VARCHAR(50) DEFAULT 'UTC',\n    muted_until TIMESTAMP WITH TIME ZONE,\n    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),\n    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()\n);\n\nCREATE INDEX idx_active_users ON user_preferences(updated_at DESC) WHERE chart_enabled = true;\n```\n\n**Why:** Scales to millions, JSONB lets you nest arrays without serialization pain, indexing on frequently-queried fields. Replication available if you need HA.\n\n**Recommendation for your case:** Start with **SQLite if you're on a single server**, graduate to **Redis + SQLite hybrid** once you hit 500 users (Redis hot, SQLite cold backup), then to **PostgreSQL** if you move to a multi-instance setup or need sub-100ms response times at scale.\n\n---\n\n## Telegram Command Interface: Self-Service Preference Menu\n\nDesign a `/settings` command that opens an inline keyboard menu. Users never need to ask you for changes.\n\n### Handler Implementation (using `python-telegram-bot` library)\n\n```python\nfrom telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update\nfrom telegram.ext import ContextTypes\nimport json\n\n# Preferences as a tuple: (human_label, preference_key, current_value)\nPREFERENCE_MENU_ITEMS = [\n    (\"\ud83d\udcca Watch Symbols\", \"symbols\", None),\n    (\"\u26a1 Alert Types\", \"alert_types\", None),\n    (\"\ud83d\udcb0 Min Liquidation (USD)\", \"min_liquidation_usd\", None),\n    (\"\ud83d\udcc8 RSI Alerts\", \"rsi_alert_enabled\", None),\n    (\"\ud83d\uddbc\ufe0f Chart Images\", \"chart_enabled\", None),\n    (\"\ud83d\udd07 Mute Duration\", \"mute_minutes\", None),\n    (\"\ud83c\udf0d Timezone\", \"timezone\", None),\n]\n\nasync def cmd_settings(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:\n    \"\"\"Open the settings menu.\"\"\"\n    user_id = update.effective_user.id\n    prefs = load_user_preferences(user_id)  # Dict from SQLite/Redis\n\n    # Build inline keyboard\n    buttons = []\n    for label, key, _ in PREFERENCE_MENU_ITEMS:\n        current = prefs.get(key, \"not set\")\n        btn_text = f\"{label}: {current}\"\n        buttons.append(\n            InlineKeyboardButton(btn_text, callback_data=f\"pref_{key}\")\n        )\n\n    # Add Exit button\n    buttons.append(InlineKeyboardButton(\"\u2705 Done\", callback_data=\"pref_exit\"))\n\n    keyboard = InlineKeyboardMarkup([buttons[i:i+1] for i in range(len(buttons))])\n\n    await update.message.reply_text(\n        \"\u2699\ufe0f *Your Trading Alert Settings*\",\n        reply_markup=keyboard,\n        parse_mode=\"MarkdownV2\"\n    )\n\nasync def handle_pref_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:\n    \"\"\"Handle inline button presses.\"\"\"\n    query = update.callback_query\n    user_id = query.from_user.id\n    await query.answer()\n\n    callback_data = query.data\n\n    if callback_data == \"pref_exit\":\n        await query.edit_message_text(\"\u2705 Settings saved\\\\.\")\n        return\n\n    # Extract preference key (e.g., \"pref_symbols\" \u2192 \"symbols\")\n    pref_key = callback_data.replace(\"pref_\", \"\")\n\n    # Store which preference is being edited in context.user_data\n    context.user_data[\"editing_pref\"] = pref_key\n\n    if pref_key == \"symbols\":\n        await query.edit_message_text(\n            \"\ud83d\udcca Enter symbols to watch \\\\(comma\\\\-separated\\\\):\\n\"\n            \"Example: `BTCUSDT,ETHUSDT,XRPUSDT`\",\n            parse_mode=\"MarkdownV2\"\n        )\n    elif pref_key == \"alert_types\":\n        # Multi-choice via sub-menu\n        btn = [\n            InlineKeyboardButton(\"\u2713 Liquidations\", callback_data=\"at_liquidation\"),\n            InlineKeyboardButton(\"\u2713 RSI Extreme\", callback_data=\"at_rsi\"),\n            InlineKeyboardButton(\"\u2717 None\", callback_data=\"at_none\"),\n        ]\n        kb = InlineKeyboardMarkup([btn])\n        await query.edit_message_text(\n            \"\u26a1 Which alert types do you want?\",\n            reply_markup=kb\n        )\n    elif pref_key == \"min_liquidation_usd\":\n        await query.edit_message_text(\n            \"\ud83d\udcb0 Enter minimum liquidation size \\\\(USD\\\\):\\n\"\n            \"Example: `5000` (alerts only for liquidations \u2265 $5000)\"\n        )\n    elif pref_key == \"rsi_alert_enabled\":\n        btn = [\n            InlineKeyboardButton(\"\u2713 Enable RSI\", callback_data=\"rsi_on\"),\n            InlineKeyboardButton(\"\u2717 Disable RSI\", callback_data=\"rsi_off\"),\n        ]\n        kb = InlineKeyboardMarkup([btn])\n        await query.edit_message_text(\n            \"\ud83d\udcc8 Do you want RSI overbought/oversold alerts?\",\n            reply_markup=kb\n        )\n    elif pref_key == \"chart_enabled\":\n        btn = [\n            InlineKeyboardButton(\"\u2713 Attach Charts\", callback_data=\"chart_on\"),\n            InlineKeyboardButton(\"\u2717 Text Only\", callback_data=\"chart_off\"),\n        ]\n        kb = InlineKeyboardMarkup([btn])\n        await query.edit_message_text(\n            \"\ud83d\uddbc\ufe0f Attach chart images to alerts?\",\n            reply_markup=kb\n        )\n    elif pref_key == \"mute_minutes\":\n        await query.edit_message_text(\n            \"\ud83d\udd07 Mute alerts for how many minutes?\\\\n\"\n            \"Enter `0` to unmute, or a number like `30` or `60`\"\n        )\n    elif pref_key == \"timezone\":\n        btn = [\n            InlineKeyboardButton(\"UTC\", callback_data=\"tz_UTC\"),\n            InlineKeyboardButton(\"EST\", callback_data=\"tz_EST\"),\n            InlineKeyboardButton(\"Asia/Tokyo\", callback_data=\"tz_Asia/Tokyo\"),\n        ]\n        kb = InlineKeyboardMarkup([btn])\n        await query.edit_message_text(\n            \"\ud83c\udf0d Choose your timezone:\",\n            reply_markup=kb\n        )\n\nasync def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:\n    \"\"\"Capture text input for settings that need it (symbols, liquidation size, etc).\"\"\"\n    user_id = update.effective_user.id\n    text = update.message.text.strip()\n\n    pref_key = context.user_data.get(\"editing_pref\")\n    if not pref_key:\n        return  # Not in settings mode\n\n    # Validate and save\n    try:\n        if pref_key == \"symbols\":\n            symbols = [s.strip().upper() for s in text.split(\",\")]\n            if not all(s.endswith(\"USDT\") for s in symbols):\n                await update.message.reply_text(\n                    \"\u26a0\ufe0f Symbols should end with USDT (e.g., BTCUSDT, ETHUSDT)\"\n                )\n                return\n            save_user_preference(user_id, \"symbols\", \",\".join(symbols))\n\n        elif pref_key == \"min_liquidation_usd\":\n            amount = float(text)\n            if amount < 0:\n                raise ValueError(\"Must be positive\")\n            save_user_preference(user_id, \"min_liquidation_usd\", amount)\n\n        elif pref_key == \"mute_minutes\":\n            minutes = int(text)\n            if minutes < 0:\n                raise ValueError(\"Must be non-negative\")\n            save_user_preference(user_id, \"mute_minutes\", minutes)\n\n        # Clear edit state and return to settings menu\n        context.user_data[\"editing_pref\"] = None\n        await update.message.reply_text(\"\u2705 Setting updated\\\\. Type `/settings` to continue\\\\.\",\n                                        parse_mode=\"MarkdownV2\")\n\n    except (ValueError, IndexError) as e:\n        await update.message.reply_text(f\"\u274c Invalid input: {e}\")\n\n# Register handlers with dispatcher\ndef register_settings_handlers(app):\n    from telegram.ext import CommandHandler, CallbackQueryHandler, MessageHandler, filters\n\n    app.add_handler(CommandHandler(\"settings\", cmd_settings))\n    app.add_handler(CallbackQueryHandler(handle_pref_callback, pattern=\"^pref_\"))\n    app.add_handler(MessageHandler(filters.TEXT, handle_text_input))\n```\n\n---\n\n## Per-User Preference Loading at Alert Time\n\nWhen you emit alerts, always check the user's preferences:\n\n```python\nasync def emit_liquidation_alert(symbol: str, usd_size: float, price: float):\n    \"\"\"Send liquidation alert to all subscribed users.\"\"\"\n    # Get all subscribed users from DB\n    subscribers = get_users_subscribed_to_symbol(symbol)\n\n    for user_id in subscribers:\n        prefs = load_user_preferences(user_id)\n\n        # Filter by user preferences\n        if prefs[\"min_liquidation_usd\"] and usd_size < prefs[\"min_liquidation_usd\"]:\n            continue  # Skip if liquidation is too small\n\n        if prefs[\"muted_until\"] and now() < prefs[\"muted_until\"]:\n            continue  # User has muted alerts\n\n        if \"liquidation\" not in prefs.get(\"alert_types\", \"\"):\n            continue  # User doesn't want liquidation alerts\n\n        # Build message\n        msg = f\"\ud83d\udd25 *{symbol}* liquidation: ${usd_size:,.0f} at {price}\"\n\n        # Conditionally attach chart\n        if prefs[\"chart_enabled\"]:\n            chart_bytes = generate_chart(symbol)\n            await bot.send_photo(\n                chat_id=user_id,\n                photo=chart_bytes,\n                caption=msg,\n                parse_mode=\"MarkdownV2\"\n            )\n        else:\n            await bot.send_message(\n                chat_id=user_id,\n                text=msg,\n                parse_mode=\"MarkdownV2\"\n            )\n```\n\n---\n\n## Scaling Considerations: 50 \u2192 5000 Users\n\n### Database Read Optimization\n\nAs you grow, every alert triggers N database reads (N = number of subscribed users). Mitigate this:\n\n1. **Cache subscription index in memory** \u2014 Maintain a dict `{symbol: [user_id1, user_id2, ...]}` and invalidate it every 5 minutes (or on subscription changes).\n\n```python\nsymbol_to_users_cache = {}\ncache_timestamp = None\n\nasync def get_users_subscribed_to_symbol(symbol: str) -> list:\n    global symbol_to_users_cache, cache_timestamp\n\n    now = time.time()\n    # Refresh if older than 5 minutes\n    if cache_timestamp is None or (now - cache_timestamp) > 300:\n        symbol_to_users_cache = build_subscription_index_from_db()\n        cache_timestamp = now\n\n    return symbol_to_users_cache.get(symbol, [])\n```\n\n2. **Batch preference loads** \u2014 Instead of loading each user's prefs one by one, load in batches:\n\n```python\nprefs_batch = load_user_preferences_batch(user_ids)  # SELECT * WHERE user_id IN (...)\nfor user_id in user_ids:\n    prefs = prefs_batch[user_id]\n    # process...\n```\n\n### Message Queue Backpressure\n\nAt high alert frequency, you'll overflow Telegram's 1 msg/sec per chat limit. Use the priority queue pattern from the skill:\n\n```python\nalert_queue = asyncio.PriorityQueue(maxsize=10000)\n\n# When enqueueing alerts, assign priority\nawait alert_queue.put((\n    priority=0 if alert_type == \"liquidation\" else 1,\n    timestamp=time.time(),\n    message_obj={\n        \"user_id\": user_id,\n        \"symbol\": symbol,\n        \"text\": msg,\n        \"chart\": chart_bytes if chart_enabled else None\n    }\n))\n\n# Single dispatcher per user_id manages rate limits\nasync def dispatch_for_user(user_id: int):\n    \"\"\"One task per user, enforces 1 msg/sec limit.\"\"\"\n    while True:\n        msg = await alert_queue.get()\n        if msg[\"user_id\"] != user_id:\n            continue  # Skip messages for other users\n\n        try:\n            if msg[\"chart\"]:\n                await bot.send_photo(chat_id=user_id, photo=msg[\"chart\"],\n                                     caption=msg[\"text\"], parse_mode=\"MarkdownV2\")\n            else:\n                await bot.send_message(chat_id=user_id, text=msg[\"text\"],\n                                       parse_mode=\"MarkdownV2\")\n        except telegram.error.RetryAfter as e:\n            await asyncio.sleep(e.retry_after)\n            # Retry the message, don't drop it\n            await alert_queue.put((msg[\"priority\"], time.time(), msg))\n```\n\n---\n\n## Non-Obvious Gotchas at Scale\n\n### 1. Preference Mutation During Alert Emission\n\nIf a user changes their settings while an alert is being formatted, you might send the wrong thing. Solution: snapshot preferences at the top of your alert loop:\n\n```python\nasync def emit_to_all_subscribers(symbol: str, alert_data: dict):\n    subscribers = get_users_subscribed_to_symbol(symbol)\n    # Load all prefs *once*, not per-user\n    all_prefs = load_user_preferences_batch(subscribers)\n\n    for user_id in subscribers:\n        prefs = all_prefs[user_id]\n        # Now prefs is stable for this loop iteration\n        # ...\n```\n\n### 2. Timezone Handling\n\nStoring timezone is good, but don't try to convert alert times to user timezone in the bot. It's a performance sink and users expect market times (UTC). Store timezone only if you're generating daily summary reports, and do the conversion then.\n\n### 3. Fallback for Missing User Records\n\nA brand-new user might receive an alert before they've visited `/settings`. Always use sensible defaults:\n\n```python\ndef load_user_preferences(user_id: int, defaults: bool = True) -> dict:\n    \"\"\"Load prefs; return defaults if user has no record.\"\"\"\n    prefs = db.query(user_id)\n\n    if prefs is None:\n        # New user gets a sane baseline\n        return {\n            \"symbols\": \"BTCUSDT,ETHUSDT\",\n            \"alert_types\": \"liquidation\",\n            \"min_liquidation_usd\": 10000,\n            \"chart_enabled\": True,\n            \"rsi_alert_enabled\": False,\n            \"muted_until\": None,\n            \"timezone\": \"UTC\"\n        }\n\n    return prefs\n```\n\n---\n\n## Summary: Recommended Architecture for Your Case\n\n**Right now (50 users):**\n- Use **SQLite** for preferences, with a simple schema as shown above.\n- Implement `/settings` command with inline keyboard menu.\n- Cache symbol\u2192users index in memory, refresh every 5 minutes.\n\n**At 500 users:**\n- Migrate preferences to **Redis** (fast, atomic updates), keep SQLite as a backup snapshot.\n- Add index caching and batch preference loading.\n\n**At 2000+ users:**\n- Switch to **PostgreSQL** if you're running multiple bot instances.\n- Add a metrics dashboard showing queue depth, alert latency, and per-symbol frequency.\n\n**Command UX:**\n- `/settings` opens a menu.\n- Each preference has a dedicated handler (inline buttons for toggles, text input for thresholds).\n- Save feedback is instant; no round-trips to confirm.\n\n**Alert emission:**\n- Snapshot all preferences once per alert cycle.\n- Respect user filters before sending (min liquidation size, alert type, muted status, chart preference).\n- Never drop messages due to rate limits; use the priority queue and honor `RetryAfter`.\n\nThis scales cleanly from 50 to 5000 users without major rewrites.\n"}], "grading": {"expectations": [{"text": "Recommends SQLite for current scale (50 users) as an appropriate starting point", "passed": true, "evidence": "SQLite is the first recommendation: 'SQLite (50\u2013500 users, single-server deployment)' with 'Why: Transactional, ACID-compliant, zero DevOps overhead.' Recommendation summary states: 'Start with SQLite if you're on a single server'."}, {"text": "Describes a concrete user preference schema with relevant fields (symbols, alert types, thresholds, muted_until or similar)", "passed": true, "evidence": "Schema includes: symbols, alert_types, min_liquidation_usd, chart_enabled, rsi_alert_enabled, rsi_overbought, rsi_oversold, timezone, muted_until. All relevant fields present."}, {"text": "Suggests inline keyboard buttons for /settings UX rather than requiring users to type commands", "passed": true, "evidence": "Comprehensive InlineKeyboardButton implementation with per-preference handlers, multi-choice sub-menus for alert types, toggle buttons for RSI and chart settings."}, {"text": "Addresses onboarding/authentication (deep-link /start token or allowlist or similar)", "passed": false, "evidence": "The response does not mention a /start deep-link token, HMAC signing, allowlist, or any other mechanism for authenticating new users. The skill documentation mentions this pattern but the response omits it."}, {"text": "Mentions muting capability as a preference option", "passed": true, "evidence": "muted_until field in schema, mute_minutes in the /settings command handlers, and the alert emission code checks 'if prefs[\"muted_until\"] and now() < prefs[\"muted_until\"]: continue'."}], "summary": {"passed": 4, "failed": 1, "total": 5, "pass_rate": 0.8}, "execution_metrics": {"total_tool_calls": 5, "total_steps": 1, "errors_encountered": 0, "output_chars": 16648}, "timing": {"executor_duration_seconds": 56.8, "total_duration_seconds": 56.8}, "claims": [{"claim": "SQLite BUSY errors occur with concurrent writes from multiple processes", "type": "factual", "verified": true, "evidence": "Accurate. SQLite's write lock is process-wide; concurrent writers from separate processes will get SQLITE_BUSY errors."}, {"claim": "Redis critical state could be lost if bot crashes", "type": "factual", "verified": true, "evidence": "Accurate nuance \u2014 Redis is in-memory by default (AOF/RDB persistence must be configured explicitly)."}], "user_notes_summary": {"uncertainties": [], "needs_review": [], "workarounds": []}, "eval_feedback": {"suggestions": [{"reason": "Authentication/onboarding is a meaningful security gap that wasn't addressed. Consider adding an assertion that checks whether the response addresses how a new user gets access (allowlist, token, admin approval) to catch this consistently."}], "overall": "Strong response. The auth gap is worth adding as an assertion since it's a real security concern for production deployments."}}}, {"id": "eval-2-without_skill", "prompt": "I want my Telegram trading bot to let users customize their own alert preferences \u2014 things like which symbols to watch, minimum liquidation size to get notified about, whether they want RSI alerts or just liquidation alerts, and whether they want chart images attached. I have about 50 users right now but might grow to a few thousand. What's the right way to store and manage per-user preferences, and how should I design the Telegram command interface so users can actually change their own settings without bothering me?", "eval_id": 2, "outputs": [{"name": "response.md", "type": "text", "content": "# Telegram Trading Bot: User Preference Management Architecture\n\n## Executive Summary\n\nTo scale your trading bot from 50 to thousands of users, you need three core components:\n1. **Database schema** for flexible, user-specific preferences\n2. **In-memory caching layer** to avoid database hits for every alert decision\n3. **Telegram command interface** for users to self-manage preferences\n\nThis design separates preference storage from bot logic, enabling users to independently adjust settings while you maintain high alert throughput.\n\n---\n\n## Database Design\n\n### Schema: PostgreSQL (recommended for your scale)\n\n```sql\n-- Users table\nCREATE TABLE users (\n  user_id BIGINT PRIMARY KEY,  -- Telegram user ID\n  username TEXT,\n  first_join TIMESTAMP DEFAULT NOW(),\n  is_active BOOLEAN DEFAULT TRUE,\n  created_at TIMESTAMP DEFAULT NOW()\n);\n\n-- Preferences table (the core of your system)\nCREATE TABLE user_preferences (\n  id SERIAL PRIMARY KEY,\n  user_id BIGINT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,\n  -- Alert selection\n  watch_symbols JSONB DEFAULT '[]'::jsonb,  -- [\"BTC\", \"ETH\", \"SOL\"]\n  min_liquidation_size DECIMAL(20, 2) DEFAULT 100000,  -- USD value\n  enable_rsi_alerts BOOLEAN DEFAULT TRUE,\n  enable_liquidation_alerts BOOLEAN DEFAULT TRUE,\n  attach_charts BOOLEAN DEFAULT FALSE,\n  -- Frequency/time preferences (optional)\n  alert_cooldown_seconds INT DEFAULT 300,  -- Min 5 minutes between alerts\n  quiet_hours_start INT,  -- 0-23 (NULL = disabled)\n  quiet_hours_end INT,\n  -- Timestamps\n  updated_at TIMESTAMP DEFAULT NOW(),\n  UNIQUE(user_id)\n);\n\n-- Audit log (optional, useful for debugging)\nCREATE TABLE preference_changes (\n  id SERIAL PRIMARY KEY,\n  user_id BIGINT NOT NULL,\n  changed_field VARCHAR(50),\n  old_value TEXT,\n  new_value TEXT,\n  changed_at TIMESTAMP DEFAULT NOW(),\n  FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE\n);\n\n-- Indexes for performance\nCREATE INDEX idx_user_preferences_user_id ON user_preferences(user_id);\nCREATE INDEX idx_preference_changes_user_id ON preference_changes(user_id);\n```\n\n### Why JSONB for Symbols?\n\nUsing `JSONB` for `watch_symbols` instead of a separate table provides:\n- **Flexibility**: Users can have 1-100+ symbols without schema changes\n- **Efficiency**: Single row per user (no JOINs needed)\n- **Query capability**: Can filter `watch_symbols @> '[\"BTC\"]'` if needed later\n\n---\n\n## Caching Strategy\n\n### In-Memory Cache Layer (Redis or Python dict)\n\n**Option 1: Redis** (recommended if bot is distributed)\n\n```python\nimport redis\nimport json\n\ncache = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)\n\ndef get_user_preferences(user_id):\n    # Try cache first\n    cached = cache.get(f\"prefs:{user_id}\")\n    if cached:\n        return json.loads(cached)\n\n    # Fallback to database\n    prefs = db.query(\"SELECT * FROM user_preferences WHERE user_id = %s\", (user_id,))\n    if prefs:\n        # Cache for 1 hour\n        cache.setex(\n            f\"prefs:{user_id}\",\n            3600,\n            json.dumps(prefs)\n        )\n    return prefs\n\ndef update_preference(user_id, field, value):\n    # Update database\n    db.execute(\n        f\"UPDATE user_preferences SET {field} = %s, updated_at = NOW() WHERE user_id = %s\",\n        (value, user_id)\n    )\n    # Invalidate cache immediately\n    cache.delete(f\"prefs:{user_id}\")\n```\n\n**Option 2: Simple Python Dict** (for single-instance bot)\n\n```python\nimport time\n\nuser_prefs_cache = {}  # {user_id: (prefs_dict, timestamp)}\nCACHE_TTL = 3600  # 1 hour\n\ndef get_user_preferences(user_id):\n    if user_id in user_prefs_cache:\n        prefs, timestamp = user_prefs_cache[user_id]\n        if time.time() - timestamp < CACHE_TTL:\n            return prefs\n\n    # Load from DB and cache\n    prefs = load_from_db(user_id)\n    user_prefs_cache[user_id] = (prefs, time.time())\n    return prefs\n```\n\n**Performance Impact:**\n- Without cache: 50-100ms per alert decision (database query)\n- With cache: <1ms per alert (memory lookup)\n- At 1000 alerts/minute: ~50-100 seconds saved per minute\n\n---\n\n## Telegram Command Interface\n\n### Core Commands Architecture\n\n```python\nfrom telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup\nfrom telegram.ext import Application, CommandHandler, CallbackQueryHandler, ConversationHandler\n\n# States for conversation flow\nSELECT_ACTION, SELECT_SYMBOLS, SELECT_SIZE, CONFIRM = range(4)\n\nasync def start_settings(update: Update, context):\n    \"\"\"Entry point: /settings\"\"\"\n    keyboard = [\n        [InlineKeyboardButton(\"\ud83d\udcca Watch Symbols\", callback_data=\"edit_symbols\")],\n        [InlineKeyboardButton(\"\ud83d\udcb0 Liquidation Size\", callback_data=\"edit_size\")],\n        [InlineKeyboardButton(\"\ud83d\udcc8 RSI Alerts\", callback_data=\"toggle_rsi\")],\n        [InlineKeyboardButton(\"\u26a0\ufe0f Liquidation Alerts\", callback_data=\"toggle_liq\")],\n        [InlineKeyboardButton(\"\ud83d\udcc9 Attach Charts\", callback_data=\"toggle_charts\")],\n        [InlineKeyboardButton(\"\u23f0 Quiet Hours\", callback_data=\"quiet_hours\")],\n        [InlineKeyboardButton(\"\u2705 View Current Settings\", callback_data=\"view_prefs\")],\n    ]\n    reply_markup = InlineKeyboardMarkup(keyboard)\n    await update.message.reply_text(\n        \"\u2699\ufe0f *Trading Alert Preferences*\\n\\nWhat would you like to adjust?\",\n        reply_markup=reply_markup,\n        parse_mode=\"Markdown\"\n    )\n    return SELECT_ACTION\n\nasync def edit_symbols(update: Update, context):\n    \"\"\"Edit watched symbols\"\"\"\n    query = update.callback_query\n    user_id = query.from_user.id\n\n    prefs = get_user_preferences(user_id)\n    current = prefs.get('watch_symbols', [])\n\n    message = (\n        f\"*Current symbols:* `{', '.join(current)}`\\n\\n\"\n        \"Send symbols separated by commas (e.g., `BTC,ETH,SOL`)\\n\"\n        \"or `/cancel` to exit\"\n    )\n\n    await query.edit_message_text(message, parse_mode=\"Markdown\")\n    return SELECT_SYMBOLS\n\nasync def save_symbols(update: Update, context):\n    \"\"\"Process symbol input\"\"\"\n    user_id = update.message.from_user.id\n    symbols = [s.strip().upper() for s in update.message.text.split(\",\")]\n\n    # Validate\n    if not all(len(s) <= 10 for s in symbols):\n        await update.message.reply_text(\"\u274c Invalid symbols. Keep them short (e.g., BTC, ETH)\")\n        return SELECT_SYMBOLS\n\n    # Update database\n    update_preference(user_id, 'watch_symbols', json.dumps(symbols))\n\n    await update.message.reply_text(\n        f\"\u2705 Updated! Now watching: {', '.join(symbols)}\",\n        parse_mode=\"Markdown\"\n    )\n    await show_main_menu(update, context)\n    return SELECT_ACTION\n\nasync def edit_liquidation_size(update: Update, context):\n    \"\"\"Edit minimum liquidation size threshold\"\"\"\n    query = update.callback_query\n    user_id = query.from_user.id\n\n    prefs = get_user_preferences(user_id)\n    current_size = prefs.get('min_liquidation_size', 100000)\n\n    # Preset buttons for quick selection\n    keyboard = [\n        [InlineKeyboardButton(\"$10K\", callback_data=\"size_10000\"),\n         InlineKeyboardButton(\"$50K\", callback_data=\"size_50000\")],\n        [InlineKeyboardButton(\"$100K\", callback_data=\"size_100000\"),\n         InlineKeyboardButton(\"$500K\", callback_data=\"size_500000\")],\n        [InlineKeyboardButton(\"$1M+\", callback_data=\"size_custom\")],\n        [InlineKeyboardButton(\"\u2190 Back\", callback_data=\"back_to_menu\")],\n    ]\n    reply_markup = InlineKeyboardMarkup(keyboard)\n\n    await query.edit_message_text(\n        f\"*Current minimum:* `${current_size:,.0f}`\\n\\n\"\n        \"Select a threshold:\",\n        reply_markup=reply_markup,\n        parse_mode=\"Markdown\"\n    )\n    return SELECT_SIZE\n\nasync def toggle_rsi_alerts(update: Update, context):\n    \"\"\"Toggle RSI alerts on/off\"\"\"\n    query = update.callback_query\n    user_id = query.from_user.id\n\n    prefs = get_user_preferences(user_id)\n    current = prefs.get('enable_rsi_alerts', True)\n    new_state = not current\n\n    update_preference(user_id, 'enable_rsi_alerts', new_state)\n\n    status = \"\u2705 ON\" if new_state else \"\u274c OFF\"\n    await query.answer(f\"RSI Alerts: {status}\", show_alert=True)\n\n    # Refresh the menu\n    await show_main_menu(update, context)\n    return SELECT_ACTION\n\nasync def view_preferences(update: Update, context):\n    \"\"\"Show all current preferences\"\"\"\n    query = update.callback_query\n    user_id = query.from_user.id\n\n    prefs = get_user_preferences(user_id)\n\n    message = (\n        \"*Your Alert Settings:*\\n\\n\"\n        f\"\ud83d\udcca Symbols: `{', '.join(prefs['watch_symbols'])}`\\n\"\n        f\"\ud83d\udcb0 Min Liquidation: `${prefs['min_liquidation_size']:,.0f}`\\n\"\n        f\"\ud83d\udcc8 RSI Alerts: {'\u2705' if prefs['enable_rsi_alerts'] else '\u274c'}\\n\"\n        f\"\u26a0\ufe0f Liquidation Alerts: {'\u2705' if prefs['enable_liquidation_alerts'] else '\u274c'}\\n\"\n        f\"\ud83d\udcc9 Charts: {'\u2705' if prefs['attach_charts'] else '\u274c'}\\n\"\n        f\"\u23f0 Quiet Hours: \"\n    )\n\n    if prefs.get('quiet_hours_start') is not None:\n        message += f\"`{prefs['quiet_hours_start']:02d}:00 - {prefs['quiet_hours_end']:02d}:00`\"\n    else:\n        message += \"Disabled\"\n\n    await query.edit_message_text(message, parse_mode=\"Markdown\")\n```\n\n---\n\n## Implementation Steps\n\n### 1. Setup Phase (Week 1)\n\n```python\n# database.py\nimport psycopg2\nfrom psycopg2.extras import RealDictCursor\n\nclass PreferencesDB:\n    def __init__(self, connection_string):\n        self.conn = psycopg2.connect(connection_string)\n\n    def ensure_user_exists(self, user_id, username):\n        \"\"\"Create user if first time\"\"\"\n        with self.conn.cursor() as cur:\n            cur.execute(\"\"\"\n                INSERT INTO users (user_id, username)\n                VALUES (%s, %s)\n                ON CONFLICT (user_id) DO NOTHING\n            \"\"\", (user_id, username))\n\n            cur.execute(\"\"\"\n                INSERT INTO user_preferences (user_id)\n                VALUES (%s)\n                ON CONFLICT (user_id) DO NOTHING\n            \"\"\", (user_id,))\n        self.conn.commit()\n\n    def get_preferences(self, user_id):\n        with self.conn.cursor(cursor_factory=RealDictCursor) as cur:\n            cur.execute(\"SELECT * FROM user_preferences WHERE user_id = %s\", (user_id,))\n            return cur.fetchone()\n\n    def update_preference(self, user_id, field, value):\n        with self.conn.cursor() as cur:\n            cur.execute(f\"\"\"\n                UPDATE user_preferences\n                SET {field} = %s, updated_at = NOW()\n                WHERE user_id = %s\n            \"\"\", (value, user_id))\n        self.conn.commit()\n```\n\n### 2. Integration with Alert Logic\n\n```python\nasync def check_and_alert(liquidation_event):\n    \"\"\"Main alert loop\"\"\"\n    user_id = liquidation_event['watcher_id']\n    symbol = liquidation_event['symbol']\n    size = liquidation_event['size_usd']\n\n    # Get preferences (cached)\n    prefs = get_user_preferences(user_id)\n\n    # Filter by user preferences\n    if symbol not in prefs['watch_symbols']:\n        return  # User not watching this symbol\n\n    if size < prefs['min_liquidation_size']:\n        return  # Below user's threshold\n\n    # Check quiet hours\n    if is_in_quiet_hours(prefs):\n        return  # Don't alert during quiet hours\n\n    # Check cooldown\n    if is_within_cooldown(user_id):\n        return\n\n    # Compose alert message\n    message = f\"\u26a0\ufe0f {symbol} liquidation: ${size:,.0f}\"\n\n    if prefs['enable_rsi_alerts']:\n        rsi = calculate_rsi(symbol)\n        message += f\"\\nRSI: {rsi:.1f}\"\n\n    # Optional: attach chart\n    if prefs['attach_charts']:\n        chart = generate_chart(symbol)\n        await context.bot.send_photo(user_id, chart, caption=message)\n    else:\n        await context.bot.send_message(user_id, message)\n\n    record_alert_sent(user_id)\n```\n\n---\n\n## Scaling Considerations\n\n### At 50 Users\n- Single PostgreSQL instance\n- Python dict cache sufficient\n- Commands via direct handlers\n\n### At 500 Users\n- Consider Redis caching\n- Database connection pooling (psycopg2.pool)\n- Monitor query performance\n\n### At 5000+ Users\n- Multi-instance bot workers\n- Redis REQUIRED\n- Database read replicas if heavy query load\n- Archive old preference_changes logs\n- Batch process symbol queries\n\n---\n\n## Best Practices\n\n### 1. Validate Input\n```python\nVALID_SYMBOLS = {\"BTC\", \"ETH\", \"SOL\", \"XRP\", \"ADA\"}  # Maintain whitelist\nMIN_SIZE = 10000\nMAX_SIZE = 1000000000\nSYMBOLS_LIMIT = 50\n\ndef validate_symbols(symbols):\n    if not symbols or len(symbols) > SYMBOLS_LIMIT:\n        raise ValueError(f\"Provide 1-{SYMBOLS_LIMIT} symbols\")\n\n    invalid = [s for s in symbols if s not in VALID_SYMBOLS]\n    if invalid:\n        raise ValueError(f\"Unknown symbols: {invalid}\")\n```\n\n### 2. Audit Preference Changes\n```python\ndef update_preference_with_audit(user_id, field, new_value):\n    old_value = get_user_preferences(user_id).get(field)\n\n    # Log change\n    audit_log.insert({\n        'user_id': user_id,\n        'field': field,\n        'old': old_value,\n        'new': new_value,\n        'timestamp': datetime.now()\n    })\n\n    # Update\n    update_preference(user_id, field, new_value)\n```\n\n### 3. Graceful Degradation\n```python\ndef get_user_preferences(user_id):\n    try:\n        return cache.get(user_id) or db.fetch(user_id)\n    except Exception as e:\n        logger.error(f\"Preferences fetch failed for {user_id}: {e}\")\n        # Return safe defaults instead of crashing\n        return DEFAULT_PREFERENCES\n```\n\n---\n\n## Telegram Command Reference for Users\n\n```\n/settings          Open preference menu\n/symbols           Quick: Edit watched symbols\n/size              Quick: Set liquidation threshold\n/alerts on|off     Quick: Toggle alert types\n/quiet HH:MM HH:MM Set quiet hours\n/reset             Reset to defaults\n/help              Show command help\n```\n\n---\n\n## Estimated Performance\n\n| Metric | Single Instance | With Redis Cache |\n|--------|-----------------|------------------|\n| Alert check time | 45-80ms | 2-5ms |\n| Settings update | 30-50ms | 50-70ms (cache invalidation) |\n| Throughput @ 100 symbols | ~10 alerts/sec | ~200 alerts/sec |\n| Database connections needed | 5-10 | 2-3 |\n\n---\n\n## Testing Checklist\n\n- [ ] Test with 100 concurrent users updating preferences\n- [ ] Verify cache invalidation on preference changes\n- [ ] Test alert filtering with complex symbol/size combinations\n- [ ] Load test alert dispatch at 1000 events/minute\n- [ ] Verify no preference data leaks between users\n- [ ] Test database recovery after connection loss\n- [ ] Monitor memory usage of cache (set eviction policy)\n- [ ] Verify preferences persist across bot restarts\n\nThis architecture will handle scaling from 50 to thousands of users while keeping preference lookup fast and UX simple for end users.\n"}], "grading": {"expectations": [{"text": "Recommends SQLite for current scale (50 users) as an appropriate starting point", "passed": false, "evidence": "The response recommends PostgreSQL as the primary option ('Schema: PostgreSQL (recommended for your scale)'). While it later says 'At 50 Users: Single PostgreSQL instance, Python dict cache sufficient', it never recommends SQLite. For a 50-user, single-server deployment, PostgreSQL is over-engineered \u2014 SQLite would be more appropriate."}, {"text": "Describes a concrete user preference schema with relevant fields (symbols, alert types, thresholds, muted_until or similar)", "passed": true, "evidence": "Schema has watch_symbols (JSONB), min_liquidation_size, enable_rsi_alerts, enable_liquidation_alerts, attach_charts, alert_cooldown_seconds, quiet_hours_start/end. Relevant fields present, though muted_until is missing."}, {"text": "Suggests inline keyboard buttons for /settings UX rather than requiring users to type commands", "passed": true, "evidence": "Comprehensive inline keyboard with per-preference callbacks shown. toggle_rsi_alerts, edit_liquidation_size with preset buttons, edit_symbols flow all use InlineKeyboardButton."}, {"text": "Addresses onboarding/authentication (deep-link /start token or allowlist or similar)", "passed": false, "evidence": "No mention of authentication, allowlisting, deep-link tokens, or any mechanism to control who can access the bot's alerts. The response treats any Telegram user as a valid subscriber."}, {"text": "Mentions muting capability as a preference option", "passed": false, "evidence": "The schema has quiet_hours_start/quiet_hours_end (time-of-day suppression) and alert_cooldown_seconds (minimum interval), but neither is a manual mute (e.g., 'silence for the next 30 minutes'). No muted_until field or /mute command is mentioned."}], "summary": {"passed": 2, "failed": 3, "total": 5, "pass_rate": 0.4}, "execution_metrics": {"total_tool_calls": 4, "total_steps": 1, "errors_encountered": 0, "output_chars": 14538}, "timing": {"executor_duration_seconds": 46.9, "total_duration_seconds": 46.9}, "claims": [{"claim": "Alert check time is 45-80ms without cache, 2-5ms with cache", "type": "factual", "verified": false, "evidence": "These numbers are illustrative estimates, not measured benchmarks. Actual latency depends on database configuration, query complexity, and hardware."}], "user_notes_summary": {"uncertainties": [], "needs_review": ["Performance benchmark figures are unverified estimates"], "workarounds": []}, "eval_feedback": {"suggestions": [], "overall": "Weaker response. Recommends over-engineered DB for small scale, missing mute capability and auth patterns."}}}, {"id": "eval-3-with_skill", "prompt": "My Telegram alert bot works great in testing but in production it just silently stops working after a few hours. I'm using Binance WebSocket streams (markPrice and aggTrade) and sending to a private Telegram channel. When I restart the script it works again for a while. Here's the relevant part: [code showing no reconnect logic]. What's causing this and how do I fix it?", "eval_id": 3, "outputs": [{"name": "response.md", "type": "text", "content": "# WebSocket Silent Disconnection: Root Cause & Fixes\n\n## The Problem: Binance 24-Hour Timeout (Not Your Code)\n\nYour code doesn't have an explicit timeout, but **Binance does**. WebSocket streams to Binance's futures servers automatically disconnect after **24 hours of inactivity** on the connection. The stream drops silently\u2014no error, no close frame. Your async loop just stops receiving messages and hangs indefinitely waiting for the next one.\n\nThis is why restarting works: you get a fresh connection.\n\n---\n\n## Root Causes (In Order of Likelihood)\n\n### 1. **Binance 24-Hour Forced Disconnect (Primary)**\nThe `wss://fstream.binance.com/ws/btcusdt@markPrice@1s` stream is guaranteed to disconnect after 24 hours regardless of message flow. Without a reconnect mechanism, you're dead.\n\n**Why your code hangs instead of crashing:**\n- `async for message in ws:` blocks indefinitely waiting for data\n- When Binance kills the connection, no error fires\u2014the iterator just stops\n- Your handler never gets called, but the coroutine is still running and consuming memory\n- You have no outer loop to detect the dead connection and reconnect\n\n### 2. **Silent Connection Drop (Network Issues)**\nEven before 24 hours, any network glitch can drop the WebSocket:\n- ISP connection reset\n- Firewall timeout (usually 60+ minutes of idle, but varies)\n- Binance load balancer restart\n- DNS timeout or ephemeral port exhaustion\n\nYour code doesn't detect or recover from these.\n\n### 3. **Unhandled Exception in `process_and_send()`**\nIf `process_and_send()` raises an exception and you're not catching it at the top level, the coroutine silently dies. Telegram API errors (rate limit, network hiccup) that aren't caught will kill the entire stream handler.\n\n---\n\n## The Fix: Reconnect Loop + Timeout\n\nReplace your bare connection with a resilient wrapper:\n\n```python\nimport asyncio\nimport websockets\nfrom websockets.exceptions import ConnectionClosed\nimport logging\n\nlogger = logging.getLogger(__name__)\nRECONNECT_MIN_WAIT = 1  # second\nRECONNECT_MAX_WAIT = 60  # cap at 1 minute\nBINANCE_24H_RECONNECT = 23 * 3600  # reconnect every 23 hours (before 24h cutoff)\n\nasync def stream_handler():\n    \"\"\"\n    Resilient WebSocket handler with auto-reconnect.\n    Reconnects on any disconnect (timeout, network, Binance 24h cutoff).\n    \"\"\"\n    backoff = RECONNECT_MIN_WAIT\n\n    while True:\n        try:\n            uri = 'wss://fstream.binance.com/ws/btcusdt@markPrice@1s'\n\n            # Add a 23-hour timeout to proactively reconnect before Binance kills us\n            async with asyncio.timeout(BINANCE_24H_RECONNECT):\n                async with websockets.connect(uri) as ws:\n                    logger.info(\"Connected to Binance stream\")\n                    backoff = RECONNECT_MIN_WAIT  # reset backoff on successful connect\n\n                    try:\n                        async for message in ws:\n                            await process_and_send(message)\n                    except Exception as e:\n                        logger.error(f\"Error processing message: {e}\", exc_info=True)\n                        # Continue to reconnect rather than crashing\n                        raise\n\n        except asyncio.TimeoutError:\n            logger.warning(\"Stream timeout (23h limit) \u2014 reconnecting proactively\")\n        except ConnectionClosed as e:\n            logger.warning(f\"WebSocket closed: {e.rcvd} / {e.sent} \u2014 reconnecting\")\n        except Exception as e:\n            logger.error(f\"Unexpected error in stream: {e}\", exc_info=True)\n\n        # Exponential backoff with jitter\n        wait_time = min(backoff, RECONNECT_MAX_WAIT)\n        logger.info(f\"Reconnecting in {wait_time}s...\")\n        await asyncio.sleep(wait_time)\n        backoff *= 1.5  # exponential growth\n```\n\n---\n\n## Why This Works\n\n1. **Outer `while True` loop**: Catches any disconnect (Binance 24h, network, exception) and reconnects\n2. **`asyncio.timeout(23h)`**: Proactively reconnects *before* Binance kills the stream. No waiting for a silent drop\n3. **Exception handling**: Logs errors but doesn't crash. `process_and_send()` failures are caught and the stream recovers\n4. **Exponential backoff**: Avoids hammering Binance with reconnects if the network is flaky (starts 1s, caps at 60s)\n5. **Reset on success**: Backoff counter resets once you reconnect successfully\n\n---\n\n## Additional: Telegram Error Handling\n\nYour `process_and_send()` is probably where alerts are sent to Telegram. **Make sure it catches `RetryAfter` exceptions** and honors the retry delay:\n\n```python\nfrom telegram import Bot\nfrom telegram.error import RetryAfter\n\nbot = Bot(token=\"YOUR_TOKEN\")\n\nasync def process_and_send(message):\n    \"\"\"Parse Binance message and send alert.\"\"\"\n    try:\n        # Your signal logic here\n        alert_text = parse_alert(message)\n\n        # Send with explicit retry on rate limit\n        max_retries = 3\n        for attempt in range(max_retries):\n            try:\n                await bot.send_message(\n                    chat_id=YOUR_CHAT_ID,\n                    text=alert_text,\n                    parse_mode=\"HTML\"\n                )\n                break\n            except RetryAfter as e:\n                logger.warning(f\"Rate limited. Waiting {e.retry_after}s...\")\n                await asyncio.sleep(e.retry_after)\n            except Exception as e:\n                logger.error(f\"Failed to send alert: {e}\")\n                if attempt == max_retries - 1:\n                    raise\n                await asyncio.sleep(2 ** attempt)  # backoff\n    except Exception as e:\n        logger.error(f\"Error in process_and_send: {e}\", exc_info=True)\n        raise\n```\n\nIf a Telegram rate limit (`RetryAfter`) is silently swallowed elsewhere in your code, it could explain the bot appearing to stop\u2014the stream is still running, but messages aren't sending.\n\n---\n\n## Monitoring & Ops\n\nAdd a heartbeat to verify the stream is actually processing data:\n\n```python\nasync def monitor_stream_health():\n    \"\"\"Verify stream is alive every 5 minutes.\"\"\"\n    global last_message_time\n\n    while True:\n        await asyncio.sleep(300)  # check every 5 min\n        time_since_last = time.time() - last_message_time\n\n        if time_since_last > 300:\n            logger.error(f\"No messages in {time_since_last}s \u2014 stream is dead!\")\n            # Optionally send alert to ops channel\n            await bot.send_message(OPS_CHAT_ID, \"\u26a0\ufe0f Stream died, restarting...\")\n        else:\n            logger.debug(f\"Stream healthy. Last message {time_since_last}s ago\")\n\n# In your main coroutine, set last_message_time on each message:\nasync def process_and_send(message):\n    global last_message_time\n    last_message_time = time.time()\n    # ... rest of your logic\n```\n\n---\n\n## Checklist\n\n- [ ] Add outer `while True` reconnect loop\n- [ ] Set `asyncio.timeout(23 * 3600)` to proactively reconnect before 24h\n- [ ] Catch and log `ConnectionClosed` exceptions\n- [ ] Implement exponential backoff with a cap (don't reconnect faster than 1/min)\n- [ ] Wrap `process_and_send()` in try-catch and log exceptions\n- [ ] In Telegram sending logic, catch `RetryAfter` and sleep the exact `retry_after` value\n- [ ] Add a health monitor that checks if messages are flowing\n- [ ] Log all reconnects with timestamps so you can correlate gaps to the ops channel\n\nDeploy this and your bot will stay alive indefinitely across network hiccups, Binance restarts, and the 24-hour cutoff.\n"}], "grading": {"expectations": [{"text": "Correctly identifies the Binance 24-hour WebSocket timeout as the primary root cause", "passed": true, "evidence": "Section 1: 'Binance 24-Hour Forced Disconnect (Primary) \u2014 The wss://fstream.binance.com/... stream is guaranteed to disconnect after 24 hours regardless of message flow.'"}, {"text": "Points out that the current code has no reconnect logic around the websockets.connect call", "passed": true, "evidence": "'You have no outer loop to detect the dead connection and reconnect.' Explicitly shows the missing reconnect wrapper around the websockets.connect context manager."}, {"text": "Provides a reconnect loop with exponential backoff", "passed": true, "evidence": "while True loop with 'backoff *= 1.5' and 'wait_time = min(backoff, RECONNECT_MAX_WAIT)' and 'await asyncio.sleep(wait_time)'. Backoff starts at 1s, caps at 60s."}, {"text": "Mentions jitter in the backoff to avoid reconnect storms", "passed": false, "evidence": "The response does not mention jitter. The backoff is pure exponential (\u00d71.5) with no randomization. Under simultaneous reconnects (e.g., if running multiple stream tasks), this could still cause clustering."}, {"text": "Recommends a proactive reconnect before the 24h limit (e.g., reconnect at 23h) rather than only reacting to disconnects", "passed": true, "evidence": "'BINANCE_24H_RECONNECT = 23 * 3600' with 'asyncio.timeout(BINANCE_24H_RECONNECT)' wrapping the connection \u2014 proactively triggers reconnect at 23 hours before Binance kills the stream."}], "summary": {"passed": 4, "failed": 1, "total": 5, "pass_rate": 0.8}, "execution_metrics": {"total_tool_calls": 7, "total_steps": 1, "errors_encountered": 0, "output_chars": 7430}, "timing": {"executor_duration_seconds": 44.1, "total_duration_seconds": 44.1}, "claims": [{"claim": "Binance streams disconnect after 24 hours regardless of message flow", "type": "factual", "verified": true, "evidence": "Accurate per Binance WebSocket API documentation."}, {"claim": "async for stops iterating silently when connection drops", "type": "factual", "verified": true, "evidence": "Accurate \u2014 the websockets library's async generator raises ConnectionClosed internally, and if not caught, the for loop terminates without re-raising. The caller sees no exception."}], "user_notes_summary": {"uncertainties": [], "needs_review": [], "workarounds": []}, "eval_feedback": {"suggestions": [{"assertion": "Mentions jitter in the backoff to avoid reconnect storms", "reason": "Jitter is important but this assertion is less critical for single-stream bots (it matters more with many simultaneous clients). Consider whether to keep it or replace with an assertion about resetting the backoff on successful connect."}], "overall": "Strong response. Missing jitter is a real but minor gap. All key facts are correct."}}}, {"id": "eval-3-without_skill", "prompt": "My Telegram alert bot works great in testing but in production it just silently stops working after a few hours. I'm using Binance WebSocket streams (markPrice and aggTrade) and sending to a private Telegram channel. When I restart the script it works again for a while. Here's the relevant part: [code showing no reconnect logic]. What's causing this and how do I fix it?", "eval_id": 3, "outputs": [{"name": "response.md", "type": "text", "content": "# WebSocket Silent Failures in Telegram Bot - Root Causes & Solutions\n\n## The Problem You're Facing\n\nYour bot is silently stopping because **WebSocket connections silently drop**, but your code has no recovery mechanism. The connection closes without raising an exception you can catch at the application level. Common reasons:\n\n1. **Binance server-side connection resets** - Binance closes idle connections after ~24 minutes without ping/pong\n2. **Network intermittencies** - Dropped packets, connection hangs on poor networks\n3. **OS-level socket timeouts** - TCP connections timeout without explicit application-level detection\n4. **No heartbeat mechanism** - WebSockets need ping/pong frames to stay alive\n\nYour current code:\n```python\nasync with websockets.connect(uri) as ws:\n    async for message in ws:\n        await process_and_send(message)\n```\n\nThis exits silently when the connection dies because `async for` just stops iterating.\n\n## Solutions\n\n### Solution 1: Add Reconnection Logic (Recommended)\n\n```python\nimport asyncio\nimport websockets\nfrom websockets.exceptions import ConnectionClosed\n\nasync def stream_handler():\n    uri = 'wss://fstream.binance.com/ws/btcusdt@markPrice@1s'\n    max_retries = 5\n    retry_count = 0\n\n    while True:\n        try:\n            async with websockets.connect(uri) as ws:\n                retry_count = 0  # Reset on successful connection\n                async for message in ws:\n                    await process_and_send(message)\n        except ConnectionClosed:\n            retry_count += 1\n            if retry_count > max_retries:\n                print(f\"Max retries ({max_retries}) exceeded\")\n                break\n            wait_time = min(2 ** retry_count, 300)  # Exponential backoff, max 5min\n            print(f\"Connection closed. Retrying in {wait_time}s... (attempt {retry_count})\")\n            await asyncio.sleep(wait_time)\n        except Exception as e:\n            print(f\"Unexpected error: {e}\")\n            await asyncio.sleep(10)\n```\n\n### Solution 2: Explicit Ping/Pong Handling\n\n```python\nasync def stream_handler():\n    uri = 'wss://fstream.binance.com/ws/btcusdt@markPrice@1s'\n\n    while True:\n        try:\n            async with websockets.connect(uri, ping_interval=20, ping_timeout=10) as ws:\n                async for message in ws:\n                    await process_and_send(message)\n        except (ConnectionClosed, asyncio.TimeoutError) as e:\n            print(f\"Connection lost: {e}\")\n            await asyncio.sleep(5)\n```\n\nThe `ping_interval=20` sends a ping every 20 seconds, and `ping_timeout=10` closes the connection if no pong response within 10 seconds. This detects dead connections fast.\n\n### Solution 3: Timeout Wrapper (Additional Safety)\n\n```python\nimport asyncio\n\nasync def stream_handler():\n    uri = 'wss://fstream.binance.com/ws/btcusdt@markPrice@1s'\n\n    while True:\n        try:\n            async with websockets.connect(uri, ping_interval=20, ping_timeout=10) as ws:\n                while True:\n                    try:\n                        message = await asyncio.wait_for(ws.recv(), timeout=30)\n                        await process_and_send(message)\n                    except asyncio.TimeoutError:\n                        print(\"No message received for 30s, closing connection\")\n                        break\n        except Exception as e:\n            print(f\"Error: {e}\")\n            await asyncio.sleep(5)\n```\n\nThis catches both connection drops and message stalls.\n\n## Why Your Code Fails in Production\n\n- **Testing environment**: Shorter sessions, fewer network interruptions, more stable conditions\n- **Production environment**:\n  - Longer uptime = higher chance of hitting timeout windows\n  - More network hops = more failure points\n  - Binance actively closes idle connections after ~24 minutes\n  - No monitoring to detect the silent failure\n\n## Additional Recommendations\n\n1. **Add logging to know when it fails**:\n```python\nimport logging\nlogging.basicConfig(level=logging.INFO)\nlogger = logging.getLogger(__name__)\nlogger.info(\"WebSocket connected\")\nlogger.error(\"WebSocket disconnected\", exc_info=True)\n```\n\n2. **Monitor the Telegram bot health**:\n```python\nasync def health_check():\n    # Send a test message to Telegram every hour to verify bot is alive\n    while True:\n        await asyncio.sleep(3600)\n        try:\n            await telegram_bot.send_message(chat_id, \"Bot is alive\")\n        except Exception as e:\n            logger.error(f\"Health check failed: {e}\")\n```\n\n3. **Use supervisor/systemd to auto-restart**:\n```ini\n[Unit]\nDescription=Telegram Trading Bot\nAfter=network.target\n\n[Service]\nType=simple\nUser=ubuntu\nWorkingDirectory=/path/to/bot\nExecStart=/usr/bin/python3 bot.py\nRestart=always\nRestartSec=10\nStandardOutput=append:/var/log/trading-bot.log\nStandardError=append:/var/log/trading-bot.log\n\n[Install]\nWantedBy=multi-user.target\n```\n\n4. **Handle multiple streams robustly**:\n```python\nasync def main():\n    tasks = [\n        stream_handler('btcusdt@markPrice@1s'),\n        stream_handler('btcusdt@aggTrade'),\n    ]\n    await asyncio.gather(*tasks)\n```\n\n## Summary\n\n- **Root cause**: Silent WebSocket disconnections with no recovery\n- **Quick fix**: Add reconnection loop with exponential backoff\n- **Best practice**: Enable ping/pong + timeouts + logging + monitoring\n- **Production deployment**: Use process supervisor to restart on failure\n\nImplement Solution 2 (ping/pong) first as it's minimal and catches most failures. Add Solution 1 (reconnection) for robustness. Use logging and health checks to gain visibility into failures.\n"}], "grading": {"expectations": [{"text": "Correctly identifies the Binance 24-hour WebSocket timeout as the primary root cause", "passed": false, "evidence": "CRITICAL FACTUAL ERROR: Response states 'Binance server-side connection resets - Binance closes idle connections after ~24 minutes without ping/pong'. The actual limit is 24 HOURS, not 24 minutes. This incorrect root cause would lead the user to implement ping/pong as the primary fix rather than a 24h reconnect cycle."}, {"text": "Points out that the current code has no reconnect logic around the websockets.connect call", "passed": true, "evidence": "'Your code has no recovery mechanism' and shows that async for just stops iterating. The gap is correctly identified."}, {"text": "Provides a reconnect loop with exponential backoff", "passed": true, "evidence": "Solution 1 shows while True loop with 'wait_time = min(2 ** retry_count, 300)' and asyncio.sleep. The backoff caps at 5 minutes."}, {"text": "Mentions jitter in the backoff to avoid reconnect storms", "passed": false, "evidence": "No jitter is mentioned. The backoff is pure exponential (2^n)."}, {"text": "Recommends a proactive reconnect before the 24h limit (e.g., reconnect at 23h) rather than only reacting to disconnects", "passed": false, "evidence": "No proactive timeout is suggested. The response focuses on reactive reconnect after failure. Since the response incorrectly believes the limit is 24 minutes (not 24 hours), it could not have suggested a 23-hour proactive reconnect."}], "summary": {"passed": 2, "failed": 3, "total": 5, "pass_rate": 0.4}, "execution_metrics": {"total_tool_calls": 4, "total_steps": 1, "errors_encountered": 0, "output_chars": 5578}, "timing": {"executor_duration_seconds": 25.1, "total_duration_seconds": 25.1}, "claims": [{"claim": "Binance closes idle connections after ~24 minutes without ping/pong", "type": "factual", "verified": false, "evidence": "INCORRECT. Binance's documented behavior is a 24-HOUR limit on stream connections, not 24 minutes. The response conflates the Binance-specific 24h forced disconnect with a general TCP idle timeout misconception. This is the critical factual error that drives incorrect prioritization of ping/pong over a 23h reconnect cycle."}, {"claim": "max_retries = 5 is a sensible cap", "type": "quality", "verified": false, "evidence": "For a production trading bot, capping retries at 5 and then breaking out of the loop entirely is dangerous \u2014 the bot would stop permanently after 5 reconnect failures. Production bots should retry indefinitely with backoff, not give up."}], "user_notes_summary": {"uncertainties": [], "needs_review": ["Critical factual error: 24 minutes vs 24 hours", "max_retries=5 cap would permanently stop the bot"], "workarounds": []}, "eval_feedback": {"suggestions": [], "overall": "The central root cause identification is factually wrong (24 minutes not 24 hours). This is exactly the kind of gap the skill is designed to prevent."}}}], "previous_feedback": {}, "previous_outputs": {}, "benchmark": {"metadata": {"skill_name": "telegram-trading-alerts", "skill_path": "/sessions/clever-vigilant-keller/telegram-trading-alerts", "executor_model": "claude-sonnet-4-6", "analyzer_model": "claude-sonnet-4-6", "timestamp": "2026-04-04T09:54:39Z", "evals_run": [1, 2, 3], "runs_per_configuration": 1}, "runs": [{"eval_id": 1, "eval_name": "Liquidation Cascade Rate Limiting", "configuration": "with_skill", "run_number": 1, "result": {"pass_rate": 0.8, "passed": 4, "failed": 1, "total": 5, "time_seconds": 62.7, "tokens": 90740, "tool_calls": 7, "errors": 0}, "expectations": [{"text": "Mentions Telegram's 1 message/second per chat limit", "passed": true, "evidence": "Explicitly stated: 'Telegram enforces 1 message/second per chat (strict)'"}, {"text": "Explains RetryAfter exception handling (not fixed sleep)", "passed": true, "evidence": "Dedicated section; code shows 'await asyncio.sleep(e.retry_after)'"}, {"text": "Recommends batching/aggregating liquidation events", "passed": true, "evidence": "LiquidationMonitor with cascade detection and per-symbol cooldown"}, {"text": "Suggests a priority queue for high-urgency alerts", "passed": true, "evidence": "asyncio.PriorityQueue with HIGH/MED/LOW tiers"}, {"text": "Addresses group vs private rate limit difference", "passed": false, "evidence": "20 msg/min group cap not mentioned"}], "notes": []}, {"eval_id": 1, "eval_name": "Liquidation Cascade Rate Limiting", "configuration": "without_skill", "run_number": 1, "result": {"pass_rate": 0.6, "passed": 3, "failed": 2, "total": 5, "time_seconds": 48.5, "tokens": 85677, "tool_calls": 4, "errors": 0}, "expectations": [{"text": "Mentions Telegram's 1 message/second per chat limit", "passed": true, "evidence": "States '~1 message per chat per second sustained'"}, {"text": "Explains RetryAfter exception handling (not fixed sleep)", "passed": true, "evidence": "429 handling present but uses tenacity which doesn't directly honor Retry-After"}, {"text": "Recommends batching/aggregating liquidation events", "passed": true, "evidence": "5-second aggregation window implemented"}, {"text": "Suggests a priority queue for high-urgency alerts", "passed": false, "evidence": "No priority queue; all alerts treated equally"}, {"text": "Addresses group vs private rate limit difference", "passed": false, "evidence": "Not mentioned"}], "notes": ["Factual inaccuracy: tenacity claim about Retry-After is misleading"]}, {"eval_id": 2, "eval_name": "Per-User Preference Management", "configuration": "with_skill", "run_number": 1, "result": {"pass_rate": 0.8, "passed": 4, "failed": 1, "total": 5, "time_seconds": 56.8, "tokens": 90805, "tool_calls": 5, "errors": 0}, "expectations": [{"text": "Recommends SQLite for 50-user scale", "passed": true, "evidence": "First recommendation; 'zero DevOps overhead'"}, {"text": "Concrete schema with relevant fields incl. muted_until", "passed": true, "evidence": "Full schema with muted_until, alert_types, symbols, thresholds"}, {"text": "Inline keyboard for /settings UX", "passed": true, "evidence": "Comprehensive InlineKeyboardButton implementation"}, {"text": "Addresses onboarding/authentication", "passed": false, "evidence": "No /start deep-link token, allowlist, or auth mechanism mentioned"}, {"text": "Muting capability as preference option", "passed": true, "evidence": "muted_until in schema; mute_minutes handler; checked in emit logic"}], "notes": []}, {"eval_id": 2, "eval_name": "Per-User Preference Management", "configuration": "without_skill", "run_number": 1, "result": {"pass_rate": 0.4, "passed": 2, "failed": 3, "total": 5, "time_seconds": 46.9, "tokens": 85609, "tool_calls": 4, "errors": 0}, "expectations": [{"text": "Recommends SQLite for 50-user scale", "passed": false, "evidence": "Recommends PostgreSQL as primary; never recommends SQLite"}, {"text": "Concrete schema with relevant fields incl. muted_until", "passed": true, "evidence": "Schema has JSONB watch_symbols, liquidation thresholds, alert toggles"}, {"text": "Inline keyboard for /settings UX", "passed": true, "evidence": "ConversationHandler with InlineKeyboardButton menus"}, {"text": "Addresses onboarding/authentication", "passed": false, "evidence": "No auth mechanism mentioned"}, {"text": "Muting capability as preference option", "passed": false, "evidence": "Has quiet_hours (time-of-day) but no on-demand mute/muted_until"}], "notes": ["Performance benchmarks (45-80ms) are unverified estimates"]}, {"eval_id": 3, "eval_name": "Binance WebSocket Silent Disconnect", "configuration": "with_skill", "run_number": 1, "result": {"pass_rate": 0.8, "passed": 4, "failed": 1, "total": 5, "time_seconds": 44.1, "tokens": 90932, "tool_calls": 7, "errors": 0}, "expectations": [{"text": "Correctly identifies Binance 24-hour timeout as root cause", "passed": true, "evidence": "'guaranteed to disconnect after 24 hours regardless of message flow'"}, {"text": "Points out missing reconnect logic", "passed": true, "evidence": "'You have no outer loop to detect the dead connection and reconnect'"}, {"text": "Reconnect loop with exponential backoff", "passed": true, "evidence": "while True; backoff *= 1.5; capped at 60s"}, {"text": "Mentions jitter in backoff", "passed": false, "evidence": "Pure exponential backoff, no jitter mentioned"}, {"text": "Proactive reconnect before 24h limit", "passed": true, "evidence": "BINANCE_24H_RECONNECT = 23 * 3600 with asyncio.timeout"}], "notes": []}, {"eval_id": 3, "eval_name": "Binance WebSocket Silent Disconnect", "configuration": "without_skill", "run_number": 1, "result": {"pass_rate": 0.4, "passed": 2, "failed": 3, "total": 5, "time_seconds": 25.1, "tokens": 81785, "tool_calls": 4, "errors": 0}, "expectations": [{"text": "Correctly identifies Binance 24-hour timeout as root cause", "passed": false, "evidence": "CRITICAL ERROR: states '~24 minutes' not 24 hours"}, {"text": "Points out missing reconnect logic", "passed": true, "evidence": "Correctly notes async for stops iterating silently"}, {"text": "Reconnect loop with exponential backoff", "passed": true, "evidence": "while True with min(2^retry_count, 300)"}, {"text": "Mentions jitter in backoff", "passed": false, "evidence": "No jitter"}, {"text": "Proactive reconnect before 24h limit", "passed": false, "evidence": "Not suggested; wrong root cause prevents this recommendation"}], "notes": ["Critical factual error: '24 minutes' vs 24 hours", "max_retries=5 cap would permanently stop a production bot"]}], "run_summary": {"with_skill": {"pass_rate": {"mean": 0.8, "stddev": 0.0, "min": 0.8, "max": 0.8}, "time_seconds": {"mean": 54.5, "stddev": 9.8, "min": 44.1, "max": 62.7}, "tokens": {"mean": 90826, "stddev": 99, "min": 90740, "max": 90932}}, "without_skill": {"pass_rate": {"mean": 0.47, "stddev": 0.11, "min": 0.4, "max": 0.6}, "time_seconds": {"mean": 40.2, "stddev": 12.4, "min": 25.1, "max": 48.5}, "tokens": {"mean": 84357, "stddev": 2170, "min": 81785, "max": 85677}}, "delta": {"pass_rate": "+0.33", "time_seconds": "+14.3", "tokens": "+6469"}}, "notes": ["Eval 3 (Binance WebSocket) is the most discriminating: without_skill had a critical 24-minutes-vs-24-hours factual error that cascaded to 3 assertion failures. With_skill correctly identified the root cause immediately.", "Eval 2 (User Preferences) shows the largest skill delta (0.80 vs 0.40). Without_skill over-engineered storage (PostgreSQL for 50 users) and missed muting.", "All 3 with_skill runs scored exactly 0.80 \u2014 the same assertion failed in each (group rate limit in eval-1, auth in eval-2, jitter in eval-3). These are clear targets for skill improvement.", "Without_skill runs are faster on average (+14.3s overhead for skill) and use ~6500 fewer tokens \u2014 the cost of reading the skill. Worth it given 0.33 pass-rate improvement.", "The 'jitter in backoff' assertion fails in both configurations \u2014 it may not be discriminating. Consider whether to keep it."]}};
+
+    // ---- State ----
+    let feedbackMap = {};  // run_id -> feedback text
+    let currentIndex = 0;
+    let visitedRuns = new Set();
+
+    // ---- Init ----
+    async function init() {
+      // Load saved feedback from server — but only if this isn't a fresh
+      // iteration (indicated by previous_feedback being present). When
+      // previous feedback exists, the feedback.json on disk is stale from
+      // the prior iteration and should not pre-fill the textareas.
+      const hasPrevious = Object.keys(EMBEDDED_DATA.previous_feedback || {}).length > 0
+        || Object.keys(EMBEDDED_DATA.previous_outputs || {}).length > 0;
+      if (!hasPrevious) {
+        try {
+          const resp = await fetch("/api/feedback");
+          const data = await resp.json();
+          if (data.reviews) {
+            for (const r of data.reviews) feedbackMap[r.run_id] = r.feedback;
+          }
+        } catch { /* first run, no feedback yet */ }
+      }
+
+      document.getElementById("skill-name").textContent = EMBEDDED_DATA.skill_name;
+      showRun(0);
+
+      // Wire up feedback auto-save
+      const textarea = document.getElementById("feedback");
+      let saveTimeout = null;
+      textarea.addEventListener("input", () => {
+        clearTimeout(saveTimeout);
+        document.getElementById("feedback-status").textContent = "";
+        saveTimeout = setTimeout(() => saveCurrentFeedback(), 800);
+      });
+    }
+
+    // ---- Navigation ----
+    function navigate(delta) {
+      const newIndex = currentIndex + delta;
+      if (newIndex >= 0 && newIndex < EMBEDDED_DATA.runs.length) {
+        saveCurrentFeedback();
+        showRun(newIndex);
+      }
+    }
+
+    function updateNavButtons() {
+      document.getElementById("prev-btn").disabled = currentIndex === 0;
+      document.getElementById("next-btn").disabled =
+        currentIndex === EMBEDDED_DATA.runs.length - 1;
+    }
+
+    // ---- Show a run ----
+    function showRun(index) {
+      currentIndex = index;
+      const run = EMBEDDED_DATA.runs[index];
+
+      // Progress
+      document.getElementById("progress").textContent =
+        `${index + 1} of ${EMBEDDED_DATA.runs.length}`;
+
+      // Prompt
+      document.getElementById("prompt-text").textContent = run.prompt;
+
+      // Config badge
+      const badge = document.getElementById("config-badge");
+      const configMatch = run.id.match(/(with_skill|without_skill|new_skill|old_skill)/);
+      if (configMatch) {
+        const config = configMatch[1];
+        const isBaseline = config === "without_skill" || config === "old_skill";
+        badge.textContent = config.replace(/_/g, " ");
+        badge.className = "config-badge " + (isBaseline ? "config-baseline" : "config-primary");
+        badge.style.display = "inline-block";
+      } else {
+        badge.style.display = "none";
+      }
+
+      // Outputs
+      renderOutputs(run);
+
+      // Previous outputs
+      renderPrevOutputs(run);
+
+      // Grades
+      renderGrades(run);
+
+      // Previous feedback
+      const prevFb = (EMBEDDED_DATA.previous_feedback || {})[run.id];
+      const prevEl = document.getElementById("prev-feedback");
+      if (prevFb) {
+        document.getElementById("prev-feedback-text").textContent = prevFb;
+        prevEl.style.display = "block";
+      } else {
+        prevEl.style.display = "none";
+      }
+
+      // Feedback
+      document.getElementById("feedback").value = feedbackMap[run.id] || "";
+      document.getElementById("feedback-status").textContent = "";
+
+      updateNavButtons();
+
+      // Track visited runs and promote done button when all visited
+      visitedRuns.add(index);
+      const doneBtn = document.getElementById("done-btn");
+      if (visitedRuns.size >= EMBEDDED_DATA.runs.length) {
+        doneBtn.classList.add("ready");
+      }
+
+      // Scroll main content to top
+      document.querySelector(".main").scrollTop = 0;
+    }
+
+    // ---- Render outputs ----
+    function renderOutputs(run) {
+      const container = document.getElementById("outputs-body");
+      container.innerHTML = "";
+
+      const outputs = run.outputs || [];
+      if (outputs.length === 0) {
+        container.innerHTML = '<div class="empty-state">No output files</div>';
+        return;
+      }
+
+      for (const file of outputs) {
+        const fileDiv = document.createElement("div");
+        fileDiv.className = "output-file";
+
+        // Always show file header with download link
+        const header = document.createElement("div");
+        header.className = "output-file-header";
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = file.name;
+        header.appendChild(nameSpan);
+        const dlBtn = document.createElement("a");
+        dlBtn.className = "dl-btn";
+        dlBtn.textContent = "Download";
+        dlBtn.download = file.name;
+        dlBtn.href = getDownloadUri(file);
+        header.appendChild(dlBtn);
+        fileDiv.appendChild(header);
+
+        const content = document.createElement("div");
+        content.className = "output-file-content";
+
+        if (file.type === "text") {
+          const pre = document.createElement("pre");
+          pre.textContent = file.content;
+          content.appendChild(pre);
+        } else if (file.type === "image") {
+          const img = document.createElement("img");
+          img.src = file.data_uri;
+          img.alt = file.name;
+          content.appendChild(img);
+        } else if (file.type === "pdf") {
+          const iframe = document.createElement("iframe");
+          iframe.src = file.data_uri;
+          content.appendChild(iframe);
+        } else if (file.type === "xlsx") {
+          renderXlsx(content, file.data_b64);
+        } else if (file.type === "binary") {
+          const a = document.createElement("a");
+          a.className = "download-link";
+          a.href = file.data_uri;
+          a.download = file.name;
+          a.textContent = "Download " + file.name;
+          content.appendChild(a);
+        } else if (file.type === "error") {
+          const pre = document.createElement("pre");
+          pre.textContent = file.content;
+          pre.style.color = "var(--red)";
+          content.appendChild(pre);
+        }
+
+        fileDiv.appendChild(content);
+        container.appendChild(fileDiv);
+      }
+    }
+
+    // ---- XLSX rendering via SheetJS ----
+    function renderXlsx(container, b64Data) {
+      try {
+        const raw = Uint8Array.from(atob(b64Data), c => c.charCodeAt(0));
+        const wb = XLSX.read(raw, { type: "array" });
+
+        for (let i = 0; i < wb.SheetNames.length; i++) {
+          const sheetName = wb.SheetNames[i];
+          const ws = wb.Sheets[sheetName];
+
+          if (wb.SheetNames.length > 1) {
+            const sheetLabel = document.createElement("div");
+            sheetLabel.style.cssText =
+              "font-weight:600; font-size:0.8rem; color:#b0aea5; margin-top:0.5rem; margin-bottom:0.25rem;";
+            sheetLabel.textContent = "Sheet: " + sheetName;
+            container.appendChild(sheetLabel);
+          }
+
+          const htmlStr = XLSX.utils.sheet_to_html(ws, { editable: false });
+          const wrapper = document.createElement("div");
+          wrapper.innerHTML = htmlStr;
+          container.appendChild(wrapper);
+        }
+      } catch (err) {
+        container.textContent = "Error rendering spreadsheet: " + err.message;
+      }
+    }
+
+    // ---- Grades ----
+    function renderGrades(run) {
+      const section = document.getElementById("grades-section");
+      const content = document.getElementById("grades-content");
+
+      if (!run.grading) {
+        section.style.display = "none";
+        return;
+      }
+
+      const grading = run.grading;
+      section.style.display = "block";
+      // Reset to collapsed
+      content.classList.remove("open");
+      document.getElementById("grades-arrow").classList.remove("open");
+
+      const summary = grading.summary || {};
+      const expectations = grading.expectations || [];
+
+      let html = '<div style="padding: 1rem;">';
+
+      // Summary line
+      const passRate = summary.pass_rate != null
+        ? Math.round(summary.pass_rate * 100) + "%"
+        : "?";
+      const badgeClass = summary.pass_rate >= 0.8 ? "grade-pass" : summary.pass_rate >= 0.5 ? "" : "grade-fail";
+      html += '<div class="grades-summary">';
+      html += '<span class="grade-badge ' + badgeClass + '">' + passRate + '</span>';
+      html += '<span>' + (summary.passed || 0) + ' passed, ' + (summary.failed || 0) + ' failed of ' + (summary.total || 0) + '</span>';
+      html += '</div>';
+
+      // Assertions list
+      html += '<ul class="assertion-list">';
+      for (const exp of expectations) {
+        const statusClass = exp.passed ? "pass" : "fail";
+        const statusIcon = exp.passed ? "\u2713" : "\u2717";
+        html += '<li class="assertion-item">';
+        html += '<span class="assertion-status ' + statusClass + '">' + statusIcon + '</span>';
+        html += '<span>' + escapeHtml(exp.text) + '</span>';
+        if (exp.evidence) {
+          html += '<div class="assertion-evidence">' + escapeHtml(exp.evidence) + '</div>';
+        }
+        html += '</li>';
+      }
+      html += '</ul>';
+
+      html += '</div>';
+      content.innerHTML = html;
+    }
+
+    function toggleGrades() {
+      const content = document.getElementById("grades-content");
+      const arrow = document.getElementById("grades-arrow");
+      content.classList.toggle("open");
+      arrow.classList.toggle("open");
+    }
+
+    // ---- Previous outputs (collapsible) ----
+    function renderPrevOutputs(run) {
+      const section = document.getElementById("prev-outputs-section");
+      const content = document.getElementById("prev-outputs-content");
+      const prevOutputs = (EMBEDDED_DATA.previous_outputs || {})[run.id];
+
+      if (!prevOutputs || prevOutputs.length === 0) {
+        section.style.display = "none";
+        return;
+      }
+
+      section.style.display = "block";
+      // Reset to collapsed
+      content.classList.remove("open");
+      document.getElementById("prev-outputs-arrow").classList.remove("open");
+
+      // Render the files into the content area
+      content.innerHTML = "";
+      const wrapper = document.createElement("div");
+      wrapper.style.padding = "1rem";
+
+      for (const file of prevOutputs) {
+        const fileDiv = document.createElement("div");
+        fileDiv.className = "output-file";
+
+        const header = document.createElement("div");
+        header.className = "output-file-header";
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = file.name;
+        header.appendChild(nameSpan);
+        const dlBtn = document.createElement("a");
+        dlBtn.className = "dl-btn";
+        dlBtn.textContent = "Download";
+        dlBtn.download = file.name;
+        dlBtn.href = getDownloadUri(file);
+        header.appendChild(dlBtn);
+        fileDiv.appendChild(header);
+
+        const fc = document.createElement("div");
+        fc.className = "output-file-content";
+
+        if (file.type === "text") {
+          const pre = document.createElement("pre");
+          pre.textContent = file.content;
+          fc.appendChild(pre);
+        } else if (file.type === "image") {
+          const img = document.createElement("img");
+          img.src = file.data_uri;
+          img.alt = file.name;
+          fc.appendChild(img);
+        } else if (file.type === "pdf") {
+          const iframe = document.createElement("iframe");
+          iframe.src = file.data_uri;
+          fc.appendChild(iframe);
+        } else if (file.type === "xlsx") {
+          renderXlsx(fc, file.data_b64);
+        } else if (file.type === "binary") {
+          const a = document.createElement("a");
+          a.className = "download-link";
+          a.href = file.data_uri;
+          a.download = file.name;
+          a.textContent = "Download " + file.name;
+          fc.appendChild(a);
+        }
+
+        fileDiv.appendChild(fc);
+        wrapper.appendChild(fileDiv);
+      }
+
+      content.appendChild(wrapper);
+    }
+
+    function togglePrevOutputs() {
+      const content = document.getElementById("prev-outputs-content");
+      const arrow = document.getElementById("prev-outputs-arrow");
+      content.classList.toggle("open");
+      arrow.classList.toggle("open");
+    }
+
+    // ---- Feedback (saved to server -> feedback.json) ----
+    function saveCurrentFeedback() {
+      const run = EMBEDDED_DATA.runs[currentIndex];
+      const text = document.getElementById("feedback").value;
+
+      if (text.trim() === "") {
+        delete feedbackMap[run.id];
+      } else {
+        feedbackMap[run.id] = text;
+      }
+
+      // Build reviews array from map
+      const reviews = [];
+      for (const [run_id, feedback] of Object.entries(feedbackMap)) {
+        if (feedback.trim()) {
+          reviews.push({ run_id, feedback, timestamp: new Date().toISOString() });
+        }
+      }
+
+      fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reviews, status: "in_progress" }),
+      }).then(() => {
+        document.getElementById("feedback-status").textContent = "Saved";
+      }).catch(() => {
+        // Static mode or server unavailable — no-op on auto-save,
+        // feedback will be downloaded on final submit
+        document.getElementById("feedback-status").textContent = "Will download on submit";
+      });
+    }
+
+    // ---- Done ----
+    function showDoneDialog() {
+      // Save current textarea to feedbackMap (but don't POST yet)
+      const run = EMBEDDED_DATA.runs[currentIndex];
+      const text = document.getElementById("feedback").value;
+      if (text.trim() === "") {
+        delete feedbackMap[run.id];
+      } else {
+        feedbackMap[run.id] = text;
+      }
+
+      // POST once with status: complete — include ALL runs so the model
+      // can distinguish "no feedback" (looks good) from "not reviewed"
+      const reviews = [];
+      const ts = new Date().toISOString();
+      for (const r of EMBEDDED_DATA.runs) {
+        reviews.push({ run_id: r.id, feedback: feedbackMap[r.id] || "", timestamp: ts });
+      }
+      const payload = JSON.stringify({ reviews, status: "complete" }, null, 2);
+      fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: payload,
+      }).then(() => {
+        document.getElementById("done-overlay").classList.add("visible");
+      }).catch(() => {
+        // Server not available (static mode) — download as file
+        const blob = new Blob([payload], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "feedback.json";
+        a.click();
+        URL.revokeObjectURL(url);
+        document.getElementById("done-overlay").classList.add("visible");
+      });
+    }
+
+    function closeDoneDialog() {
+      // Reset status back to in_progress
+      saveCurrentFeedback();
+      document.getElementById("done-overlay").classList.remove("visible");
+    }
+
+    // ---- Toast ----
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.classList.add("visible");
+      setTimeout(() => toast.classList.remove("visible"), 2000);
+    }
+
+    // ---- Keyboard nav ----
+    document.addEventListener("keydown", (e) => {
+      // Don't capture when typing in textarea
+      if (e.target.tagName === "TEXTAREA") return;
+
+      if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+        e.preventDefault();
+        navigate(-1);
+      } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+        e.preventDefault();
+        navigate(1);
+      }
+    });
+
+    // ---- Util ----
+    function getDownloadUri(file) {
+      if (file.data_uri) return file.data_uri;
+      if (file.data_b64) return "data:application/octet-stream;base64," + file.data_b64;
+      if (file.type === "text") return "data:text/plain;charset=utf-8," + encodeURIComponent(file.content);
+      return "#";
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // ---- View switching ----
+    function switchView(view) {
+      document.querySelectorAll(".view-tab").forEach(t => t.classList.remove("active"));
+      document.querySelectorAll(".view-panel").forEach(p => p.classList.remove("active"));
+      document.querySelector(`[onclick="switchView('${view}')"]`).classList.add("active");
+      document.getElementById("panel-" + view).classList.add("active");
+    }
+
+    // ---- Benchmark rendering ----
+    function renderBenchmark() {
+      const data = EMBEDDED_DATA.benchmark;
+      if (!data) return;
+
+      // Show the tabs
+      document.getElementById("view-tabs").style.display = "flex";
+
+      const container = document.getElementById("benchmark-content");
+      const summary = data.run_summary || {};
+      const metadata = data.metadata || {};
+      const notes = data.notes || [];
+
+      let html = "";
+
+      // Header
+      html += "<h2 style='font-family: Poppins, sans-serif; margin-bottom: 0.5rem;'>Benchmark Results</h2>";
+      html += "<p style='color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1.25rem;'>";
+      if (metadata.skill_name) html += "<strong>" + escapeHtml(metadata.skill_name) + "</strong> &mdash; ";
+      if (metadata.timestamp) html += metadata.timestamp + " &mdash; ";
+      if (metadata.evals_run) html += "Evals: " + metadata.evals_run.join(", ") + " &mdash; ";
+      html += (metadata.runs_per_configuration || "?") + " runs per configuration";
+      html += "</p>";
+
+      // Summary table
+      html += '<table class="benchmark-table">';
+
+      function fmtStat(stat, pct) {
+        if (!stat) return "—";
+        const suffix = pct ? "%" : "";
+        const m = pct ? (stat.mean * 100).toFixed(0) : stat.mean.toFixed(1);
+        const s = pct ? (stat.stddev * 100).toFixed(0) : stat.stddev.toFixed(1);
+        return m + suffix + " ± " + s + suffix;
+      }
+
+      function deltaClass(val) {
+        if (!val) return "";
+        const n = parseFloat(val);
+        if (n > 0) return "benchmark-delta-positive";
+        if (n < 0) return "benchmark-delta-negative";
+        return "";
+      }
+
+      // Discover config names dynamically (everything except "delta")
+      const configs = Object.keys(summary).filter(k => k !== "delta");
+      const configA = configs[0] || "config_a";
+      const configB = configs[1] || "config_b";
+      const labelA = configA.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+      const labelB = configB.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+      const a = summary[configA] || {};
+      const b = summary[configB] || {};
+      const delta = summary.delta || {};
+
+      html += "<thead><tr><th>Metric</th><th>" + escapeHtml(labelA) + "</th><th>" + escapeHtml(labelB) + "</th><th>Delta</th></tr></thead>";
+      html += "<tbody>";
+
+      html += "<tr><td><strong>Pass Rate</strong></td>";
+      html += "<td>" + fmtStat(a.pass_rate, true) + "</td>";
+      html += "<td>" + fmtStat(b.pass_rate, true) + "</td>";
+      html += '<td class="' + deltaClass(delta.pass_rate) + '">' + (delta.pass_rate || "—") + "</td></tr>";
+
+      // Time (only show row if data exists)
+      if (a.time_seconds || b.time_seconds) {
+        html += "<tr><td><strong>Time (s)</strong></td>";
+        html += "<td>" + fmtStat(a.time_seconds, false) + "</td>";
+        html += "<td>" + fmtStat(b.time_seconds, false) + "</td>";
+        html += '<td class="' + deltaClass(delta.time_seconds) + '">' + (delta.time_seconds ? delta.time_seconds + "s" : "—") + "</td></tr>";
+      }
+
+      // Tokens (only show row if data exists)
+      if (a.tokens || b.tokens) {
+        html += "<tr><td><strong>Tokens</strong></td>";
+        html += "<td>" + fmtStat(a.tokens, false) + "</td>";
+        html += "<td>" + fmtStat(b.tokens, false) + "</td>";
+        html += '<td class="' + deltaClass(delta.tokens) + '">' + (delta.tokens || "—") + "</td></tr>";
+      }
+
+      html += "</tbody></table>";
+
+      // Per-eval breakdown (if runs data available)
+      const runs = data.runs || [];
+      if (runs.length > 0) {
+        const evalIds = [...new Set(runs.map(r => r.eval_id))].sort((a, b) => a - b);
+
+        html += "<h3 style='font-family: Poppins, sans-serif; margin-bottom: 0.75rem;'>Per-Eval Breakdown</h3>";
+
+        const hasTime = runs.some(r => r.result && r.result.time_seconds != null);
+        const hasErrors = runs.some(r => r.result && r.result.errors > 0);
+
+        for (const evalId of evalIds) {
+          const evalRuns = runs.filter(r => r.eval_id === evalId);
+          const evalName = evalRuns[0] && evalRuns[0].eval_name ? evalRuns[0].eval_name : "Eval " + evalId;
+
+          html += "<h4 style='font-family: Poppins, sans-serif; margin: 1rem 0 0.5rem; color: var(--text);'>" + escapeHtml(evalName) + "</h4>";
+          html += '<table class="benchmark-table">';
+          html += "<thead><tr><th>Config</th><th>Run</th><th>Pass Rate</th>";
+          if (hasTime) html += "<th>Time (s)</th>";
+          if (hasErrors) html += "<th>Crashes During Execution</th>";
+          html += "</tr></thead>";
+          html += "<tbody>";
+
+          // Group by config and render with average rows
+          const configGroups = [...new Set(evalRuns.map(r => r.configuration))];
+          for (let ci = 0; ci < configGroups.length; ci++) {
+            const config = configGroups[ci];
+            const configRuns = evalRuns.filter(r => r.configuration === config);
+            if (configRuns.length === 0) continue;
+
+            const rowClass = ci === 0 ? "benchmark-row-with" : "benchmark-row-without";
+            const configLabel = config.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+
+            for (const run of configRuns) {
+              const r = run.result || {};
+              const prClass = r.pass_rate >= 0.8 ? "benchmark-delta-positive" : r.pass_rate < 0.5 ? "benchmark-delta-negative" : "";
+              html += '<tr class="' + rowClass + '">';
+              html += "<td>" + configLabel + "</td>";
+              html += "<td>" + run.run_number + "</td>";
+              html += '<td class="' + prClass + '">' + ((r.pass_rate || 0) * 100).toFixed(0) + "% (" + (r.passed || 0) + "/" + (r.total || 0) + ")</td>";
+              if (hasTime) html += "<td>" + (r.time_seconds != null ? r.time_seconds.toFixed(1) : "—") + "</td>";
+              if (hasErrors) html += "<td>" + (r.errors || 0) + "</td>";
+              html += "</tr>";
+            }
+
+            // Average row
+            const rates = configRuns.map(r => (r.result || {}).pass_rate || 0);
+            const avgRate = rates.reduce((a, b) => a + b, 0) / rates.length;
+            const avgPrClass = avgRate >= 0.8 ? "benchmark-delta-positive" : avgRate < 0.5 ? "benchmark-delta-negative" : "";
+            html += '<tr class="benchmark-row-avg ' + rowClass + '">';
+            html += "<td>" + configLabel + "</td>";
+            html += "<td>Avg</td>";
+            html += '<td class="' + avgPrClass + '">' + (avgRate * 100).toFixed(0) + "%</td>";
+            if (hasTime) {
+              const times = configRuns.map(r => (r.result || {}).time_seconds).filter(t => t != null);
+              html += "<td>" + (times.length ? (times.reduce((a, b) => a + b, 0) / times.length).toFixed(1) : "—") + "</td>";
+            }
+            if (hasErrors) html += "<td></td>";
+            html += "</tr>";
+          }
+          html += "</tbody></table>";
+
+          // Per-assertion detail for this eval
+          const runsWithExpectations = {};
+          for (const config of configGroups) {
+            runsWithExpectations[config] = evalRuns.filter(r => r.configuration === config && r.expectations && r.expectations.length > 0);
+          }
+          const hasAnyExpectations = Object.values(runsWithExpectations).some(runs => runs.length > 0);
+          if (hasAnyExpectations) {
+            // Collect all unique assertion texts across all configs
+            const allAssertions = [];
+            const seen = new Set();
+            for (const config of configGroups) {
+              for (const run of runsWithExpectations[config]) {
+                for (const exp of (run.expectations || [])) {
+                  if (!seen.has(exp.text)) {
+                    seen.add(exp.text);
+                    allAssertions.push(exp.text);
+                  }
+                }
+              }
+            }
+
+            html += '<table class="benchmark-table" style="margin-top: 0.5rem;">';
+            html += "<thead><tr><th>Assertion</th>";
+            for (const config of configGroups) {
+              const label = config.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+              html += "<th>" + escapeHtml(label) + "</th>";
+            }
+            html += "</tr></thead><tbody>";
+
+            for (const assertionText of allAssertions) {
+              html += "<tr><td>" + escapeHtml(assertionText) + "</td>";
+
+              for (const config of configGroups) {
+                html += "<td>";
+                for (const run of runsWithExpectations[config]) {
+                  const exp = (run.expectations || []).find(e => e.text === assertionText);
+                  if (exp) {
+                    const cls = exp.passed ? "benchmark-delta-positive" : "benchmark-delta-negative";
+                    const icon = exp.passed ? "\u2713" : "\u2717";
+                    html += '<span class="' + cls + '" title="Run ' + run.run_number + ': ' + escapeHtml(exp.evidence || "") + '">' + icon + "</span> ";
+                  } else {
+                    html += "— ";
+                  }
+                }
+                html += "</td>";
+              }
+              html += "</tr>";
+            }
+            html += "</tbody></table>";
+          }
+        }
+      }
+
+      // Notes
+      if (notes.length > 0) {
+        html += '<div class="benchmark-notes">';
+        html += "<h3>Analysis Notes</h3>";
+        html += "<ul>";
+        for (const note of notes) {
+          html += "<li>" + escapeHtml(note) + "</li>";
+        }
+        html += "</ul></div>";
+      }
+
+      container.innerHTML = html;
+    }
+
+    // ---- Start ----
+    init();
+    renderBenchmark();
+  </script>
+</body>
+</html>

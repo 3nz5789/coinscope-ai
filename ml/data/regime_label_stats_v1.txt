@@ -1,0 +1,30 @@
+=================================================================
+REGIME LABEL DATASET v1  —  Statistics
+Generated : 2026-04-17 08:28 UTC
+=================================================================
+
+Total rows       : 55,615
+Feature columns  : 36
+Sessions         : 20
+Date range       : 2023-01-10 04:00:00+00:00 → 2024-04-30 00:00:00+00:00
+
+Label                  Count       %   Avg Conf     Min     Max
+-----------------------------------------------------------------
+  Trending            13,905   25.0%      0.592   0.500   1.000
+  Mean-Reverting      13,900   25.0%      0.556   0.400   1.000
+  Volatile            13,905   25.0%      0.657   0.500   1.000
+  Quiet               13,905   25.0%      0.585   0.500   1.000
+
+Label Thresholds:
+  Trending      : ADX > 25.0  AND  |+DI−-DI| > 10.0
+  Volatile      : ATR% z-score > 0.75  OR  BBwidth z-score > 0.6
+  Quiet         : ATR% z-score < -0.5  AND  Vol z-score < -0.3
+  Mean-Reverting: catch-all (all remaining rows after warmup strip)
+
+Data Source: synthetic OHLCV via regime-matched stochastic processes
+  Trending      → GBM with non-trivial drift
+  Mean-Reverting → Ornstein-Uhlenbeck process
+  Volatile      → GBM + Poisson jump diffusion
+  Quiet         → GBM with minimal σ and suppressed volume
+
+Next step: train regime_classifier_v3.py on this dataset.

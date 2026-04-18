@@ -28,22 +28,31 @@ import os
 # ── Database IDs ──────────────────────────────────────────────────────────────
 # These match your live Notion workspace (CoinScopeAI teamspace).
 
-TRADE_JOURNAL_DB_ID = "28e29aaf-938e-81eb-8c91-d166a2246520"
+TRADE_JOURNAL_DB_ID = "1430e3fb-d21b-49e7-b260-9dfa4adcb5f0"
 """
-Crypto Trading Journal database.
-Fields: Crypto Pair, Date of Trade, Direction, Entry/Exit Prices,
-        Quantity, Signal Score, Regime, Stop Loss, Take Profit,
-        R:R Ratio, Signal Source, Exit Reason, Funding Rate %,
-        Leverage, Trade Notes, Mistakes/Notes, Profit/Loss (formula)
+Trade Journal database (rebuilt 2026-04-04).
+Fields: Trade (title), Pair, Direction, Status, Signal Score, Conviction,
+        Regime at Entry, MTF at Entry, Entry Price, Entry Time, Stop Loss,
+        Take Profit 1, Take Profit 2, Exit Price, Exit Time, Size USDT,
+        Leverage, Kelly Pct Used, RR Planned, RR Actual, PnL USDT, PnL Pct,
+        Mistakes (multi-select), Lessons
 """
 
-SIGNAL_LOG_DB_ID = "86f896d1-0db7-4fe6-afde-8d2e8f5e3463"
+SIGNAL_LOG_DB_ID = "ed9457ff-78f7-4008-bc28-ef3046506039"
 """
-Signal Log database.
-Fields: Signal ID (auto), Pair, Signal, Total Score,
-        Momentum/Trend/Volatility/Volume/Entry/Liquidity scores,
-        RSI, ATR %, Regime, Regime Confidence %, Timeframe,
-        Funding Rate %, Scanned At, Acted On, Skip Reason, Notes
+Signal Log database (rebuilt 2026-04-04).
+Fields: Signal (title), Pair, Direction, Score (0-12), Strength Label,
+        Regime, MTF Confirmed, RSI, Timeframe, Price at Signal,
+        Scan Timestamp, Status, Funding Rate, Funding Warning,
+        OI Change 1h, Sub-scores, Engine Mode, Notes
+"""
+
+SCAN_HISTORY_DB_ID = "c008175e-cfc0-4553-ab37-c47c3825f2e3"
+"""
+Scan History database (new 2026-04-04).
+Fields: Scan ID (title), Scan Timestamp, Pairs Scanned, Signals Found,
+        Min Score Used, Avg Score, Top Signal, Top Score, BTC Regime,
+        BTC Price, Market Regime, Engine Mode, Notes
 """
 
 PAIR_INTELLIGENCE_DB_ID = "21108fd0-1471-4184-bf86-1e64c662548b"
@@ -55,16 +64,17 @@ Updated manually or via pair_monitor.py stats.
 
 # ── Page IDs ──────────────────────────────────────────────────────────────────
 
-ENGINE_CONFIG_PAGE_ID = "33629aaf-938e-816b-9a82-fb5c221559cb"
-"""
-Engine Config & Knowledge Base page.
-Used as anchor for performance snapshot comments.
-"""
+WORKSPACE_ROOT_PAGE_ID = "33829aaf-938e-8178-8a41-c00d3cac2d41"
+"""Root 🤖 CoinScopeAI hub page (rebuilt 2026-04-04)."""
 
-WORKSPACE_HUB_PAGE_ID = "ec28f4e4-214b-49b3-831f-5f63925d62d2"
-"""
-CoinScopeAI workspace databases hub page.
-"""
+ENGINE_STATUS_PAGE_ID = "33829aaf-938e-81fb-b2ca-ec7e62587680"
+"""🏥 Engine Status page — health check log and testnet run log."""
+
+ENGINE_CONFIG_PAGE_ID = "33829aaf-938e-816b-9a82-fb5c221559cb"
+"""Legacy Engine Config page (archived). Kept for backward compatibility."""
+
+WORKSPACE_HUB_PAGE_ID = "33829aaf-938e-8178-8a41-c00d3cac2d41"
+"""Alias for WORKSPACE_ROOT_PAGE_ID."""
 
 # ── Runtime Settings ──────────────────────────────────────────────────────────
 
@@ -86,47 +96,67 @@ NOTION_BASE_URL    = "https://api.notion.com/v1"
 # Used by notion_simple_integration.py for documentation and validation.
 
 TRADE_FIELD_MAP = {
-    # engine field          : Notion property name
-    "symbol"                : "Crypto Pair",
-    "opened_at"             : "Date of Trade",
+    # engine field          : Notion property name (Trade Journal v2 — 2026-04-04)
+    "symbol"                : "Pair",
     "side"                  : "Direction",
-    "entry_price"           : "Entry Prices",
-    "exit_price"            : "Exit Prices",
-    "quantity"              : "Quantity",
+    "status"                : "Status",
     "signal_score"          : "Signal Score",
-    "regime"                : "Regime",
-    "timeframe"             : "Timeframe",
+    "conviction"            : "Conviction",
+    "regime"                : "Regime at Entry",
+    "mtf_confirmed"         : "MTF at Entry",
+    "entry_price"           : "Entry Price",
+    "opened_at"             : "Entry Time",
     "stop_loss"             : "Stop Loss",
-    "take_profit"           : "Take Profit",
+    "take_profit"           : "Take Profit 1",
+    "take_profit_2"         : "Take Profit 2",
+    "exit_price"            : "Exit Price",
+    "closed_at"             : "Exit Time",
+    "quantity"              : "Size USDT",
     "leverage"              : "Leverage",
-    "rr_ratio"              : "R:R Ratio",
-    "funding_rate"          : "Funding Rate %",
-    "signal_source"         : "Signal Source",
-    "status"                : "Exit Reason",
-    "trade_notes"           : "Trade Notes",
-    "mistakes"              : "Mistakes / Notes",
+    "kelly_pct"             : "Kelly Pct Used",
+    "rr_planned"            : "RR Planned",
+    "rr_actual"             : "RR Actual",
+    "pnl_usdt"              : "PnL USDT",
+    "pnl_pct"               : "PnL Pct",
+    "mistakes"              : "Mistakes",
+    "notes"                 : "Lessons",
 }
 
 SIGNAL_FIELD_MAP = {
-    # engine field          : Notion property name
+    # engine field          : Notion property name (Signal Log v2 — 2026-04-04)
     "symbol"                : "Pair",
-    "signal"                : "Signal",
-    "score"                 : "Total Score",
-    "sub_scores.momentum"   : "Momentum Score",
-    "sub_scores.trend"      : "Trend Score",
-    "sub_scores.volatility" : "Volatility Score",
-    "sub_scores.volume"     : "Volume Score",
-    "sub_scores.entry"      : "Entry Score",
-    "sub_scores.liquidity"  : "Liquidity Score",
-    "rsi"                   : "RSI",
-    "atr_pct"               : "ATR %",
+    "signal"                : "Direction",
+    "score"                 : "Score (0-12)",
+    "strength_label"        : "Strength Label",
     "regime"                : "Regime",
-    "confidence"            : "Regime Confidence %",
+    "mtf_confirmed"         : "MTF Confirmed",
+    "rsi"                   : "RSI",
     "timeframe"             : "Timeframe",
-    "funding_rate"          : "Funding Rate %",
-    "timestamp"             : "Scanned At",
-    "acted_on"              : "Acted On",
-    "skip_reason"           : "Skip Reason",
+    "price"                 : "Price at Signal",
+    "timestamp"             : "Scan Timestamp",
+    "status"                : "Status",
+    "funding_rate"          : "Funding Rate",
+    "funding_warning"       : "Funding Warning",
+    "oi_change_1h"          : "OI Change 1h",
+    "sub_scores"            : "Sub-scores",
+    "engine_mode"           : "Engine Mode",
+    "notes"                 : "Notes",
+}
+
+SCAN_HISTORY_FIELD_MAP = {
+    # engine field          : Notion property name (Scan History v1 — 2026-04-04)
+    "scan_id"               : "Scan ID",
+    "timestamp"             : "Scan Timestamp",
+    "pairs_scanned"         : "Pairs Scanned",
+    "signals_found"         : "Signals Found",
+    "min_score"             : "Min Score Used",
+    "avg_score"             : "Avg Score",
+    "top_signal"            : "Top Signal",
+    "top_score"             : "Top Score",
+    "btc_regime"            : "BTC Regime",
+    "btc_price"             : "BTC Price",
+    "market_regime"         : "Market Regime",
+    "engine_mode"           : "Engine Mode",
     "notes"                 : "Notes",
 }
 

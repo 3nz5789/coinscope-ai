@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CoinScopeAI — Subscription Confirmed</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:        #0a0d12;
+      --surface:   #10141c;
+      --card:      #151a25;
+      --border:    #1e2535;
+      --border-hi: #2a3450;
+      --text:      #e2e8f0;
+      --muted:     #64748b;
+      --accent:    #2de8a8;
+      --green:     #2de8a8;
+      --green-dim: rgba(45,232,168,0.12);
+      --green-glow:rgba(45,232,168,0.25);
+      --font:      'Inter', 'SF Pro Display', -apple-system, sans-serif;
+      --mono:      'JetBrains Mono', 'Fira Code', monospace;
+    }
+    html { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; }
+    body { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; }
+
+    /* ── Check animation ── */
+    .check-ring {
+      width: 80px; height: 80px; border-radius: 50%;
+      background: var(--green-dim); border: 2px solid var(--green);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 36px; margin: 0 auto 28px;
+      animation: pop 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
+      box-shadow: 0 0 40px var(--green-glow);
+    }
+    @keyframes pop {
+      from { transform: scale(0.4); opacity: 0; }
+      to   { transform: scale(1);   opacity: 1; }
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 16px; padding: 48px 40px;
+      max-width: 460px; width: 100%; text-align: center;
+      animation: fadeUp 0.4s ease both; animation-delay: 0.1s;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 10px; }
+    h1 span { color: var(--green); }
+
+    .sub-text { font-size: 14px; color: var(--muted); line-height: 1.6; margin-bottom: 32px; }
+
+    /* ── Details box ── */
+    .details-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 20px; margin-bottom: 32px; text-align: left;
+    }
+    .details-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 6px 0; font-size: 13px;
+    }
+    .details-row:not(:last-child) { border-bottom: 1px solid var(--border); }
+    .details-label { color: var(--muted); }
+    .details-value { color: var(--text); font-weight: 600; }
+    .details-value.green { color: var(--green); }
+    .details-value.mono { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+
+    /* ── Buttons ── */
+    .btn-row { display: flex; gap: 10px; }
+    .btn {
+      flex: 1; padding: 11px 16px; border-radius: 8px;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      border: none; text-decoration: none; display: flex;
+      align-items: center; justify-content: center; gap: 6px;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--green), #1dbf8a);
+      color: #000; box-shadow: 0 0 20px var(--green-glow);
+    }
+    .btn-primary:hover { background: linear-gradient(135deg, #4ff0b8, var(--green)); transform: translateY(-1px); }
+    .btn-secondary {
+      background: var(--surface); border: 1px solid var(--border-hi);
+      color: var(--text);
+    }
+    .btn-secondary:hover { border-color: var(--accent); background: rgba(45,232,168,0.08); }
+
+    /* ── Next steps ── */
+    .next-steps { margin-top: 32px; text-align: left; }
+    .next-steps h3 { font-size: 12px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+    .step {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 10px 0; border-bottom: 1px solid var(--border);
+    }
+    .step:last-child { border-bottom: none; }
+    .step-num {
+      width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+      background: var(--accent); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; margin-top: 1px;
+    }
+    .step-content h4 { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+    .step-content p  { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+    /* ── Powered by Stripe ── */
+    .stripe-note {
+      margin-top: 24px; font-size: 11px; color: var(--muted);
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <div class="check-ring">✓</div>
+
+    <h1>You're <span>subscribed</span>!</h1>
+    <p class="sub-text">
+      Your payment was processed successfully. A confirmation receipt
+      has been sent to your email by Stripe.
+    </p>
+
+    <!-- Session details (populated from URL params) -->
+    <div class="details-box" id="details-box">
+      <div class="details-row">
+        <span class="details-label">Plan</span>
+        <span class="details-value green" id="d-plan">—</span>
+      </div>
+      <div class="details-row">
+        <span class="details-label">Billing</span>
+        <span class="details-value" id="d-interval">—</span>
+      </div>
+      <div class="details-row">
+        <span class="details-label">Status</span>
+        <span class="details-value green">Active</span>
+      </div>
+      <div class="details-row">
+        <span class="details-label">Session</span>
+        <span class="details-value mono" id="d-session">—</span>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <a href="http://localhost:8001" class="btn btn-primary">
+        🚀 Open Dashboard
+      </a>
+      <a href="pricing.html" class="btn btn-secondary">
+        ← Pricing
+      </a>
+    </div>
+
+    <!-- Next steps -->
+    <div class="next-steps">
+      <h3>What happens next</h3>
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <h4>Engine access activated</h4>
+          <p>Your plan entitlements are provisioned within a few minutes.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <h4>Telegram bot connected</h4>
+          <p>Start @ScoopyAI_bot to receive live scan alerts and daily reports.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <h4>First scan runs automatically</h4>
+          <p>The engine will scan top futures pairs and alert you on the next cycle.</p>
+        </div>
+      </div>
+    </div>
+
+    <p class="stripe-note">🔒 Billing managed securely by Stripe</p>
+  </div>
+
+  <script>
+    // Parse query params Stripe appends on redirect:
+    //   ?session_id=cs_test_...
+    // We also stash tier/interval in sessionStorage right before redirecting
+    function init() {
+      const params  = new URLSearchParams(window.location.search);
+      const session = params.get('session_id') || '';
+      const tier    = sessionStorage.getItem('csa_tier') || '—';
+      const interval= sessionStorage.getItem('csa_interval') || '—';
+
+      document.getElementById('d-plan').textContent =
+        tier !== '—' ? tier.charAt(0).toUpperCase() + tier.slice(1) : 'Pro';
+      document.getElementById('d-interval').textContent =
+        interval !== '—' ? interval.charAt(0).toUpperCase() + interval.slice(1) : 'Monthly';
+      document.getElementById('d-session').textContent =
+        session ? session.slice(0, 24) + '…' : '—';
+
+      // Clear after reading
+      sessionStorage.removeItem('csa_tier');
+      sessionStorage.removeItem('csa_interval');
+    }
+    init();
+  </script>
+</body>
+</html>

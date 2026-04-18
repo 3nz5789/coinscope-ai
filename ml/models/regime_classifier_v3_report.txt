@@ -1,0 +1,48 @@
+=================================================================
+REGIME CLASSIFIER v3  —  Training Report
+Trained : 2026-04-17 08:40 UTC
+=================================================================
+
+Dataset         : /sessions/hopeful-laughing-lovelace/mnt/CoinScopeAI/ml/data/regime_labeled_v1.csv
+Train samples   : 44,492
+Test samples    : 11,123
+Features        : 18
+Training time   : 15.2s
+
+Overall Accuracy: 0.9709  (97.1%)
+
+Per-class Classification Report:
+                precision    recall  f1-score   support
+
+      Trending     0.9117    0.9838    0.9464      2781
+Mean-Reverting     0.9782    0.9047    0.9400      2780
+      Volatile     0.9989    1.0000    0.9995      2781
+         Quiet     1.0000    0.9950    0.9975      2781
+
+      accuracy                         0.9709     11123
+     macro avg     0.9722    0.9709    0.9708     11123
+  weighted avg     0.9722    0.9709    0.9708     11123
+
+
+Confusion Matrix (rows=actual, cols=predicted):
+Labels: ['Trending', 'Mean-Reverting', 'Volatile', 'Quiet']
+             Trending  Mean-Reve   Volatile      Quiet
+Trending         2736         42          3          0
+Mean-Reve         265       2515          0          0
+Volatile            0          0       2781          0
+Quiet               0         14          0       2767
+
+Top-10 Feature Importances (avg RF + XGB):
+  atr_pct                   0.3477  █████████████████████████████████████████████████████████████████████
+  bb_width                  0.1892  █████████████████████████████████████
+  vol_of_vol                0.1051  █████████████████████
+  adx                       0.0906  ██████████████████
+  price_vs_ema200           0.0826  ████████████████
+  bb_width_zscore           0.0331  ██████
+  abs_ret                   0.0324  ██████
+  price_vs_ema50            0.0251  █████
+  atr_pct_zscore            0.0238  ████
+  macd_hist                 0.0161  ███
+
+Model saved to: /sessions/hopeful-laughing-lovelace/mnt/CoinScopeAI/ml/models/regime_classifier_v3.pkl
+Metadata saved to: /sessions/hopeful-laughing-lovelace/mnt/CoinScopeAI/ml/models/regime_classifier_v3_meta.json

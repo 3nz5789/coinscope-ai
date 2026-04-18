@@ -1,236 +1,199 @@
-# ⬡ CoinScopeAI
+# CoinScopeAI
 
-> **AI-powered Binance Futures scanner and autonomous trading assistant**
-> Built on FastAPI · FixedScorer · HMM Regime Detection · Kelly Position Sizing
+> AI-driven Binance USD-M Futures scanner + autonomous trading engine. Capital preservation first, profit generation second. Binance Testnet only during validation.
 
-[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.104%2B-009688.svg)](https://fastapi.tiangolo.com)
-[![Testnet Only](https://img.shields.io/badge/trading-testnet%20only-orange.svg)]()
-[![License: Private](https://img.shields.io/badge/license-private-red.svg)]()
+**Status:** Validation phase (2026-04-10 to 2026-04-30). No core-engine changes until validation closes.
+**Primary dashboard (separate repo):** <https://coinscope.ai/>
+**Engine API (local):** `http://localhost:8001`
 
 ---
 
-## What It Does
+## What this repo is
 
-CoinScopeAI continuously scans Binance Futures perpetual pairs and scores each one using a 6-component signal model. When a setup scores above the threshold, the system sizes the position using the Kelly Criterion, validates it against live risk limits, and logs every decision to a Notion trade journal.
+A Python 3.11+ trading engine. Everything under this repo is backend:
 
-```
-Market Data → FixedScorer (0–12) → HMM Regime Filter → Risk Gate → Kelly Sizer → Order / Journal
-```
+- `coinscope_trading_engine/` - scanner, signal scoring, risk gate, execution, FastAPI HTTP surface, Celery workers, HMM regime detector.
+- `billing/` + `billing_server.py` - Stripe webhook + entitlements subsystem (duplication under review; see `docs/ops/stripe-billing.md`).
+- `ml/` - v3 regime classifier training pipeline (Random Forest + XGBoost ensemble; labels: Trending / Mean-Reverting / Volatile / Quiet).
+- `dashboard/` - 3 static HTML pages (`pricing.html`, `billing_success.html`, `pnl_widget.html`) served alongside billing. The React dashboard at <https://coinscope.ai/> is a separate repo and is **not** in this tree.
+- `data/` - runtime funding-rate cache.
+- `tests/` - billing + smoke tests at repo root. Engine-specific tests live in `coinscope_trading_engine/tests/`.
+- `scripts/` - operational scripts (reconciliation, Stripe product setup, journal watchdog).
+- `incidents/` - incident artifacts.
+- `docs/` - developer documentation set. Start at `docs/README.md`.
+- `archive/` - quarantine for duplicate snapshots, `.docx` exports, historical reports, legacy scripts, skill artifacts. Nothing here is load-bearing.
 
----
-
-## Signal Scoring — FixedScorer
-
-Each pair receives a score from **0 to 12** across 6 sub-components:
-
-| Sub-Score | Range | What It Measures |
-|-----------|-------|-----------------|
-| Momentum | 0–2 | RSI divergence, price velocity vs ATR |
-| Trend | 0–2 | EMA 20/50/200 stack alignment, MACD |
-| Volatility | 0–2 | ATR % in optimal range |
-| Volume | 0–2 | Volume spike vs 20-period average |
-| Entry Timing | 0–2 | S/R proximity, candle pattern quality |
-| Liquidity | 0–2 | Spread, order book depth, funding rate |
-
-| Score | Strength | Action |
-|-------|----------|--------|
-| 9.0–12.0 | Very Strong | Full Kelly position |
-| 7.0–8.9 | Strong | Standard position |
-| 5.5–6.9 | Moderate | Reduced position |
-| < 5.5 | Weak | Skip |
-
----
-
-## Architecture
+## Architecture in one picture
 
 ```
-coinscope_trading_engine/
-├── api.py                        # FastAPI app — all HTTP endpoints
-├── scoring_fixed.py              # FixedScorer: 6 sub-scores → 0–12
-├── hmm_regime_detector.py        # HMM: Bull / Bear / Chop classifier
-├── risk_gate.py                  # Circuit breakers & daily limits
-├── kelly_position_sizer.py       # Fractional Kelly position sizing
-├── master_orchestrator.py        # Async scan loop coordinator
-├── orchestrator_with_notion.py   # Orchestrator + live Notion sync
-├── binance_futures_testnet_client.py  # Futures testnet REST client
-├── binance_rest_testnet_client.py     # Spot testnet REST client
-├── binance_websocket_client.py        # Futures testnet WebSocket
-├── binance_testnet_executor.py        # Order placement layer
-├── trade_journal.py              # Local trade journal store
-├── trade_logger.py               # Trade event logger
-├── notion_simple_integration.py  # Notion API — log trades & signals
-├── notion_sync_config.py         # Notion DB IDs and field maps
-├── telegram_alerts.py            # Telegram signal notifications
-├── funding_rate_filter.py        # Funding rate risk filter
-├── multi_timeframe_filter.py     # Multi-TF signal confirmation
-├── whale_signal_filter.py        # Large-order flow filter
-├── alpha_decay_monitor.py        # Signal freshness tracker
-├── pair_monitor.py               # Per-pair health monitor
-├── portfolio_sync.py             # Portfolio state sync
-├── realtime_dashboard.py         # Terminal dashboard
-├── metrics_exporter.py           # Prometheus-compatible metrics
-├── retrain_scheduler.py          # Scheduled HMM retraining
-└── scale_up_manager.py           # Scale-up position manager
+Binance USD-M Futures Testnet
+        |
+        v  WebSocket + REST
+   Data layer  -->  5 scanners (Volume . Liquidation . FundingRate . Pattern . OrderBook)
+                          |
+                          v
+                 ConfluenceScorer (0-100; 0-12 confluence factors depending on scorer version)
+                          |
+                          v
+                 EntryExitCalculator (ATR entry . SL . TP1/TP2 . R:R)
+                          |
+                          v
+                  -- RiskGate --
+                  |- CircuitBreaker (daily loss . max DD . consecutive losses)
+                  |- ExposureTracker (heat cap . max 3 positions)
+                  |- CorrelationAnalyzer
+                  |- KellyRiskController (regime-aware: bull 1.0x . chop 0.5x . bear 0.3x, hard 2% cap)
+                          |
+                          v
+                  Alerts (Telegram . webhook) + Trade Journal
+                          |
+                          v
+                  Binance Testnet Executor
+                          |
+                          v
+                  Journal + equity/daily PnL + metrics exporter
 
-market_scanner_skill/
-├── SKILL.md                      # Manus agent skill definition
-├── market_scanner.py             # CLI scanner runner
-└── skill_config.json             # Manus trigger & parameter config
-
-tests/
-└── ...                           # Test suite
+Background: HMM regime (bull/bear/chop) . v3 classifier (Trending/Mean-Reverting/Volatile/Quiet) . sentiment (if configured) . scheduled retraining
 ```
 
----
+See `docs/architecture/system-overview.md` for prose and `docs/architecture/data-flow.md` for step-by-step.
 
-## API Endpoints
-
-The engine runs at `http://localhost:8001` by default.
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/health` | Engine health + module status |
-| `GET` | `/scan` | Score all pairs, return signals |
-| `GET` | `/regime/{symbol}` | HMM regime for a symbol |
-| `GET` | `/performance` | Trade performance metrics |
-| `GET` | `/journal` | Recent trade journal entries |
-| `POST` | `/scale` | Kelly position sizing |
-| `POST` | `/validate` | Risk gate trade validation |
-
-**Scan example:**
-```bash
-curl "http://localhost:8001/scan?min_score=5.5&signal=LONG&limit=10"
-```
-
----
-
-## Quick Start
-
-### 1. Clone & install
+## Quick start
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/coinscope-ai.git
-cd coinscope-ai
-python -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-```
-
-### 2. Configure environment
-
-```bash
+# 1. Enter the engine
+cd coinscope_trading_engine
 cp .env.example .env
-# Edit .env — add your Binance testnet keys and Notion token
+# edit .env: fill in BINANCE_FUTURES_TESTNET_API_KEY and _SECRET, TELEGRAM_BOT_TOKEN, etc.
+
+# 2. Install (Python 3.11+ required)
+python -m venv .venv
+source .venv/bin/activate
+pip install -r ../requirements.txt     # root requirements.txt is canonical
+pip install -r requirements.txt        # engine-local pins, if present
+
+# 3. Smoke test
+python testnet_check.py
+
+# 4. Run the engine in dry-run (scans only, no alerts sent)
+python main.py --testnet --dry-run
+
+# 5. Start the HTTP API (separate terminal)
+uvicorn api:app --host 0.0.0.0 --port 8001 --reload
+
+# 6. Hit the health check
+curl http://localhost:8001/health
 ```
 
-### 3. Start the engine
+Full local loop including Docker Compose: `docs/runbooks/local-development.md`.
+
+## Running tests
 
 ```bash
-python coinscope_trading_engine/api.py
-# Engine runs at http://localhost:8001
+# Root billing + smoke tests
+pytest tests -v
+
+# Engine-local tests
+cd coinscope_trading_engine && pytest tests -v
 ```
 
-### 4. Run the scanner
+CI definition: `.github/workflows/ci.yml` (Python 3.11, pytest against both test roots).
 
-```bash
-python market_scanner_skill/market_scanner.py --top 10 --min-score 5.5
-```
+## Key endpoints (engine API, port 8001)
 
----
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET | `/health` | Liveness probe |
+| GET | `/config` | Safe config values |
+| GET | `/signals` | Recent scored signals |
+| POST | `/scan` | Trigger a scan cycle |
+| GET | `/positions` | Open positions + PnL |
+| GET | `/exposure` | Portfolio heat + max-position usage |
+| GET | `/circuit-breaker` | Current breaker state |
+| POST | `/circuit-breaker/reset` | Reset a tripped breaker |
+| POST | `/circuit-breaker/trip` | Manually halt trading |
+| GET | `/regime` | Current regime per symbol |
+| GET | `/sentiment` | Sentiment score |
+| GET | `/anomaly` | Anomaly score |
+| GET | `/position-size` | Preview Kelly size for a candidate |
+| GET | `/correlation` | Correlation matrix |
+| GET | `/journal` | Trade journal entries |
+| GET | `/performance` | Aggregate performance |
+| GET | `/performance/equity` | Equity curve |
+| GET | `/performance/daily` | Daily PnL |
+| GET | `/scale` | Scale-up manager state |
+| POST | `/scale/check` | Evaluate scale-up eligibility |
+| GET | `/validate` | Validation-mode checks |
 
-## Environment Variables
+Full reference: `docs/api/backend-endpoints.md`.
 
-Copy `.env.example` to `.env` and populate:
+## Risk thresholds (project-wide, non-negotiable during validation)
 
-```env
-# Binance Futures Testnet
-BINANCE_FUTURES_TESTNET_API_KEY=your_key_here
-BINANCE_FUTURES_TESTNET_API_SECRET=your_secret_here
-BINANCE_FUTURES_TESTNET_BASE_URL=https://testnet.binancefuture.com
+| Limit | Value |
+| --- | --- |
+| Max drawdown | 10% |
+| Daily loss limit | 5% |
+| Max leverage | 20x |
+| Max concurrent positions | 3 |
+| Position heat cap | 80% |
+| Per-trade hard cap | 2% of equity (Kelly ceiling) |
 
-# Notion Integration
-NOTION_TOKEN=your_notion_token_here
+See `docs/risk/risk-framework.md` and `docs/risk/failsafes-and-kill-switches.md`.
 
-# Telegram Alerts (optional)
-TELEGRAM_BOT_TOKEN=your_bot_token_here
-TELEGRAM_CHAT_ID=your_chat_id_here
+## Technology stack (as it actually is today)
 
-# Engine Config
-ENGINE_PORT=8001
-TESTNET_MODE=true
-```
+- **Language:** Python 3.11+ (venv required).
+- **HTTP:** FastAPI, uvicorn, aiohttp, websockets, requests.
+- **Data/ML:** numpy, pandas, scikit-learn, hmmlearn, xgboost (training), ccxt.
+- **Config:** pydantic + pydantic-settings.
+- **Exchange:** Binance USD-M Futures (testnet during validation). Bybit / OKX / Hyperliquid are planned, not implemented.
+- **Queue:** Celery with Redis broker (`celery_app.py`, `tasks.py`).
+- **Observability:** Prometheus exporter (`metrics_exporter.py`), `prometheus.yml` at repo root.
+- **Persistence:** filesystem journals + Redis caches. Billing uses SQLite locally (`billing_subscriptions.db`); a Postgres store exists at `billing/pg_subscription_store.py`.
+- **Infra:** Docker / Docker Compose (`docker-compose.yml`). No Kubernetes manifests in this repo - K8s is planned.
+- **LLM:** not used on the hot path (see `docs/decisions/adr-0003-llm-off-hot-path.md`).
 
-> ⚠️ **Never commit `.env`** — it is listed in `.gitignore`
+## Status of modules - implemented vs planned
 
----
+| Area | State |
+| --- | --- |
+| Binance USD-M scanners + signal scoring | Implemented |
+| Risk gate + Kelly sizing + circuit breakers | Implemented |
+| Binance testnet executor | Implemented |
+| HMM regime detector (bull/bear/chop) | Implemented |
+| v3 regime classifier (Trending/Mean-Reverting/Volatile/Quiet) | Training pipeline implemented; inference integration partial |
+| Telegram alerts | Implemented |
+| Stripe billing + entitlements | Implemented (root `billing_server.py` + package `billing/`; consolidation TODO, see `docs/ops/stripe-billing.md`) |
+| Trade journal + performance endpoints | Implemented |
+| Prometheus metrics exporter | Implemented |
+| React dashboard | Separate repo, deployed at <https://coinscope.ai/> |
+| Bybit / OKX / Hyperliquid adapters | Planned |
+| Kubernetes deployment | Planned |
+| PyTorch models | Not used; classical ML only |
 
-## Notion Integration
+## Documentation map
 
-CoinScopeAI syncs to two Notion databases:
+Start here: **`docs/README.md`** - the index.
 
-| Database | Purpose |
-|----------|---------|
-| Trade Journal | Every trade — entry, exit, score, P&L, regime |
-| Signal Log | Every scanner signal — acted on and skipped |
+Highlights:
 
-Set `NOTION_TOKEN` in `.env` and ensure your integration is invited to both databases.
+- `docs/onboarding/new-developer-guide.md` - first hour of productive work.
+- `docs/onboarding/first-week-checklist.md` - first week of onboarding.
+- `docs/onboarding/glossary.md` - domain vocabulary.
+- `docs/architecture/system-overview.md` - how the pieces fit.
+- `docs/architecture/data-flow.md` - end-to-end flow.
+- `docs/api/backend-endpoints.md` - full HTTP contract.
+- `docs/risk/risk-framework.md` - invariants, guarantees, escalation.
+- `docs/ml/ml-overview.md` - what the ML layer does (and does not) do.
+- `docs/ops/binance-adapter.md` - exchange integration details.
+- `docs/runbooks/local-development.md` - how to run on your laptop.
+- `docs/runbooks/daily-ops.md` - daily operating checklist.
+- `docs/decisions/` - ADRs.
 
----
+## Contributing
 
-## Supported Pairs
+See `CONTRIBUTING.md` for branching, PR expectations, and how to add or update docs.
 
-`BTCUSDT` · `ETHUSDT` · `SOLUSDT` · `BNBUSDT` · `XRPUSDT` · `DOGEUSDT` · `AVAXUSDT` · `LINKUSDT`
+## License
 
----
-
-## Risk Management
-
-The Risk Gate blocks new trades when any threshold is breached:
-
-| Breaker | Default | Env Variable |
-|---------|---------|-------------|
-| Daily loss | 3% | `MAX_DAILY_LOSS_PCT` |
-| Consecutive losses | 5 | `MAX_CONSECUTIVE_LOSSES` |
-| Total drawdown | 10% | `MAX_DRAWDOWN_PCT` |
-| Open positions | 3 | `MAX_OPEN_POSITIONS` |
-
----
-
-## Testnet Only
-
-This system is configured for **Binance Futures Testnet** by default (`TESTNET_MODE=true`). Do not connect real API keys until you have completed at least 30 days of paper trading and are satisfied with system performance.
-
----
-
-## Testing
-
-```bash
-pytest tests/ -v
-```
-
----
-
-## Manus Agent Skills
-
-The `market_scanner_skill/` folder contains skill definitions for the Manus AI agent platform. Trigger phrases include:
-
-- *"Scan top movers"*
-- *"Find setups"*
-- *"What's setting up now?"*
-
-See `market_scanner_skill/SKILL.md` for the full skill specification.
-
----
-
-## Roadmap
-
-- [ ] Live mainnet support (post paper-trading validation)
-- [ ] FinBERT sentiment filter integration
-- [ ] Multi-exchange support (OKX, Bybit)
-- [ ] Web dashboard (React frontend for `realtime_dashboard.py`)
-- [ ] Automated weekly performance reports → Google Drive
-
----
-
-*CoinScopeAI is a research and paper-trading tool. It does not constitute financial advice. All trading involves risk.*
+Private. Not open source. Not authorized for redistribution.

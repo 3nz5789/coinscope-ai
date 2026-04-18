@@ -1,0 +1,133 @@
+{
+  "version": "3.0.0",
+  "trained_at": "2026-04-17T08:40:13.050982+00:00",
+  "dataset": "/sessions/hopeful-laughing-lovelace/mnt/CoinScopeAI/ml/data/regime_labeled_v1.csv",
+  "train_samples": 44492,
+  "test_samples": 11123,
+  "features": [
+    "log_ret",
+    "abs_ret",
+    "roc_10",
+    "rsi",
+    "stoch_k",
+    "macd_hist",
+    "adx",
+    "di_split",
+    "ema_align",
+    "price_vs_ema50",
+    "price_vs_ema200",
+    "atr_pct",
+    "atr_pct_zscore",
+    "bb_width",
+    "bb_width_zscore",
+    "bb_pct_b",
+    "vol_of_vol",
+    "vol_zscore"
+  ],
+  "labels": [
+    "Trending",
+    "Mean-Reverting",
+    "Volatile",
+    "Quiet"
+  ],
+  "label_encoding": {
+    "Mean-Reverting": 0,
+    "Quiet": 1,
+    "Trending": 2,
+    "Volatile": 3
+  },
+  "accuracy": 0.970871,
+  "training_secs": 15.2,
+  "per_class_f1": {
+    "Trending": 0.9464,
+    "Mean-Reverting": 0.94,
+    "Volatile": 0.9995,
+    "Quiet": 0.9975
+  },
+  "feature_importance": [
+    {
+      "feature": "atr_pct",
+      "importance": 0.34774
+    },
+    {
+      "feature": "bb_width",
+      "importance": 0.18923
+    },
+    {
+      "feature": "vol_of_vol",
+      "importance": 0.10509
+    },
+    {
+      "feature": "adx",
+      "importance": 0.09059
+    },
+    {
+      "feature": "price_vs_ema200",
+      "importance": 0.0826
+    },
+    {
+      "feature": "bb_width_zscore",
+      "importance": 0.03307
+    },
+    {
+      "feature": "abs_ret",
+      "importance": 0.03244
+    },
+    {
+      "feature": "price_vs_ema50",
+      "importance": 0.0251
+    },
+    {
+      "feature": "atr_pct_zscore",
+      "importance": 0.02382
+    },
+    {
+      "feature": "macd_hist",
+      "importance": 0.01608
+    },
+    {
+      "feature": "rsi",
+      "importance": 0.01418
+    },
+    {
+      "feature": "di_split",
+      "importance": 0.0103
+    },
+    {
+      "feature": "roc_10",
+      "importance": 0.00697
+    },
+    {
+      "feature": "ema_align",
+      "importance": 0.0069
+    },
+    {
+      "feature": "log_ret",
+      "importance": 0.00592
+    },
+    {
+      "feature": "bb_pct_b",
+      "importance": 0.00478
+    },
+    {
+      "feature": "stoch_k",
+      "importance": 0.00396
+    },
+    {
+      "feature": "vol_zscore",
+      "importance": 0.00125
+    }
+  ],
+  "models": {
+    "rf": {
+      "n_estimators": 400,
+      "max_depth": 12
+    },
+    "xgb": {
+      "n_estimators": 400,
+      "max_depth": 6,
+      "lr": 0.05
+    }
+  },
+  "ensemble": "soft_voting_equal_weights"
+}

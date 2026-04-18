@@ -1,0 +1,11 @@
+# CoinScopeAI — Funding Rate Pipeline Dependencies
+# Install: pip install -r data/funding_rates/requirements.txt
+
+# Async HTTP client (REST calls + Telegram)
+aiohttp>=3.9.0
+
+# WebSocket client (Binance stream)
+websockets>=12.0
+
+# SQLite is in the standard library — no extra package needed
+# asyncio is in the standard library — no extra package needed

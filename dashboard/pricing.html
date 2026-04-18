@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CoinScopeAI — Pricing</title>
+  <style>
+    /* ── Reset & Tokens ──────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:           #0a0d12;
+      --surface:      #10141c;
+      --card:         #151a25;
+      --card-hi:      #1a2030;
+      --border:       #1e2535;
+      --border-hi:    #2a3450;
+      --text:         #e2e8f0;
+      --muted:        #64748b;
+      --accent:       #2de8a8;
+      --accent-dim:   rgba(45,232,168,0.12);
+      --accent-glow:  rgba(45,232,168,0.25);
+      --green:        #2de8a8;
+      --green-dim:    rgba(45,232,168,0.12);
+      --green-glow:   rgba(45,232,168,0.25);
+      --yellow:       #f59e0b;
+      --yellow-dim:   rgba(245,158,11,0.12);
+      --red:          #ef4444;
+      --font:         'Inter', 'SF Pro Display', -apple-system, sans-serif;
+      --mono:         'JetBrains Mono', 'Fira Code', monospace;
+    }
+    html { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; }
+    body { min-height: 100vh; display: flex; flex-direction: column; }
+
+    /* ── Header ──────────────────────────────────────────────────────── */
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 40px; border-bottom: 1px solid var(--border);
+      background: var(--surface); position: sticky; top: 0; z-index: 50;
+    }
+    .logo {
+      font-size: 17px; font-weight: 700; letter-spacing: -0.5px;
+      color: var(--text); text-decoration: none; display: flex; align-items: center; gap: 8px;
+    }
+    .logo-icon {
+      width: 28px; height: 28px; border-radius: 6px;
+      background: linear-gradient(135deg, var(--accent), var(--green));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 800; color: #fff;
+    }
+    .logo-text span { color: var(--accent); }
+    .header-badge {
+      font-size: 10px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase;
+      background: var(--green-dim); color: var(--green); border: 1px solid var(--green);
+      padding: 2px 8px; border-radius: 20px;
+    }
+    .header-right { display: flex; align-items: center; gap: 16px; }
+    .nav-link { font-size: 13px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+    .nav-link:hover { color: var(--text); }
+    .btn-login {
+      font-size: 13px; font-weight: 500; color: var(--text);
+      background: transparent; border: 1px solid var(--border-hi);
+      padding: 6px 16px; border-radius: 6px; cursor: pointer;
+      text-decoration: none; transition: border-color 0.2s, background 0.2s;
+    }
+    .btn-login:hover { border-color: var(--accent); background: var(--accent-dim); }
+
+    /* ── Hero ────────────────────────────────────────────────────────── */
+    .hero {
+      text-align: center; padding: 72px 24px 48px;
+    }
+    .hero-label {
+      font-size: 11px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase;
+      color: var(--accent); margin-bottom: 16px; display: block;
+    }
+    .hero h1 {
+      font-size: clamp(28px, 4vw, 42px); font-weight: 800; letter-spacing: -1px;
+      color: var(--text); line-height: 1.15; margin-bottom: 16px;
+    }
+    .hero h1 span { color: var(--green); }
+    .hero-sub {
+      font-size: 15px; color: var(--muted); max-width: 520px; margin: 0 auto 36px;
+      line-height: 1.6;
+    }
+
+    /* ── Toggle ──────────────────────────────────────────────────────── */
+    .toggle-wrap {
+      display: inline-flex; align-items: center; gap: 12px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 100px; padding: 6px 8px;
+    }
+    .toggle-label {
+      font-size: 13px; font-weight: 500; color: var(--muted);
+      padding: 4px 12px; border-radius: 100px; cursor: pointer;
+      transition: color 0.2s;
+    }
+    .toggle-label.active { color: var(--text); background: var(--card); }
+    .toggle-label:hover:not(.active) { color: var(--text); }
+    .save-badge {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+      background: var(--green-dim); color: var(--green); border: 1px solid rgba(45,232,168,0.3);
+      padding: 2px 8px; border-radius: 20px; white-space: nowrap;
+    }
+
+    /* ── Pricing Grid ────────────────────────────────────────────────── */
+    .pricing-section {
+      flex: 1; padding: 0 40px 80px;
+      max-width: 1180px; margin: 0 auto; width: 100%;
+    }
+    .plans-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+    @media (max-width: 1024px) { .plans-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 640px)  { .plans-grid { grid-template-columns: 1fr; } }
+
+    /* ── Plan Card ───────────────────────────────────────────────────── */
+    .plan-card {
+      position: relative; display: flex; flex-direction: column;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 28px 24px;
+      transition: border-color 0.25s, transform 0.2s, box-shadow 0.25s;
+    }
+    .plan-card:hover {
+      border-color: var(--border-hi); transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+    .plan-card.popular {
+      border-color: var(--green);
+      box-shadow: 0 0 0 1px var(--green), 0 8px 40px var(--green-glow);
+    }
+    .plan-card.popular:hover {
+      box-shadow: 0 0 0 1px var(--green), 0 12px 48px var(--green-glow);
+    }
+
+    .popular-badge {
+      position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+      font-size: 10px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase;
+      background: var(--green); color: #000;
+      padding: 3px 14px; border-radius: 20px; white-space: nowrap;
+    }
+
+    .plan-tier {
+      font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 12px;
+    }
+    .plan-card.popular .plan-tier { color: var(--green); }
+
+    .plan-price-wrap { margin-bottom: 6px; display: flex; align-items: baseline; gap: 4px; }
+    .plan-currency { font-size: 20px; font-weight: 700; color: var(--text); margin-top: 6px; }
+    .plan-amount {
+      font-size: 44px; font-weight: 800; letter-spacing: -2px; color: var(--text);
+      font-family: var(--mono); line-height: 1;
+    }
+    .plan-period { font-size: 13px; color: var(--muted); }
+
+    .plan-annual-note {
+      font-size: 11px; color: var(--muted); margin-bottom: 20px;
+      min-height: 16px;
+    }
+    .plan-annual-note .save { color: var(--green); font-weight: 600; }
+
+    .plan-divider { border: none; border-top: 1px solid var(--border); margin: 0 0 20px; }
+
+    .plan-features { list-style: none; flex: 1; margin-bottom: 24px; }
+    .plan-features li {
+      display: flex; align-items: flex-start; gap: 8px;
+      font-size: 13px; color: var(--muted); padding: 5px 0; line-height: 1.4;
+    }
+    .plan-features li .check {
+      color: var(--green); flex-shrink: 0; margin-top: 1px; font-size: 14px;
+    }
+    .plan-card.popular .plan-features li { color: var(--text); }
+
+    /* ── CTA Button ──────────────────────────────────────────────────── */
+    .btn-cta {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      width: 100%; padding: 11px 20px; border-radius: 8px;
+      font-size: 14px; font-weight: 600; cursor: pointer;
+      border: none; transition: all 0.2s; position: relative; overflow: hidden;
+    }
+    .btn-cta:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .btn-cta.default {
+      background: var(--surface); border: 1px solid var(--border-hi);
+      color: var(--text);
+    }
+    .btn-cta.default:hover:not(:disabled) {
+      background: var(--card-hi); border-color: var(--accent);
+    }
+    .btn-cta.primary {
+      background: linear-gradient(135deg, var(--green), #1dbf8a);
+      color: #000;
+      box-shadow: 0 0 20px var(--green-glow);
+    }
+    .btn-cta.primary:hover:not(:disabled) {
+      background: linear-gradient(135deg, #4ff0b8, var(--green));
+      box-shadow: 0 0 28px var(--green-glow);
+      transform: translateY(-1px);
+    }
+    .btn-cta.team-btn {
+      background: var(--surface); border: 1px solid var(--accent);
+      color: var(--accent);
+    }
+    .btn-cta.team-btn:hover:not(:disabled) {
+      background: var(--accent-dim);
+    }
+
+    .btn-spinner {
+      width: 14px; height: 14px; border: 2px solid rgba(0,0,0,0.3);
+      border-top-color: #000; border-radius: 50%;
+      animation: spin 0.7s linear infinite; display: none;
+    }
+    .btn-cta.default .btn-spinner,
+    .btn-cta.team-btn .btn-spinner {
+      border-color: rgba(255,255,255,0.2); border-top-color: var(--text);
+    }
+    .loading .btn-spinner { display: block; }
+    .loading .btn-text { display: none; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Toast ───────────────────────────────────────────────────────── */
+    #toast {
+      position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(80px);
+      background: var(--card); border: 1px solid var(--border-hi);
+      color: var(--text); font-size: 13px; padding: 10px 20px;
+      border-radius: 8px; z-index: 100; transition: transform 0.3s ease;
+      white-space: nowrap; box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+    #toast.error { border-color: var(--red); color: var(--red); }
+
+    /* ── FAQ Strip ───────────────────────────────────────────────────── */
+    .faq-strip {
+      background: var(--surface); border-top: 1px solid var(--border);
+      padding: 40px 40px 56px; text-align: center;
+    }
+    .faq-strip h2 { font-size: 18px; font-weight: 700; margin-bottom: 32px; color: var(--text); }
+    .faq-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;
+      max-width: 860px; margin: 0 auto; text-align: left;
+    }
+    @media (max-width: 768px) { .faq-grid { grid-template-columns: 1fr; } }
+    .faq-item h3 { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+    .faq-item p  { font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+    /* ── Footer ──────────────────────────────────────────────────────── */
+    footer {
+      background: var(--surface); border-top: 1px solid var(--border);
+      padding: 20px 40px; display: flex; align-items: center; justify-content: space-between;
+    }
+    footer p { font-size: 12px; color: var(--muted); }
+    .footer-links { display: flex; gap: 20px; }
+    .footer-links a { font-size: 12px; color: var(--muted); text-decoration: none; }
+    .footer-links a:hover { color: var(--text); }
+
+    /* ── Guarantee Bar ───────────────────────────────────────────────── */
+    .guarantee-bar {
+      display: flex; align-items: center; justify-content: center; gap: 32px;
+      padding: 16px 40px; border-bottom: 1px solid var(--border);
+      background: var(--surface); flex-wrap: wrap;
+    }
+    .guar-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+    .guar-icon { font-size: 16px; }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <a href="#" class="logo">
+      <div class="logo-icon">C</div>
+      <div class="logo-text">CoinScope<span>AI</span></div>
+    </a>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="header-badge">Testnet Validation</span>
+    </div>
+    <div class="header-right">
+      <a href="#faq" class="nav-link">FAQ</a>
+      <a href="http://localhost:8001/performance" class="nav-link" target="_blank">Performance</a>
+      <a href="#" class="btn-login">Sign In</a>
+    </div>
+  </header>
+
+  <!-- Guarantee Bar -->
+  <div class="guarantee-bar">
+    <div class="guar-item"><span class="guar-icon">🔒</span> 256-bit SSL</div>
+    <div class="guar-item"><span class="guar-icon">💳</span> Powered by Stripe</div>
+    <div class="guar-item"><span class="guar-icon">🔄</span> Cancel anytime</div>
+    <div class="guar-item"><span class="guar-icon">🧪</span> Binance Testnet — no real trades</div>
+  </div>
+
+  <!-- Hero -->
+  <div class="hero">
+    <span class="hero-label">Pricing</span>
+    <h1>Institutional-grade signals.<br><span>Accessible pricing.</span></h1>
+    <p class="hero-sub">
+      ML-driven futures setups, real-time regime detection, and automated
+      risk management — built for traders who take capital preservation seriously.
+    </p>
+
+    <!-- Billing Toggle -->
+    <div class="toggle-wrap" id="toggle-wrap">
+      <span class="toggle-label active" id="lbl-monthly" onclick="setInterval_('monthly')">Monthly</span>
+      <span class="toggle-label" id="lbl-annual" onclick="setInterval_('annual')">
+        Annual&nbsp;<span class="save-badge">Save 20%</span>
+      </span>
+    </div>
+  </div>
+
+  <!-- Plans -->
+  <section class="pricing-section">
+    <div class="plans-grid" id="plans-grid">
+      <!-- Injected by JS -->
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <div class="faq-strip" id="faq">
+    <h2>Common Questions</h2>
+    <div class="faq-grid">
+      <div class="faq-item">
+        <h3>Is this real money?</h3>
+        <p>All trading runs on Binance Testnet only. No real orders are placed. This is a 30-day validation phase — real trading requires explicit activation.</p>
+      </div>
+      <div class="faq-item">
+        <h3>Can I cancel anytime?</h3>
+        <p>Yes. Cancel via the billing portal at any time. Your access continues until the end of the current billing period. No questions asked.</p>
+      </div>
+      <div class="faq-item">
+        <h3>What's the annual discount?</h3>
+        <p>Annual plans are billed at 20% off the monthly equivalent rate. Starter goes from $228/yr to $190/yr. Pro from $588/yr to $490/yr.</p>
+      </div>
+      <div class="faq-item">
+        <h3>What exchanges are supported?</h3>
+        <p>Elite and above get multi-exchange coverage: Binance Futures, Bybit, OKX, and Hyperliquid. Starter and Pro focus on Binance.</p>
+      </div>
+      <div class="faq-item">
+        <h3>What is ML regime detection?</h3>
+        <p>Our v3 HMM model classifies each market into Trending, Mean-Reverting, Volatile, or Quiet states — adjusting signal weights and position sizing in real time.</p>
+      </div>
+      <div class="faq-item">
+        <h3>Team / custom pricing?</h3>
+        <p>Team plans support up to 5 seats with dedicated onboarding and custom regime tuning. Contact us via Telegram @ScoopyAI_bot for a custom quote.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <p>© 2026 CoinScopeAI. All rights reserved. TEST MODE — no real funds at risk.</p>
+    <div class="footer-links">
+      <a href="#">Terms</a>
+      <a href="#">Privacy</a>
+      <a href="https://t.me/ScoopyAI_bot" target="_blank">Telegram</a>
+    </div>
+  </footer>
+
+  <!-- Toast -->
+  <div id="toast"></div>
+
+  <script>
+    // ── Config ─────────────────────────────────────────────────────────
+    const BILLING_API = 'http://localhost:8002';
+    const SUCCESS_URL = window.location.origin + '/billing/success';
+    const CANCEL_URL  = window.location.href;
+
+    // ── Pricing Data (mirrors billing/config.py) ───────────────────────
+    const PLANS = [
+      {
+        tier: 'starter',
+        name: 'Starter',
+        monthly: 19,
+        annual: 190,
+        annualMonthly: 15.83,
+        popular: false,
+        cta: 'Get Started',
+        ctaStyle: 'default',
+        features: [
+          '5 pairs monitored',
+          '4h scan interval',
+          'Telegram alerts',
+          'Trade journal (30 days)',
+          'Basic risk gate',
+        ],
+      },
+      {
+        tier: 'pro',
+        name: 'Pro',
+        monthly: 49,
+        annual: 490,
+        annualMonthly: 40.83,
+        popular: true,
+        cta: 'Start with Pro',
+        ctaStyle: 'primary',
+        features: [
+          '25 pairs monitored',
+          '1h scan interval',
+          'ML regime detection (v3)',
+          'Telegram + email alerts',
+          'Trade journal (unlimited)',
+          'Kelly position sizing',
+          'Walk-forward validation',
+        ],
+      },
+      {
+        tier: 'elite',
+        name: 'Elite',
+        monthly: 99,
+        annual: 990,
+        annualMonthly: 82.50,
+        popular: false,
+        cta: 'Go Elite',
+        ctaStyle: 'default',
+        features: [
+          'Unlimited pairs',
+          '15min scan interval',
+          'Multi-exchange (Binance, Bybit, OKX, Hyperliquid)',
+          'CVD + whale flow signals',
+          'API access (full engine)',
+          'Priority Telegram support',
+          'Alpha decay monitoring',
+        ],
+      },
+      {
+        tier: 'team',
+        name: 'Team',
+        monthly: 299,
+        annual: 299 * 12 * 0.8,
+        annualMonthly: (299 * 0.8).toFixed(2),
+        popular: false,
+        cta: 'Contact Us',
+        ctaStyle: 'team-btn',
+        isTeam: true,
+        features: [
+          'Everything in Elite',
+          'Up to 5 seats',
+          'Dedicated onboarding',
+          'Custom regime tuning',
+          'SLA support',
+        ],
+      },
+    ];
+
+    // ── State ──────────────────────────────────────────────────────────
+    let currentInterval = 'monthly';
+
+    function setInterval_(iv) {
+      currentInterval = iv;
+      document.getElementById('lbl-monthly').classList.toggle('active', iv === 'monthly');
+      document.getElementById('lbl-annual').classList.toggle('active', iv === 'annual');
+      renderPlans();
+    }
+
+    // ── Render ─────────────────────────────────────────────────────────
+    function renderPlans() {
+      const grid = document.getElementById('plans-grid');
+      grid.innerHTML = PLANS.map(p => renderCard(p)).join('');
+    }
+
+    function renderCard(p) {
+      const isAnnual = currentInterval === 'annual';
+      const displayAmt = isAnnual ? p.annualMonthly : p.monthly;
+      const displayAmtInt = Math.floor(displayAmt);
+      const displayAmtDec = ('.' + String((displayAmt % 1).toFixed(2)).slice(2));
+      const annualNote = isAnnual
+        ? `<span class="save">$${p.annual}/yr</span> — saves $${(p.monthly * 12 - p.annual).toFixed(0)}`
+        : `&nbsp;`;
+
+      const features = p.features.map(f =>
+        `<li><span class="check">✓</span>${f}</li>`
+      ).join('');
+
+      const ctaOnClick = p.isTeam
+        ? `onclick="window.open('https://t.me/ScoopyAI_bot','_blank')"`
+        : `onclick="startCheckout('${p.tier}', this)"`;
+
+      return `
+        <div class="plan-card ${p.popular ? 'popular' : ''}">
+          ${p.popular ? '<div class="popular-badge">Most Popular</div>' : ''}
+          <div class="plan-tier">${p.name}</div>
+          <div class="plan-price-wrap">
+            <span class="plan-currency">$</span>
+            <span class="plan-amount">${displayAmtInt}</span>
+            <span class="plan-period">/mo</span>
+          </div>
+          <p class="plan-annual-note">${annualNote}</p>
+          <hr class="plan-divider">
+          <ul class="plan-features">${features}</ul>
+          <button class="btn-cta ${p.ctaStyle}" ${ctaOnClick}>
+            <span class="btn-text">${p.isTeam ? '💬 ' + p.cta : p.cta}</span>
+            <span class="btn-spinner"></span>
+          </button>
+        </div>
+      `;
+    }
+
+    // ── Checkout ───────────────────────────────────────────────────────
+    async function startCheckout(tier, btn) {
+      if (btn.disabled) return;
+      btn.disabled = true;
+      btn.classList.add('loading');
+
+      try {
+        const resp = await fetch(`${BILLING_API}/billing/checkout/session`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tier, interval: currentInterval }),
+        });
+
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          throw new Error(err.detail || `HTTP ${resp.status}`);
+        }
+
+        const data = await resp.json();
+
+        if (data.session_url) {
+          // Stash tier/interval so success page can display them
+          sessionStorage.setItem('csa_tier', tier);
+          sessionStorage.setItem('csa_interval', currentInterval);
+          // Redirect to Stripe Checkout
+          window.location.href = data.session_url;
+        } else {
+          throw new Error('No session URL returned from billing API');
+        }
+      } catch (e) {
+        console.error('[checkout]', e);
+        showToast(`⚠️  ${e.message}`, true);
+        btn.disabled = false;
+        btn.classList.remove('loading');
+      }
+    }
+
+    // ── Toast ──────────────────────────────────────────────────────────
+    function showToast(msg, isError = false) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = isError ? 'error show' : 'show';
+      setTimeout(() => t.classList.remove('show'), 4000);
+    }
+
+    // ── Init ───────────────────────────────────────────────────────────
+    renderPlans();
+  </script>
+</body>
+</html>

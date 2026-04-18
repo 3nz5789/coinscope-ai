@@ -1,0 +1,158 @@
+version: "3.9"
+
+# =============================================================================
+#  CoinScopeAI — Docker Compose
+#  Usage:
+#    docker compose up --build            # start everything
+#    docker compose up engine api         # engine + API only (no Celery)
+#    docker compose logs -f engine        # follow engine logs
+# =============================================================================
+
+x-engine-base: &engine-base
+  build:
+    context: ./coinscope_trading_engine
+    dockerfile: Dockerfile
+  env_file:
+    - ./coinscope_trading_engine/.env
+  environment:
+    - REDIS_HOST=redis
+    - REDIS_PORT=6379
+    - REDIS_URL=redis://redis:6379/0
+    - REDIS_BACKEND_URL=redis://redis:6379/1
+  volumes:
+    - ./coinscope_trading_engine:/app
+    - ./logs:/app/logs
+  depends_on:
+    redis:
+      condition: service_healthy
+  restart: unless-stopped
+
+services:
+
+  # ── Infrastructure ──────────────────────────────────────────────────────────
+
+  redis:
+    image: redis:7-alpine
+    container_name: coinscopeai-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --save 60 1 --loglevel warning --maxmemory 512mb --maxmemory-policy allkeys-lru
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Core Engine ─────────────────────────────────────────────────────────────
+
+  engine:
+    <<: *engine-base
+    container_name: coinscopeai-engine
+    command: python main.py --testnet
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('localhost', 8001), 2)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # ── FastAPI HTTP Layer ───────────────────────────────────────────────────────
+
+  api:
+    <<: *engine-base
+    container_name: coinscopeai-api
+    command: uvicorn api:app --host 0.0.0.0 --port 8001 --workers 1
+    ports:
+      - "8001:8001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+
+  # ── Celery Workers ──────────────────────────────────────────────────────────
+
+  celery-default:
+    <<: *engine-base
+    container_name: coinscopeai-celery-default
+    command: celery -A celery_app worker -Q default,scanning --loglevel=info --concurrency=4
+    healthcheck:
+      test: ["CMD", "celery", "-A", "celery_app", "inspect", "ping", "-d", "celery@$$HOSTNAME"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  celery-ml:
+    <<: *engine-base
+    container_name: coinscopeai-celery-ml
+    command: celery -A celery_app worker -Q ml_tasks --loglevel=info --concurrency=2
+    # ML worker gets more memory; limit CPU to avoid starving the main engine
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: 2G
+
+  celery-alerts:
+    <<: *engine-base
+    container_name: coinscopeai-celery-alerts
+    command: celery -A celery_app worker -Q alerts --loglevel=info --concurrency=8
+
+  celery-beat:
+    <<: *engine-base
+    container_name: coinscopeai-celery-beat
+    command: celery -A celery_app beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    # Beat only runs one process
+    deploy:
+      replicas: 1
+
+  # ── Celery Monitor (Flower) ─────────────────────────────────────────────────
+
+  flower:
+    <<: *engine-base
+    container_name: coinscopeai-flower
+    command: celery -A celery_app flower --port=5555 --broker=redis://redis:6379/0
+    ports:
+      - "5555:5555"
+
+  # ── Prometheus ──────────────────────────────────────────────────────────────
+
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    container_name: coinscopeai-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=15d
+    restart: unless-stopped
+    depends_on:
+      - engine
+
+  # ── Grafana ─────────────────────────────────────────────────────────────────
+
+  grafana:
+    image: grafana/grafana:10.4.2
+    container_name: coinscopeai-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=coinscopeai
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+  prometheus_data:
+  grafana_data:

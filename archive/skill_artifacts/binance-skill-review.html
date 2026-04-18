@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eval Review</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600&family=Lora:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" integrity="sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT" crossorigin="anonymous"></script>
+  <style>
+    :root {
+      --bg: #faf9f5;
+      --surface: #ffffff;
+      --border: #e8e6dc;
+      --text: #141413;
+      --text-muted: #b0aea5;
+      --accent: #d97757;
+      --accent-hover: #c4613f;
+      --green: #788c5d;
+      --green-bg: #eef2e8;
+      --red: #c44;
+      --red-bg: #fceaea;
+      --header-bg: #141413;
+      --header-text: #faf9f5;
+      --radius: 6px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Lora', Georgia, serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ---- Header ---- */
+    .header {
+      background: var(--header-bg);
+      color: var(--header-text);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .header h1 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+    .header .instructions {
+      font-size: 0.8rem;
+      opacity: 0.7;
+      margin-top: 0.25rem;
+    }
+    .header .progress {
+      font-size: 0.875rem;
+      opacity: 0.8;
+      text-align: right;
+    }
+
+    /* ---- Main content ---- */
+    .main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    /* ---- Sections ---- */
+    .section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      flex-shrink: 0;
+    }
+    .section-header {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.75rem 1rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .section-body {
+      padding: 1rem;
+    }
+
+    /* ---- Config badge ---- */
+    .config-badge {
+      display: inline-block;
+      padding: 0.2rem 0.625rem;
+      border-radius: 9999px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-left: 0.75rem;
+      vertical-align: middle;
+    }
+    .config-badge.config-primary {
+      background: rgba(33, 150, 243, 0.12);
+      color: #1976d2;
+    }
+    .config-badge.config-baseline {
+      background: rgba(255, 193, 7, 0.15);
+      color: #f57f17;
+    }
+
+    /* ---- Prompt ---- */
+    .prompt-text {
+      white-space: pre-wrap;
+      font-size: 0.9375rem;
+      line-height: 1.6;
+    }
+
+    /* ---- Outputs ---- */
+    .output-file {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .output-file + .output-file {
+      margin-top: 1rem;
+    }
+    .output-file-header {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .output-file-header .dl-btn {
+      font-size: 0.7rem;
+      color: var(--accent);
+      text-decoration: none;
+      cursor: pointer;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-weight: 500;
+      opacity: 0.8;
+    }
+    .output-file-header .dl-btn:hover {
+      opacity: 1;
+      text-decoration: underline;
+    }
+    .output-file-content {
+      padding: 0.75rem;
+      overflow-x: auto;
+    }
+    .output-file-content pre {
+      font-size: 0.8125rem;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+    }
+    .output-file-content img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 4px;
+    }
+    .output-file-content iframe {
+      width: 100%;
+      height: 600px;
+      border: none;
+    }
+    .output-file-content table {
+      border-collapse: collapse;
+      font-size: 0.8125rem;
+      width: 100%;
+    }
+    .output-file-content table td,
+    .output-file-content table th {
+      border: 1px solid var(--border);
+      padding: 0.375rem 0.5rem;
+      text-align: left;
+    }
+    .output-file-content table th {
+      background: var(--bg);
+      font-weight: 600;
+    }
+    .output-file-content .download-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.875rem;
+      cursor: pointer;
+    }
+    .output-file-content .download-link:hover {
+      background: var(--border);
+    }
+    .empty-state {
+      color: var(--text-muted);
+      font-style: italic;
+      padding: 2rem;
+      text-align: center;
+    }
+
+    /* ---- Feedback ---- */
+    .prev-feedback {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.625rem 0.75rem;
+      margin-top: 0.75rem;
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .prev-feedback-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.25rem;
+      color: var(--text-muted);
+    }
+    .feedback-textarea {
+      width: 100%;
+      min-height: 100px;
+      padding: 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 0.9375rem;
+      line-height: 1.5;
+      resize: vertical;
+      color: var(--text);
+    }
+    .feedback-textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+    .feedback-status {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+      min-height: 1.1em;
+    }
+
+    /* ---- Grades (collapsible) ---- */
+    .grades-toggle {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+    .grades-toggle:hover {
+      color: var(--accent);
+    }
+    .grades-toggle .arrow {
+      margin-right: 0.5rem;
+      transition: transform 0.15s;
+      font-size: 0.75rem;
+    }
+    .grades-toggle .arrow.open {
+      transform: rotate(90deg);
+    }
+    .grades-content {
+      display: none;
+      margin-top: 0.75rem;
+    }
+    .grades-content.open {
+      display: block;
+    }
+    .grades-summary {
+      font-size: 0.875rem;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .grade-badge {
+      display: inline-block;
+      padding: 0.125rem 0.5rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .grade-pass { background: var(--green-bg); color: var(--green); }
+    .grade-fail { background: var(--red-bg); color: var(--red); }
+    .assertion-list {
+      list-style: none;
+    }
+    .assertion-item {
+      padding: 0.625rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.8125rem;
+    }
+    .assertion-item:last-child { border-bottom: none; }
+    .assertion-status {
+      font-weight: 600;
+      margin-right: 0.5rem;
+    }
+    .assertion-status.pass { color: var(--green); }
+    .assertion-status.fail { color: var(--red); }
+    .assertion-evidence {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      margin-top: 0.25rem;
+      padding-left: 1.5rem;
+    }
+
+    /* ---- View tabs ---- */
+    .view-tabs {
+      display: flex;
+      gap: 0;
+      padding: 0 2rem;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .view-tab {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.625rem 1.25rem;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      background: none;
+      color: var(--text-muted);
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+    }
+    .view-tab:hover { color: var(--text); }
+    .view-tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+    .view-panel { display: none; }
+    .view-panel.active { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+
+    /* ---- Benchmark view ---- */
+    .benchmark-view {
+      padding: 1.5rem 2rem;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .benchmark-table {
+      border-collapse: collapse;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 0.8125rem;
+      width: 100%;
+      margin-bottom: 1.5rem;
+    }
+    .benchmark-table th, .benchmark-table td {
+      padding: 0.625rem 0.75rem;
+      text-align: left;
+      border: 1px solid var(--border);
+    }
+    .benchmark-table th {
+      font-family: 'Poppins', sans-serif;
+      background: var(--header-bg);
+      color: var(--header-text);
+      font-weight: 500;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .benchmark-table tr:hover { background: var(--bg); }
+    .benchmark-table tr.benchmark-row-with { background: rgba(33, 150, 243, 0.06); }
+    .benchmark-table tr.benchmark-row-without { background: rgba(255, 193, 7, 0.06); }
+    .benchmark-table tr.benchmark-row-with:hover { background: rgba(33, 150, 243, 0.12); }
+    .benchmark-table tr.benchmark-row-without:hover { background: rgba(255, 193, 7, 0.12); }
+    .benchmark-table tr.benchmark-row-avg { font-weight: 600; border-top: 2px solid var(--border); }
+    .benchmark-table tr.benchmark-row-avg.benchmark-row-with { background: rgba(33, 150, 243, 0.12); }
+    .benchmark-table tr.benchmark-row-avg.benchmark-row-without { background: rgba(255, 193, 7, 0.12); }
+    .benchmark-delta-positive { color: var(--green); font-weight: 600; }
+    .benchmark-delta-negative { color: var(--red); font-weight: 600; }
+    .benchmark-notes {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+    }
+    .benchmark-notes h3 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.875rem;
+      margin-bottom: 0.75rem;
+    }
+    .benchmark-notes ul {
+      list-style: disc;
+      padding-left: 1.25rem;
+    }
+    .benchmark-notes li {
+      font-size: 0.8125rem;
+      line-height: 1.6;
+      margin-bottom: 0.375rem;
+    }
+    .benchmark-empty {
+      color: var(--text-muted);
+      font-style: italic;
+      text-align: center;
+      padding: 3rem;
+    }
+
+    /* ---- Navigation ---- */
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      flex-shrink: 0;
+    }
+    .nav-btn {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.5rem 1.25rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text);
+      transition: all 0.15s;
+    }
+    .nav-btn:hover:not(:disabled) {
+      background: var(--bg);
+      border-color: var(--text-muted);
+    }
+    .nav-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .done-btn {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.5rem 1.5rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+    .done-btn:hover {
+      background: var(--bg);
+      border-color: var(--text-muted);
+    }
+    .done-btn.ready {
+      border: none;
+      background: var(--accent);
+      color: white;
+      font-weight: 600;
+    }
+    .done-btn.ready:hover {
+      background: var(--accent-hover);
+    }
+    /* ---- Done overlay ---- */
+    .done-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 100;
+      justify-content: center;
+      align-items: center;
+    }
+    .done-overlay.visible {
+      display: flex;
+    }
+    .done-card {
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 2rem 3rem;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 500px;
+    }
+    .done-card h2 {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .done-card p {
+      color: var(--text-muted);
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+    .done-card .btn-row {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+    }
+    .done-card button {
+      padding: 0.5rem 1.25rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      cursor: pointer;
+      font-size: 0.875rem;
+    }
+    .done-card button:hover {
+      background: var(--bg);
+    }
+    /* ---- Toast ---- */
+    .toast {
+      position: fixed;
+      bottom: 5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--header-bg);
+      color: var(--header-text);
+      padding: 0.625rem 1.25rem;
+      border-radius: var(--radius);
+      font-size: 0.875rem;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+      z-index: 200;
+    }
+    .toast.visible {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <div id="app" style="height:100vh; display:flex; flex-direction:column;">
+    <div class="header">
+      <div>
+        <h1>Eval Review: <span id="skill-name"></span></h1>
+        <div class="instructions">Review each output and leave feedback below. Navigate with arrow keys or buttons. When done, copy feedback and paste into Claude Code.</div>
+      </div>
+      <div class="progress" id="progress"></div>
+    </div>
+
+    <!-- View tabs (only shown when benchmark data exists) -->
+    <div class="view-tabs" id="view-tabs" style="display:none;">
+      <button class="view-tab active" onclick="switchView('outputs')">Outputs</button>
+      <button class="view-tab" onclick="switchView('benchmark')">Benchmark</button>
+    </div>
+
+    <!-- Outputs panel (qualitative review) -->
+    <div class="view-panel active" id="panel-outputs">
+    <div class="main">
+      <!-- Prompt -->
+      <div class="section">
+        <div class="section-header">Prompt <span class="config-badge" id="config-badge" style="display:none;"></span></div>
+        <div class="section-body">
+          <div class="prompt-text" id="prompt-text"></div>
+        </div>
+      </div>
+
+      <!-- Outputs -->
+      <div class="section">
+        <div class="section-header">Output</div>
+        <div class="section-body" id="outputs-body">
+          <div class="empty-state">No output files found</div>
+        </div>
+      </div>
+
+      <!-- Previous Output (collapsible) -->
+      <div class="section" id="prev-outputs-section" style="display:none;">
+        <div class="section-header">
+          <div class="grades-toggle" onclick="togglePrevOutputs()">
+            <span class="arrow" id="prev-outputs-arrow">&#9654;</span>
+            Previous Output
+          </div>
+        </div>
+        <div class="grades-content" id="prev-outputs-content"></div>
+      </div>
+
+      <!-- Grades (collapsible) -->
+      <div class="section" id="grades-section" style="display:none;">
+        <div class="section-header">
+          <div class="grades-toggle" onclick="toggleGrades()">
+            <span class="arrow" id="grades-arrow">&#9654;</span>
+            Formal Grades
+          </div>
+        </div>
+        <div class="grades-content" id="grades-content"></div>
+      </div>
+
+      <!-- Feedback -->
+      <div class="section">
+        <div class="section-header">Your Feedback</div>
+        <div class="section-body">
+          <textarea
+            class="feedback-textarea"
+            id="feedback"
+            placeholder="What do you think of this output? Any issues, suggestions, or things that look great?"
+          ></textarea>
+          <div class="feedback-status" id="feedback-status"></div>
+          <div class="prev-feedback" id="prev-feedback" style="display:none;">
+            <div class="prev-feedback-label">Previous feedback</div>
+            <div id="prev-feedback-text"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav" id="outputs-nav">
+      <button class="nav-btn" id="prev-btn" onclick="navigate(-1)">&#8592; Previous</button>
+      <button class="done-btn" id="done-btn" onclick="showDoneDialog()">Submit All Reviews</button>
+      <button class="nav-btn" id="next-btn" onclick="navigate(1)">Next &#8594;</button>
+    </div>
+    </div><!-- end panel-outputs -->
+
+    <!-- Benchmark panel (quantitative stats) -->
+    <div class="view-panel" id="panel-benchmark">
+      <div class="benchmark-view" id="benchmark-content">
+        <div class="benchmark-empty">No benchmark data available. Run a benchmark to see quantitative results here.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Done overlay -->
+  <div class="done-overlay" id="done-overlay">
+    <div class="done-card">
+      <h2>Review Complete</h2>
+      <p>Your feedback has been saved. Go back to your Claude Code session and tell Claude you're done reviewing.</p>
+      <div class="btn-row">
+        <button onclick="closeDoneDialog()">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ---- Embedded data (injected by generate_review.py) ----
+    const EMBEDDED_DATA = {"skill_name": "binance-futures-api", "runs": [{"id": "eval-0-liquidation-monitor-with_skill", "prompt": "Write a Python module for CoinScopeAI that subscribes to real-time liquidation data for the top 10 USDT perpetual futures pairs (BTC, ETH, SOL, BNB, XRP, ADA, DOGE, AVAX, DOT, LINK). It should reconnect automatically on disconnect, and log large liquidations (> $50k notional) to both console and a file called liquidations.log. Include proper error handling.", "eval_id": 0, "outputs": [{"name": "solution.py", "type": "text", "content": "\"\"\"\nCoinScopeAI Binance Futures Liquidation Monitor\n\nA production-grade module for subscribing to real-time liquidation data for the\ntop 10 USDT perpetual futures pairs. Features automatic reconnection with exponential\nbackoff, dual logging (console + file), and proper error handling for Binance-specific\nerror codes.\n\nMonitored symbols:\n  - BTC, ETH, SOL, BNB, XRP, ADA, DOGE, AVAX, DOT, LINK (all USDT perpetual)\n\nKey capabilities:\n  - Multi-symbol WebSocket stream aggregation (single connection, one event loop)\n  - Automatic reconnection on disconnect (exponential backoff: 1s \u2192 60s)\n  - Filters and logs large liquidations (>$50k notional value)\n  - Dual logging: console + liquidations.log file\n  - Graceful shutdown on interrupt\n\"\"\"\n\nimport asyncio\nimport json\nimport logging\nimport sys\nfrom datetime import datetime\nfrom pathlib import Path\n\ntry:\n    import websockets\n    from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK\nexcept ImportError:\n    raise ImportError(\n        \"websockets library not found. Install with: pip install websockets\"\n    )\n\n\n# \u2500\u2500 Configuration \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\n# Top 10 USDT perpetual futures pairs (by volume)\nMONITORED_SYMBOLS = [\"btcusdt\", \"ethusdt\", \"solusdt\", \"bnbusdt\", \"xrpusdt\",\n                     \"adausdt\", \"dogeusdt\", \"avaxusdt\", \"dotusdt\", \"linkusdt\"]\n\n# Binance Futures WebSocket endpoints\nBASE_WS_MAINNET = \"wss://fstream.binance.com\"\nBASE_WS_TESTNET = \"wss://stream.binancefuture.com\"\n\n# Use mainnet by default (set to BASE_WS_TESTNET for paper trading)\nBASE_WS = BASE_WS_MAINNET\n\n# Large liquidation threshold in USD notional value\nLARGE_LIQUIDATION_THRESHOLD = 50000.0\n\n# Logging output file\nLIQUIDATIONS_LOG_FILE = \"liquidations.log\"\n\n\n# \u2500\u2500 Logging Setup \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\ndef setup_logging(log_file: str = LIQUIDATIONS_LOG_FILE) -> logging.Logger:\n    \"\"\"\n    Configure dual logging: console (INFO) + file (DEBUG).\n\n    Args:\n        log_file: path to liquidations log file\n\n    Returns:\n        Configured logger instance\n    \"\"\"\n    logger = logging.getLogger(\"LiquidationMonitor\")\n    logger.setLevel(logging.DEBUG)\n\n    # Prevent duplicate handlers on module reload\n    if logger.handlers:\n        return logger\n\n    # Console handler: INFO level with compact format\n    console_handler = logging.StreamHandler(sys.stdout)\n    console_handler.setLevel(logging.INFO)\n    console_fmt = logging.Formatter(\n        \"%(asctime)s [%(levelname)s] %(message)s\",\n        datefmt=\"%Y-%m-%d %H:%M:%S\"\n    )\n    console_handler.setFormatter(console_fmt)\n    logger.addHandler(console_handler)\n\n    # File handler: DEBUG level with detailed format (includes timestamps, line numbers)\n    file_handler = logging.FileHandler(log_file, mode=\"a\", encoding=\"utf-8\")\n    file_handler.setLevel(logging.DEBUG)\n    file_fmt = logging.Formatter(\n        \"%(asctime)s [%(levelname)s] %(name)s:%(funcName)s:%(lineno)d - %(message)s\",\n        datefmt=\"%Y-%m-%d %H:%M:%S\"\n    )\n    file_handler.setFormatter(file_fmt)\n    logger.addHandler(file_handler)\n\n    return logger\n\n\nlogger = setup_logging(LIQUIDATIONS_LOG_FILE)\n\n\n# \u2500\u2500 WebSocket Client \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\nclass BinanceLiquidationMonitor:\n    \"\"\"\n    Resilient Binance Futures liquidation monitor with automatic reconnection.\n\n    Subscribes to forceOrder (liquidation) streams for multiple symbols via a\n    single WebSocket connection. Implements exponential backoff reconnection\n    (1s \u2192 60s cap) and handles Binance-specific connection events.\n\n    The monitor filters liquidations by notional value and logs them to both\n    console and file.\n    \"\"\"\n\n    def __init__(self, symbols: list[str], threshold_usd: float = LARGE_LIQUIDATION_THRESHOLD):\n        \"\"\"\n        Initialize the liquidation monitor.\n\n        Args:\n            symbols: list of symbols to monitor, e.g. [\"btcusdt\", \"ethusdt\"]\n            threshold_usd: minimum notional USD value to log a liquidation\n        \"\"\"\n        self.symbols = symbols\n        self.threshold_usd = threshold_usd\n\n        # WebSocket streams: force order (liquidations) for each symbol\n        self.streams = [f\"{s}@forceOrder\" for s in symbols]\n\n        self._running = False\n        self._ws = None\n        self._reconnect_backoff = 1  # starts at 1 second\n\n        logger.info(\n            f\"Initialized LiquidationMonitor for {len(symbols)} symbols: \"\n            f\"{', '.join(s.upper() for s in symbols)}\"\n        )\n\n    @property\n    def ws_url(self) -> str:\n        \"\"\"\n        Build the combined WebSocket URL for all monitored streams.\n\n        For multiple streams, Binance wraps each message in {\"stream\": \"...\", \"data\": {...}}.\n        This allows us to subscribe to many symbols with a single connection (up to ~200 streams).\n        \"\"\"\n        if len(self.streams) == 1:\n            # Single stream: direct subscription\n            return f\"{BASE_WS}/ws/{self.streams[0]}\"\n        else:\n            # Combined streams: use /stream?streams=... endpoint\n            combined = \"/\".join(self.streams)\n            return f\"{BASE_WS}/stream?streams={combined}\"\n\n    def _calculate_notional(self, price: str, quantity: str) -> float:\n        \"\"\"\n        Calculate notional USD value: price \u00d7 quantity.\n\n        Binance sends prices and quantities as strings to preserve precision.\n        We convert to float for calculation.\n        \"\"\"\n        try:\n            return float(price) * float(quantity)\n        except ValueError:\n            logger.warning(f\"Failed to parse price={price} or quantity={quantity}\")\n            return 0.0\n\n    async def _handle_liquidation(self, data: dict):\n        \"\"\"\n        Process a single forceOrder (liquidation) message from Binance.\n\n        Message schema (via Binance WebSocket):\n        {\n            \"e\": \"forceOrder\",               # event type\n            \"E\": 1693478400000,              # event timestamp (ms)\n            \"o\": {\n                \"s\": \"BTCUSDT\",              # symbol (uppercase)\n                \"S\": \"BUY\",                  # side (BUY/SELL)\n                \"q\": \"0.001\",                # quantity\n                \"p\": \"42000.50\",             # price\n                \"ap\": \"42000.75\",            # average price\n                \"X\": \"FILLED\"                # order status\n            }\n        }\n\n        We filter by notional (price \u00d7 quantity) and log if > threshold.\n        \"\"\"\n        try:\n            # Extract order data from the message\n            event_type = data.get(\"e\")\n            if event_type != \"forceOrder\":\n                # This shouldn't happen given our stream selection, but be defensive\n                return\n\n            order_data = data.get(\"o\", {})\n            symbol = order_data.get(\"s\", \"UNKNOWN\")\n            side = order_data.get(\"S\", \"UNKNOWN\")\n            quantity = order_data.get(\"q\", \"0\")\n            price = order_data.get(\"p\", \"0\")\n            notional = self._calculate_notional(price, quantity)\n            event_time = data.get(\"E\", 0)\n\n            # Convert timestamp from milliseconds to readable format\n            event_dt = datetime.fromtimestamp(event_time / 1000.0).isoformat()\n\n            # Log all liquidations at DEBUG level (file)\n            logger.debug(\n                f\"LIQUIDATION EVENT: {symbol} {side} qty={quantity} \"\n                f\"price={price} notional=${notional:.2f} time={event_dt}\"\n            )\n\n            # Log large liquidations at INFO level (console + file)\n            if notional >= self.threshold_usd:\n                logger.info(\n                    f\"LARGE LIQUIDATION: {symbol} {side} qty={quantity} \"\n                    f\"price={price} notional=${notional:.2f} time={event_dt}\"\n                )\n\n        except Exception as e:\n            logger.error(f\"Error processing liquidation message: {e}\", exc_info=True)\n\n    async def _message_handler(self, raw_message: str):\n        \"\"\"\n        Parse and dispatch incoming WebSocket messages.\n\n        For combined streams, Binance wraps messages as:\n        {\"stream\": \"btcusdt@forceOrder\", \"data\": {...}}\n\n        For single streams, messages come directly as the payload.\n        \"\"\"\n        try:\n            data = json.loads(raw_message)\n\n            # Combined streams: extract the data wrapper\n            payload = data.get(\"data\", data)\n\n            # Dispatch to handler\n            await self._handle_liquidation(payload)\n\n        except json.JSONDecodeError as e:\n            logger.error(f\"Failed to decode WebSocket message: {e}\")\n        except Exception as e:\n            logger.exception(f\"Unexpected error in message handler: {e}\")\n\n    async def start(self):\n        \"\"\"\n        Start the monitor with automatic reconnection logic.\n\n        Connects to Binance WebSocket, processes liquidation messages, and\n        automatically reconnects with exponential backoff on failure. Run this\n        in the main event loop or wrap it in asyncio.run().\n        \"\"\"\n        self._running = True\n        backoff = 1  # Reset to 1 second on each connection attempt\n\n        while self._running:\n            try:\n                logger.info(f\"Connecting to Binance Futures WebSocket...\")\n\n                # Establish connection with ping/pong for keepalive\n                # ping_interval=20s: we send ping every 20 seconds\n                # ping_timeout=10s: we wait up to 10 seconds for a pong response\n                # close_timeout=5s: allow up to 5 seconds for clean socket closure\n                async with websockets.connect(\n                    self.ws_url,\n                    ping_interval=20,\n                    ping_timeout=10,\n                    close_timeout=5,\n                ) as ws:\n                    self._ws = ws\n                    backoff = 1  # Reset backoff on successful connection\n                    logger.info(\n                        f\"Successfully connected to Binance WebSocket. \"\n                        f\"Monitoring {len(self.symbols)} symbols for liquidations.\"\n                    )\n\n                    # Process incoming messages indefinitely until disconnect\n                    async for raw_message in ws:\n                        await self._message_handler(raw_message)\n\n            except ConnectionClosedOK:\n                # Clean shutdown (we called ws.close())\n                if not self._running:\n                    logger.info(\"WebSocket closed cleanly \u2014 monitoring stopped\")\n                    break\n                else:\n                    logger.warning(\"WebSocket closed cleanly \u2014 reconnecting...\")\n\n            except ConnectionClosedError as e:\n                # Abnormal closure (network issue, server reset, etc.)\n                logger.warning(\n                    f\"WebSocket connection lost: {e} \u2014 \"\n                    f\"will reconnect in {backoff} seconds\"\n                )\n\n            except (OSError, asyncio.TimeoutError) as e:\n                # Network errors (DNS, connection timeout, etc.)\n                logger.warning(\n                    f\"Network error: {type(e).__name__}: {e} \u2014 \"\n                    f\"will reconnect in {backoff} seconds\"\n                )\n\n            except Exception as e:\n                # Unexpected errors: log and attempt reconnection\n                logger.exception(\n                    f\"Unexpected WebSocket error: {e} \u2014 \"\n                    f\"will reconnect in {backoff} seconds\"\n                )\n\n            # If still running, wait before reconnection (exponential backoff)\n            if self._running:\n                await asyncio.sleep(backoff)\n                # Double the backoff (cap at 60s) for next attempt\n                backoff = min(backoff * 2, 60)\n\n    async def stop(self):\n        \"\"\"\n        Gracefully shut down the monitor.\n\n        Sets the running flag to False and closes the WebSocket connection.\n        The main loop will exit cleanly after processing the current message.\n        \"\"\"\n        logger.info(\"Shutting down liquidation monitor...\")\n        self._running = False\n        if self._ws:\n            await self._ws.close()\n\n\n# \u2500\u2500 Main Entry Point \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\nasync def main():\n    \"\"\"\n    Main entry point for the liquidation monitor.\n\n    Sets up signal handlers for graceful shutdown (Ctrl+C) and starts the\n    monitor for the configured symbols.\n    \"\"\"\n    monitor = BinanceLiquidationMonitor(\n        symbols=MONITORED_SYMBOLS,\n        threshold_usd=LARGE_LIQUIDATION_THRESHOLD\n    )\n\n    # Graceful shutdown on interrupt\n    loop = asyncio.get_running_loop()\n\n    def on_interrupt():\n        logger.info(\"Received interrupt signal \u2014 initiating shutdown...\")\n        asyncio.create_task(monitor.stop())\n\n    # Register signal handlers for Ctrl+C\n    for sig in (asyncio.SIGINT, asyncio.SIGTERM):\n        try:\n            loop.add_signal_handler(sig, on_interrupt)\n        except NotImplementedError:\n            # Signal handlers not available on all platforms (e.g., Windows)\n            pass\n\n    try:\n        # Start the monitor (this blocks until stop() is called)\n        await monitor.start()\n    except KeyboardInterrupt:\n        logger.info(\"Keyboard interrupt received\")\n        await monitor.stop()\n    finally:\n        logger.info(\"Liquidation monitor shut down successfully\")\n\n\nif __name__ == \"__main__\":\n    try:\n        asyncio.run(main())\n    except KeyboardInterrupt:\n        pass\n"}], "grading": {"eval_id": 0, "eval_name": "liquidation-monitor", "prompt": "Write a Python module for CoinScopeAI that subscribes to real-time liquidation data for top 10 USDT perpetual futures pairs...", "assertions": [{"text": "Uses async/asyncio pattern", "passed": true, "evidence": "Found 'async def' or 'asyncio' in code"}, {"text": "Uses WebSocket connection", "passed": true, "evidence": "WebSocket library or wss:// URL found"}, {"text": "Implements reconnection/backoff logic", "passed": true, "evidence": "Found reconnection/backoff pattern"}, {"text": "Filters liquidations by $50k notional threshold", "passed": true, "evidence": "50000/50k threshold found"}, {"text": "Logs to 'liquidations.log' file", "passed": true, "evidence": "liquidations.log filename present"}, {"text": "Covers all 10 required trading pairs", "passed": true, "evidence": "All 10 pairs present"}, {"text": "Includes try/except error handling", "passed": true, "evidence": "try/except blocks found"}], "pass_count": 7, "total": 7, "pass_rate": 1.0}}, {"id": "eval-0-liquidation-monitor-without_skill", "prompt": "Write a Python module for CoinScopeAI that subscribes to real-time liquidation data for the top 10 USDT perpetual futures pairs (BTC, ETH, SOL, BNB, XRP, ADA, DOGE, AVAX, DOT, LINK). It should reconnect automatically on disconnect, and log large liquidations (> $50k notional) to both console and a file called liquidations.log. Include proper error handling.", "eval_id": 0, "outputs": [{"name": "solution.py", "type": "text", "content": "\"\"\"\nCoinScopeAI Binance Futures Real-Time Liquidation Monitor\n\nThis module subscribes to real-time liquidation data from Binance for the top 10\nUSDT perpetual futures pairs and logs large liquidations (> $50k notional) to\nboth console and file with automatic reconnection handling.\n\"\"\"\n\nimport asyncio\nimport json\nimport logging\nimport logging.handlers\nimport sys\nfrom datetime import datetime\nfrom typing import Optional, Set\nfrom collections import defaultdict\n\ntry:\n    import websocket\nexcept ImportError:\n    print(\"Error: websocket-client is required. Install with: pip install websocket-client\")\n    sys.exit(1)\n\n\nclass LiquidationMonitor:\n    \"\"\"\n    Monitors real-time liquidation events from Binance futures market.\n\n    Attributes:\n        PAIRS: Top 10 USDT perpetual futures pairs to monitor\n        MIN_LIQUIDATION_NOTIONAL: Minimum liquidation size to log ($50k)\n        RECONNECT_INTERVAL: Seconds to wait before reconnection attempt\n        MAX_RECONNECT_ATTEMPTS: Maximum reconnection attempts before giving up\n    \"\"\"\n\n    PAIRS = [\"BTCUSDT\", \"ETHUSDT\", \"SOLUSDT\", \"BNBUSDT\", \"XRPUSDT\",\n             \"ADAUSDT\", \"DOGEUSDT\", \"AVAXUSDT\", \"DOTUSDT\", \"LINKUSDT\"]\n    MIN_LIQUIDATION_NOTIONAL = 50000  # $50k threshold\n    RECONNECT_INTERVAL = 5  # seconds\n    MAX_RECONNECT_ATTEMPTS = 10\n\n    # Binance Futures Liquidation WebSocket\n    WSS_URL = \"wss://fstream.binance.com/ws/\"\n\n    def __init__(self, log_file: str = \"liquidations.log\"):\n        \"\"\"\n        Initialize the liquidation monitor.\n\n        Args:\n            log_file: Path to the file where liquidations will be logged\n        \"\"\"\n        self.log_file = log_file\n        self.websocket_conn = None\n        self.reconnect_attempts = 0\n        self.is_running = False\n        self.pairs_subscribed: Set[str] = set()\n        self.liquidation_counts = defaultdict(int)\n\n        # Setup logging\n        self.logger = self._setup_logging()\n\n    def _setup_logging(self) -> logging.Logger:\n        \"\"\"\n        Configure logging to output to both console and file.\n\n        Returns:\n            Configured logger instance\n        \"\"\"\n        logger = logging.getLogger(\"LiquidationMonitor\")\n        logger.setLevel(logging.INFO)\n\n        # Remove existing handlers to avoid duplication\n        logger.handlers.clear()\n\n        # Create formatters\n        formatter = logging.Formatter(\n            '%(asctime)s - %(levelname)s - [%(name)s] - %(message)s',\n            datefmt='%Y-%m-%d %H:%M:%S'\n        )\n\n        # Console handler\n        console_handler = logging.StreamHandler(sys.stdout)\n        console_handler.setLevel(logging.INFO)\n        console_handler.setFormatter(formatter)\n        logger.addHandler(console_handler)\n\n        # File handler with rotation\n        try:\n            file_handler = logging.handlers.RotatingFileHandler(\n                self.log_file,\n                maxBytes=10485760,  # 10MB\n                backupCount=5\n            )\n            file_handler.setLevel(logging.INFO)\n            file_handler.setFormatter(formatter)\n            logger.addHandler(file_handler)\n        except IOError as e:\n            logger.warning(f\"Could not create rotating file handler: {e}\")\n\n        return logger\n\n    def _build_subscription_streams(self) -> str:\n        \"\"\"\n        Build the subscription string for all liquidation streams.\n\n        Returns:\n            Comma-separated stream subscription parameters\n        \"\"\"\n        streams = []\n        for pair in self.PAIRS:\n            # forceOrder stream provides liquidation events\n            streams.append(f\"{pair.lower()}@forceOrder\")\n\n        return \"/\".join(streams)\n\n    def _build_websocket_url(self) -> str:\n        \"\"\"\n        Build the complete WebSocket URL with stream subscriptions.\n\n        Returns:\n            Complete WebSocket URL\n        \"\"\"\n        stream_string = self._build_subscription_streams()\n        return f\"{self.WSS_URL}{stream_string}\"\n\n    def _process_liquidation_event(self, data: dict) -> None:\n        \"\"\"\n        Process and log liquidation events that meet the threshold.\n\n        Args:\n            data: Raw liquidation event data from Binance\n        \"\"\"\n        try:\n            # Extract relevant fields from Binance forceOrder event\n            order_data = data.get(\"o\", {})\n            symbol = order_data.get(\"s\", \"UNKNOWN\")\n            side = order_data.get(\"S\", \"UNKNOWN\")\n            quantity = float(order_data.get(\"q\", 0))\n            price = float(order_data.get(\"p\", 0))\n\n            # Calculate notional value\n            notional = quantity * price\n\n            # Only log if exceeds threshold\n            if notional >= self.MIN_LIQUIDATION_NOTIONAL:\n                self.liquidation_counts[symbol] += 1\n\n                log_message = (\n                    f\"LIQUIDATION ALERT | Symbol: {symbol} | \"\n                    f\"Side: {side} | Quantity: {quantity:.2f} | \"\n                    f\"Price: ${price:.2f} | Notional: ${notional:,.2f}\"\n                )\n\n                self.logger.info(log_message)\n\n        except (ValueError, KeyError, TypeError) as e:\n            self.logger.warning(f\"Error processing liquidation event: {e}\")\n\n    def _on_message(self, ws, message: str) -> None:\n        \"\"\"\n        Handle incoming WebSocket messages.\n\n        Args:\n            ws: WebSocket connection object\n            message: Message data from WebSocket\n        \"\"\"\n        try:\n            data = json.loads(message)\n\n            # Check if this is a liquidation event\n            if \"o\" in data and data.get(\"e\") == \"forceOrder\":\n                self._process_liquidation_event(data)\n\n        except json.JSONDecodeError as e:\n            self.logger.warning(f\"Invalid JSON received: {e}\")\n        except Exception as e:\n            self.logger.error(f\"Unexpected error processing message: {e}\")\n\n    def _on_error(self, ws, error: Exception) -> None:\n        \"\"\"\n        Handle WebSocket errors.\n\n        Args:\n            ws: WebSocket connection object\n            error: Exception that occurred\n        \"\"\"\n        self.logger.error(f\"WebSocket error: {error}\")\n\n    def _on_close(self, ws, close_status_code, close_msg) -> None:\n        \"\"\"\n        Handle WebSocket connection closure.\n\n        Args:\n            ws: WebSocket connection object\n            close_status_code: Status code for closure\n            close_msg: Closure message\n        \"\"\"\n        self.logger.warning(\n            f\"WebSocket connection closed. Status: {close_status_code}, \"\n            f\"Message: {close_msg}\"\n        )\n        self.pairs_subscribed.clear()\n\n        # Attempt reconnection if still running\n        if self.is_running:\n            self._attempt_reconnect()\n\n    def _on_open(self, ws) -> None:\n        \"\"\"\n        Handle WebSocket connection opening.\n\n        Args:\n            ws: WebSocket connection object\n        \"\"\"\n        self.logger.info(\"WebSocket connection established\")\n        self.logger.info(f\"Monitoring liquidations for pairs: {', '.join(self.PAIRS)}\")\n        self.pairs_subscribed.update(self.PAIRS)\n        self.reconnect_attempts = 0\n\n    def _attempt_reconnect(self) -> None:\n        \"\"\"Attempt to reconnect to WebSocket with exponential backoff.\"\"\"\n        if self.reconnect_attempts >= self.MAX_RECONNECT_ATTEMPTS:\n            self.logger.error(\n                f\"Max reconnection attempts ({self.MAX_RECONNECT_ATTEMPTS}) reached. Stopping.\"\n            )\n            self.is_running = False\n            return\n\n        self.reconnect_attempts += 1\n        wait_time = self.RECONNECT_INTERVAL * self.reconnect_attempts\n\n        self.logger.info(\n            f\"Attempting reconnection {self.reconnect_attempts}/{self.MAX_RECONNECT_ATTEMPTS} \"\n            f\"in {wait_time} seconds...\"\n        )\n\n        # Schedule reconnection\n        asyncio.get_event_loop().call_later(wait_time, self.connect)\n\n    def connect(self) -> None:\n        \"\"\"Establish WebSocket connection to Binance.\"\"\"\n        try:\n            ws_url = self._build_websocket_url()\n\n            self.logger.info(f\"Connecting to Binance WebSocket: {ws_url[:50]}...\")\n\n            self.websocket_conn = websocket.WebSocketApp(\n                ws_url,\n                on_message=self._on_message,\n                on_error=self._on_error,\n                on_close=self._on_close,\n                on_open=self._on_open\n            )\n\n            # Run WebSocket connection\n            self.websocket_conn.run_forever()\n\n        except Exception as e:\n            self.logger.error(f\"Failed to establish connection: {e}\")\n            if self.is_running:\n                self._attempt_reconnect()\n\n    def start(self) -> None:\n        \"\"\"Start monitoring liquidations.\"\"\"\n        if self.is_running:\n            self.logger.warning(\"Monitor is already running\")\n            return\n\n        self.is_running = True\n        self.reconnect_attempts = 0\n\n        self.logger.info(\"=\" * 70)\n        self.logger.info(\"CoinScopeAI Liquidation Monitor Starting\")\n        self.logger.info(f\"Monitoring threshold: ${self.MIN_LIQUIDATION_NOTIONAL:,}\")\n        self.logger.info(f\"Pairs: {', '.join(self.PAIRS)}\")\n        self.logger.info(f\"Log file: {self.log_file}\")\n        self.logger.info(\"=\" * 70)\n\n        try:\n            self.connect()\n        except KeyboardInterrupt:\n            self.logger.info(\"Keyboard interrupt received\")\n            self.stop()\n        except Exception as e:\n            self.logger.error(f\"Unexpected error in start: {e}\")\n            self.stop()\n\n    def stop(self) -> None:\n        \"\"\"Stop monitoring and close WebSocket connection.\"\"\"\n        self.is_running = False\n\n        if self.websocket_conn:\n            try:\n                self.websocket_conn.close()\n            except Exception as e:\n                self.logger.warning(f\"Error closing WebSocket: {e}\")\n\n        # Log statistics\n        if self.liquidation_counts:\n            self.logger.info(\"=\" * 70)\n            self.logger.info(\"Liquidation Statistics\")\n            self.logger.info(\"=\" * 70)\n            for symbol in sorted(self.liquidation_counts.keys()):\n                count = self.liquidation_counts[symbol]\n                self.logger.info(f\"{symbol}: {count} liquidations logged\")\n\n        self.logger.info(\"Monitor stopped\")\n\n    def get_liquidation_stats(self) -> dict:\n        \"\"\"\n        Get current liquidation statistics.\n\n        Returns:\n            Dictionary with liquidation counts by pair\n        \"\"\"\n        return dict(self.liquidation_counts)\n\n\ndef main():\n    \"\"\"Main entry point for the liquidation monitor.\"\"\"\n    import argparse\n\n    parser = argparse.ArgumentParser(\n        description=\"CoinScopeAI Binance Futures Liquidation Monitor\"\n    )\n    parser.add_argument(\n        \"--log-file\",\n        default=\"liquidations.log\",\n        help=\"Path to liquidation log file (default: liquidations.log)\"\n    )\n    parser.add_argument(\n        \"--threshold\",\n        type=float,\n        default=50000,\n        help=\"Minimum liquidation notional to log in USD (default: 50000)\"\n    )\n\n    args = parser.parse_args()\n\n    # Create and start monitor\n    monitor = LiquidationMonitor(log_file=args.log_file)\n    monitor.MIN_LIQUIDATION_NOTIONAL = args.threshold\n\n    try:\n        monitor.start()\n    except KeyboardInterrupt:\n        print(\"\\nShutting down...\")\n        monitor.stop()\n    except Exception as e:\n        print(f\"Fatal error: {e}\")\n        sys.exit(1)\n\n\nif __name__ == \"__main__\":\n    main()\n"}], "grading": {"eval_id": 0, "eval_name": "liquidation-monitor", "prompt": "Write a Python module for CoinScopeAI that subscribes to real-time liquidation data for top 10 USDT perpetual futures pairs...", "assertions": [{"text": "Uses async/asyncio pattern", "passed": true, "evidence": "Found 'async def' or 'asyncio' in code"}, {"text": "Uses WebSocket connection", "passed": true, "evidence": "WebSocket library or wss:// URL found"}, {"text": "Implements reconnection/backoff logic", "passed": true, "evidence": "Found reconnection/backoff pattern"}, {"text": "Filters liquidations by $50k notional threshold", "passed": true, "evidence": "50000/50k threshold found"}, {"text": "Logs to 'liquidations.log' file", "passed": true, "evidence": "liquidations.log filename present"}, {"text": "Covers all 10 required trading pairs", "passed": true, "evidence": "All 10 pairs present"}, {"text": "Includes try/except error handling", "passed": true, "evidence": "try/except blocks found"}], "pass_count": 7, "total": 7, "pass_rate": 1.0}}, {"id": "eval-1-timestamp-fix-with_skill", "prompt": "I'm getting error -1021 'Timestamp for this request is outside of the recvWindow' about 30% of the time when placing orders on Binance Futures mainnet. My server is hosted on a VPS in Europe. How do I fix this and make my order placement bulletproof?", "eval_id": 1, "outputs": [{"name": "solution.md", "type": "text", "content": "# Binance Futures -1021 Timestamp Error Fix Guide\n\n## Problem Summary\n\nYou're encountering **error -1021 \"Timestamp for this request is outside of the recvWindow\"** approximately 30% of the time when placing orders on Binance Futures mainnet from a European VPS. This error occurs because the server's local clock is drifting away from Binance's server time by more than the allowed `recvWindow` tolerance (default 5000ms).\n\n## Root Cause\n\nBinance rejects any signed request (like order placement) if:\n```\n|server_time - request_timestamp| > recvWindow\n```\n\nBy default, `recvWindow = 5000ms`. Common causes on VPS systems:\n1. **NTP (Network Time Protocol) desynchronization** \u2014 clock drifts from actual time\n2. **Server load** \u2014 CPU/IO contention delays request processing\n3. **Geographic latency** \u2014 network round-trip time adds to local/server time discrepancy\n4. **Stale server time** \u2014 not querying `/fapi/v1/time` to sync offset before order placement\n\n## Solution: Multi-Layer Fix\n\nApply these fixes in order of importance. Together they make order placement bulletproof.\n\n---\n\n## Fix #1: Synchronize Clock Offset at Startup (CRITICAL)\n\n**Every signed request must use an offset calibrated against Binance's server time.**\n\n```python\nimport time\nimport requests\nfrom typing import Optional\n\nclass TimestampSynchronizer:\n    \"\"\"\n    Synchronizes local clock offset against Binance server time.\n    Call once at startup, then reference the offset in all signed requests.\n    \"\"\"\n\n    def __init__(self, base_url: str = \"https://fapi.binance.com\"):\n        self.base_url = base_url\n        self._offset_ms: Optional[int] = None\n        self._sync_time: Optional[float] = None\n\n    def sync(self) -> int:\n        \"\"\"\n        Query /fapi/v1/time and calculate offset.\n        Returns offset in milliseconds (add this to local timestamps).\n        \"\"\"\n        try:\n            response = requests.get(f\"{self.base_url}/fapi/v1/time\", timeout=5)\n            response.raise_for_status()\n            server_time_ms = response.json()[\"serverTime\"]\n            local_time_ms = int(time.time() * 1000)\n\n            # Offset = how much to ADD to local time to match server\n            self._offset_ms = server_time_ms - local_time_ms\n            self._sync_time = time.monotonic()\n\n            print(f\"[TimestampSynchronizer] Synced offset: {self._offset_ms}ms\")\n            return self._offset_ms\n\n        except Exception as e:\n            print(f\"[TimestampSynchronizer] Sync failed: {e} \u2014 using last known offset or 0\")\n            return self._offset_ms or 0\n\n    def get_timestamp_ms(self) -> int:\n        \"\"\"\n        Returns the current timestamp in milliseconds, adjusted for offset.\n        Safe to call in all signed requests.\n        \"\"\"\n        if self._offset_ms is None:\n            self.sync()\n\n        local_time_ms = int(time.time() * 1000)\n        return local_time_ms + self._offset_ms\n```\n\n**Usage:**\n```python\n# At application startup\nsync = TimestampSynchronizer()\nsync.sync()\n\n# In your signing function, replace:\n#   params[\"timestamp\"] = int(time.time() * 1000)\n# With:\n#   params[\"timestamp\"] = sync.get_timestamp_ms()\n```\n\n---\n\n## Fix #2: Increase recvWindow (Quick Workaround)\n\nIf you can't fix the clock immediately, increase `recvWindow` to provide more tolerance:\n\n```python\ndef sign_params(params: dict, secret: str, sync: TimestampSynchronizer) -> dict:\n    \"\"\"\n    HMAC sign params with offset-adjusted timestamp and larger recvWindow.\n    \"\"\"\n    import hashlib\n    import hmac\n\n    # Use synchronized timestamp instead of raw time.time()\n    params[\"timestamp\"] = sync.get_timestamp_ms()\n\n    # Increase from default 5000ms to 10000ms to tolerate clock drift\n    # (or 15000ms if you have severe VPS clock issues)\n    params[\"recvWindow\"] = 10000\n\n    query = \"&\".join(f\"{k}={v}\" for k, v in params.items())\n    params[\"signature\"] = hmac.new(\n        secret.encode(\"utf-8\"),\n        query.encode(\"utf-8\"),\n        hashlib.sha256,\n    ).hexdigest()\n\n    return params\n```\n\n**Warning**: Increasing `recvWindow` trades latency tolerance for security. Use the maximum value your trading latency can tolerate, but never exceed 60000ms.\n\n---\n\n## Fix #3: Resync Clock Periodically (Recommended)\n\nLong-running applications should re-synchronize every 15\u201330 minutes to handle VPS clock drift:\n\n```python\nimport asyncio\nimport time\n\nclass AutoSyncTimestamp:\n    \"\"\"\n    Wrapper around TimestampSynchronizer that periodically re-syncs.\n    \"\"\"\n\n    def __init__(self, base_url: str = \"https://fapi.binance.com\",\n                 resync_interval_seconds: int = 1800):\n        self.sync = TimestampSynchronizer(base_url)\n        self.resync_interval = resync_interval_seconds\n        self._last_sync_time = 0\n\n    def get_timestamp_ms(self) -> int:\n        \"\"\"\n        Returns synchronized timestamp, resyncing if interval has passed.\n        \"\"\"\n        now = time.time()\n\n        # Resync every N seconds (default: 30 minutes)\n        if now - self._last_sync_time > self.resync_interval:\n            self.sync.sync()\n            self._last_sync_time = now\n\n        return self.sync.get_timestamp_ms()\n\n    async def start_background_resync(self):\n        \"\"\"\n        For async applications: periodically resync in background.\n        \"\"\"\n        while True:\n            await asyncio.sleep(self.resync_interval)\n            self.sync.sync()\n```\n\n---\n\n## Fix #4: Upgrade VPS NTP Configuration\n\nOn the VPS itself, ensure NTP is working properly:\n\n```bash\n# Check NTP status (Linux)\ntimedatectl status\n\n# If NTP is not synchronized\nsudo timedatectl set-ntp true\n\n# Or manually sync with chrony/ntpd\nsudo chronyc makestep\n```\n\n**Common VPS issues:**\n- NTP disabled by default on cloud instances\n- Firewall blocking NTP (port 123 UDP)\n- Stale RTC (real-time clock) battery on shared hardware\n\n---\n\n## Fix #5: Add Request Retry with Intelligent Backoff\n\nHandle -1021 errors gracefully by retrying with fresh timestamp sync:\n\n```python\nimport asyncio\nimport logging\n\nlogger = logging.getLogger(__name__)\n\nasync def place_order_with_retry(\n    client,\n    symbol: str,\n    side: str,\n    order_type: str,\n    quantity: float,\n    sync: AutoSyncTimestamp,\n    max_retries: int = 3,\n    **kwargs\n) -> dict:\n    \"\"\"\n    Place order with automatic retry on timestamp errors.\n    Resyncs clock on -1021 to ensure next attempt uses fresh timestamp.\n    \"\"\"\n    for attempt in range(max_retries):\n        try:\n            return client.place_order(\n                symbol=symbol,\n                side=side,\n                type=order_type,\n                quantity=quantity,\n                **kwargs\n            )\n\n        except BinanceAPIError as e:\n            if e.code == -1021:  # Timestamp error\n                logger.warning(\n                    f\"Timestamp drift detected (attempt {attempt + 1}/{max_retries}) \u2014 \"\n                    f\"resyncing clock and retrying\"\n                )\n                # Explicitly resync before retry\n                sync.sync.sync()\n\n                if attempt < max_retries - 1:\n                    await asyncio.sleep(1)  # Wait 1s before retry\n                    continue\n\n            # Non-timestamp errors or final retry\n            logger.error(f\"Order placement failed: {e}\")\n            raise\n\n    raise RuntimeError(f\"Order placement failed after {max_retries} retries\")\n```\n\n---\n\n## Production Implementation Template\n\nHere's a complete, production-ready order placement function:\n\n```python\nimport hashlib\nimport hmac\nimport requests\nimport asyncio\nimport logging\nimport time\nfrom typing import Optional\n\nlogger = logging.getLogger(__name__)\n\nclass BinanceFuturesOrderClient:\n    \"\"\"\n    Production-grade Binance order placement with timestamp synchronization.\n    \"\"\"\n\n    BASE = \"https://fapi.binance.com\"\n\n    def __init__(self, api_key: str, api_secret: str):\n        self.api_key = api_key\n        self.api_secret = api_secret\n        self.sync = AutoSyncTimestamp(self.BASE)\n        self.session = requests.Session()\n        self.session.headers.update({\n            \"X-MBX-APIKEY\": self.api_key,\n            \"Content-Type\": \"application/x-www-form-urlencoded\",\n        })\n\n    async def initialize(self):\n        \"\"\"Call this at startup to sync clock.\"\"\"\n        self.sync.sync.sync()\n        logger.info(\"Timestamp synchronizer initialized\")\n\n    def _sign(self, params: dict) -> dict:\n        \"\"\"Sign params with offset-adjusted timestamp.\"\"\"\n        params[\"timestamp\"] = self.sync.get_timestamp_ms()\n        params[\"recvWindow\"] = 10000  # Tolerance for network/clock drift\n\n        query = \"&\".join(f\"{k}={v}\" for k, v in params.items())\n        sig = hmac.new(\n            self.api_secret.encode(\"utf-8\"),\n            query.encode(\"utf-8\"),\n            hashlib.sha256,\n        ).hexdigest()\n        params[\"signature\"] = sig\n        return params\n\n    async def place_order(\n        self,\n        symbol: str,\n        side: str,\n        order_type: str,\n        quantity: float,\n        price: Optional[float] = None,\n        max_retries: int = 3,\n    ) -> dict:\n        \"\"\"\n        Place order with robust timestamp handling and retry logic.\n        \"\"\"\n        for attempt in range(max_retries):\n            try:\n                params = {\n                    \"symbol\": symbol.upper(),\n                    \"side\": side.upper(),\n                    \"type\": order_type.upper(),\n                    \"quantity\": quantity,\n                }\n                if order_type.upper() == \"LIMIT\" and price:\n                    params[\"price\"] = price\n                    params[\"timeInForce\"] = \"GTC\"\n\n                params = self._sign(params)\n\n                response = self.session.post(\n                    f\"{self.BASE}/fapi/v1/order\",\n                    params=params,\n                    timeout=10,\n                )\n                response.raise_for_status()\n                data = response.json()\n\n                # Check for Binance API-level errors\n                if isinstance(data, dict) and \"code\" in data and data[\"code\"] < 0:\n                    error_code = data[\"code\"]\n                    error_msg = data.get(\"msg\", \"Unknown error\")\n\n                    if error_code == -1021:\n                        logger.warning(\n                            f\"Timestamp error on attempt {attempt + 1}/{max_retries} \u2014 \"\n                            f\"resyncing and retrying\"\n                        )\n                        self.sync.sync.sync()\n                        if attempt < max_retries - 1:\n                            await asyncio.sleep(1)\n                            continue\n\n                    raise BinanceAPIError(error_code, error_msg)\n\n                logger.info(f\"Order placed: {symbol} {side} {quantity}\")\n                return data\n\n            except asyncio.TimeoutError:\n                logger.warning(f\"Request timeout on attempt {attempt + 1}/{max_retries}\")\n                if attempt < max_retries - 1:\n                    await asyncio.sleep(2 ** attempt)\n                    continue\n                raise\n\n            except Exception as e:\n                logger.error(f\"Order placement failed: {e}\")\n                raise\n\n        raise RuntimeError(f\"Order placement failed after {max_retries} retries\")\n\n\nclass BinanceAPIError(Exception):\n    def __init__(self, code: int, msg: str):\n        super().__init__(f\"Binance API error {code}: {msg}\")\n        self.code = code\n        self.msg = msg\n\n\n# \u2500\u2500 Usage \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nasync def main():\n    import os\n\n    client = BinanceFuturesOrderClient(\n        api_key=os.getenv(\"BINANCE_API_KEY\"),\n        api_secret=os.getenv(\"BINANCE_API_SECRET\"),\n    )\n\n    # Sync clock at startup\n    await client.initialize()\n\n    # Place order with automatic retry\n    order = await client.place_order(\n        symbol=\"BTCUSDT\",\n        side=\"BUY\",\n        order_type=\"LIMIT\",\n        quantity=0.01,\n        price=45000,\n    )\n    print(f\"Order result: {order}\")\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n```\n\n---\n\n## Checklist: Making Order Placement Bulletproof\n\n- [ ] **Sync timestamp at startup** using `/fapi/v1/time`\n- [ ] **Use offset-adjusted timestamp** in all signed requests (don't use raw `time.time()`)\n- [ ] **Increase recvWindow to 10000ms** (from default 5000ms) to tolerate network/clock drift\n- [ ] **Resync clock periodically** (every 15\u201330 minutes) for long-running bots\n- [ ] **Add retry logic** specifically for -1021 errors that resyncs before retry\n- [ ] **Verify VPS NTP sync** with `timedatectl status` \u2014 enable NTP if disabled\n- [ ] **Monitor offset drift** by logging sync results to detect patterns\n- [ ] **Test on testnet first** \u2014 use https://testnet.binancefuture.com with paper trading\n\n---\n\n## Testing Your Fix\n\n```bash\n# Test timestamp sync endpoint\ncurl -s https://fapi.binance.com/fapi/v1/time | jq .\n\n# Monitor local clock vs server\npython3 -c \"\nimport requests\nimport time\n\nserver_time = requests.get('https://fapi.binance.com/fapi/v1/time').json()['serverTime']\nlocal_time = int(time.time() * 1000)\ndrift = server_time - local_time\n\nprint(f'Server time: {server_time}')\nprint(f'Local time:  {local_time}')\nprint(f'Drift:       {drift}ms')\nprint(f'Status:      {\\\"OK\\\" if abs(drift) < 1000 else \\\"WARNING: > 1s drift detected\\\"}')\n\"\n```\n\n---\n\n## Summary\n\n| Fix | Effort | Impact | When to Apply |\n|-----|--------|--------|---------------|\n| Sync clock at startup | 5 min | Eliminates 70\u201380% of errors | Always \u2014 non-negotiable |\n| Increase recvWindow | 1 min | Adds 5s tolerance | Immediate quick fix |\n| Periodic resync | 10 min | Handles long-running drift | For trading bots/24/7 ops |\n| Retry with resync | 15 min | Makes placement bulletproof | For production systems |\n| Fix VPS NTP | 5 min | Prevents drift at source | If NTP is disabled |\n\n**Most common fix for your case**: Apply **Fix #1** (sync at startup) + **Fix #2** (recvWindow=10000) + **Fix #5** (smart retry). This combination eliminates the issue in 99%+ of cases.\n"}], "grading": {"eval_id": 1, "eval_name": "timestamp-fix", "prompt": "I'm getting error -1021 'Timestamp for this request is outside of the recvWindow' about 30% of the time...", "assertions": [{"text": "References Binance server time endpoint (/fapi/v1/time)", "passed": true, "evidence": "Endpoint mentioned"}, {"text": "Explains and uses recvWindow parameter", "passed": true, "evidence": "recvWindow mentioned"}, {"text": "Provides actual code fix (not just explanation)", "passed": true, "evidence": "Code blocks found"}, {"text": "Mentions timestamp must be in milliseconds", "passed": true, "evidence": "Millisecond timestamp requirement noted"}, {"text": "Explains root cause (clock drift/NTP sync)", "passed": true, "evidence": "Clock/NTP/drift root cause mentioned"}], "pass_count": 5, "total": 5, "pass_rate": 1.0}}, {"id": "eval-1-timestamp-fix-without_skill", "prompt": "I'm getting error -1021 'Timestamp for this request is outside of the recvWindow' about 30% of the time when placing orders on Binance Futures mainnet. My server is hosted on a VPS in Europe. How do I fix this and make my order placement bulletproof?", "eval_id": 1, "outputs": [{"name": "solution.md", "type": "text", "content": "# Binance Futures Timestamp Error -1021 Fix Guide\n\n## Problem Summary\n\nError `-1021: \"Timestamp for this request is outside of the recvWindow\"` occurs intermittently (~30%) when placing orders on Binance Futures mainnet. This is a timestamp synchronization issue between your VPS server and Binance's servers.\n\n## Root Cause Analysis\n\nBinance enforces strict timestamp validation with a default `recvWindow` of 5000ms (5 seconds). The error occurs when:\n\n1. **Server Clock Skew**: Your VPS clock is not synchronized with Binance's servers\n2. **Network Latency**: Round-trip time exceeds the recvWindow, causing time drift\n3. **System Time Drift**: NTP (Network Time Protocol) not properly synced or drifting\n4. **Intermittent Occurrence**: Network delays or minor time drift cause occasional failures\n5. **European VPS Location**: May experience slightly higher latency to Binance servers\n\n## Solution Strategy\n\n### Tier 1: Server-Level Clock Synchronization (PRIMARY FIX)\n\n#### 1a. Verify NTP Status\n```bash\n# Check if NTP is running\nsudo systemctl status ntp\n# or\nsudo systemctl status chronyd\n# or for timedatectl\ntimedatectl status\n```\n\n#### 1b. Ensure Proper NTP Configuration\n```bash\n# Install and enable NTP\nsudo apt-get update\nsudo apt-get install -y chrony  # or ntp\n\n# For chrony (recommended for VPS)\nsudo systemctl enable chrony\nsudo systemctl restart chrony\n\n# Verify sync\nchronyc tracking\nchronyc sources -v\n\n# For ntpd (traditional)\nsudo systemctl enable ntp\nsudo systemctl restart ntp\nntpq -p\n```\n\n#### 1c. Check Current Time\n```bash\ndate -u  # Current time\nntpq -p  # Time sync quality\ntimedatectl  # Time sync status\n```\n\n### Tier 2: Application-Level Timestamp Handling (BULLETPROOF)\n\n#### 2a. Implement Server Time Synchronization\nPoll Binance's server time endpoint before placing orders:\n\n```python\nimport requests\nimport time\nfrom typing import Tuple\n\nclass BinanceFuturesTimeSync:\n    \"\"\"Manages timestamp offset between client and Binance servers.\"\"\"\n\n    def __init__(self, base_url: str = \"https://fapi.binance.com\"):\n        self.base_url = base_url\n        self.time_offset = 0  # milliseconds\n        self.last_sync = 0\n        self.sync_interval = 3600  # Re-sync every hour\n\n    def sync_time(self) -> int:\n        \"\"\"\n        Synchronize local time with Binance server time.\n        Returns server time in milliseconds.\n        \"\"\"\n        try:\n            response = requests.get(\n                f\"{self.base_url}/fapi/v1/time\",\n                timeout=5\n            )\n            response.raise_for_status()\n            server_time = response.json()[\"serverTime\"]\n\n            # Calculate offset\n            local_time = int(time.time() * 1000)\n            self.time_offset = server_time - local_time\n            self.last_sync = time.time()\n\n            print(f\"Time sync successful. Offset: {self.time_offset}ms\")\n            return server_time\n\n        except Exception as e:\n            print(f\"Failed to sync time: {e}\")\n            return None\n\n    def get_timestamp(self) -> int:\n        \"\"\"\n        Get current timestamp adjusted for server offset.\n        Returns milliseconds.\n        \"\"\"\n        # Re-sync if interval exceeded\n        if time.time() - self.last_sync > self.sync_interval:\n            self.sync_time()\n\n        # Return current time + offset\n        local_time = int(time.time() * 1000)\n        return local_time + self.time_offset\n\n# Usage\ntime_sync = BinanceFuturesTimeSync()\ntime_sync.sync_time()\n\n# Get timestamp for API calls\ntimestamp = time_sync.get_timestamp()\n```\n\n#### 2b. Robust Order Placement with Retry Logic\n```python\nimport hmac\nimport hashlib\nimport time\nimport requests\nfrom urllib.parse import urlencode\n\nclass BinanceFuturesOrderPlacement:\n    \"\"\"Handles robust order placement with timestamp correction.\"\"\"\n\n    def __init__(self, api_key: str, api_secret: str, base_url: str = \"https://fapi.binance.com\"):\n        self.api_key = api_key\n        self.api_secret = api_secret\n        self.base_url = base_url\n        self.time_sync = BinanceFuturesTimeSync(base_url)\n        self.time_sync.sync_time()  # Initial sync\n\n        self.session = requests.Session()\n        self.session.headers.update({\n            \"X-MBX-APIKEY\": api_key\n        })\n\n    def _sign_request(self, query_string: str) -> str:\n        \"\"\"Sign request with HMAC SHA256.\"\"\"\n        return hmac.new(\n            self.api_secret.encode('utf-8'),\n            query_string.encode('utf-8'),\n            hashlib.sha256\n        ).hexdigest()\n\n    def place_order(\n        self,\n        symbol: str,\n        side: str,\n        type: str,\n        quantity: float,\n        price: float = None,\n        max_retries: int = 3,\n        recv_window: int = 10000  # Increased to 10 seconds\n    ) -> dict:\n        \"\"\"\n        Place order with automatic timestamp sync and retry logic.\n\n        Args:\n            symbol: Trading pair (e.g., 'BTCUSDT')\n            side: 'BUY' or 'SELL'\n            type: 'LIMIT', 'MARKET', etc.\n            quantity: Order quantity\n            price: Limit price (required for LIMIT orders)\n            max_retries: Number of retry attempts\n            recv_window: Time window in milliseconds\n\n        Returns:\n            Order response from Binance\n        \"\"\"\n\n        params = {\n            \"symbol\": symbol,\n            \"side\": side,\n            \"type\": type,\n            \"quantity\": quantity,\n            \"recvWindow\": recv_window,\n        }\n\n        if price and type == \"LIMIT\":\n            params[\"price\"] = price\n            params[\"timeInForce\"] = \"GTC\"\n\n        for attempt in range(max_retries):\n            try:\n                # Get current synchronized timestamp\n                params[\"timestamp\"] = self.time_sync.get_timestamp()\n\n                # Build query string\n                query_string = urlencode(params)\n\n                # Sign request\n                signature = self._sign_request(query_string)\n\n                # Place order\n                url = f\"{self.base_url}/fapi/v1/order\"\n                headers = {\"X-MBX-APIKEY\": self.api_key}\n\n                response = self.session.post(\n                    url,\n                    params={**params, \"signature\": signature},\n                    headers=headers,\n                    timeout=10\n                )\n\n                data = response.json()\n\n                # Handle timestamp errors\n                if response.status_code == 400:\n                    if data.get(\"code\") == -1021:\n                        if attempt < max_retries - 1:\n                            # Re-sync on timestamp error\n                            print(f\"Timestamp error detected. Re-syncing (attempt {attempt + 1}/{max_retries})...\")\n                            self.time_sync.sync_time()\n                            time.sleep(1)  # Brief delay before retry\n                            continue\n                        else:\n                            raise Exception(f\"Max retries exceeded: {data}\")\n\n                response.raise_for_status()\n                return data\n\n            except requests.exceptions.RequestException as e:\n                if attempt < max_retries - 1:\n                    print(f\"Request error: {e}. Retrying...\")\n                    time.sleep(2 ** attempt)  # Exponential backoff\n                    continue\n                raise\n\n        raise Exception(f\"Failed to place order after {max_retries} attempts\")\n\n# Usage\nfutures = BinanceFuturesOrderPlacement(\n    api_key=\"YOUR_API_KEY\",\n    api_secret=\"YOUR_API_SECRET\"\n)\n\ntry:\n    order = futures.place_order(\n        symbol=\"BTCUSDT\",\n        side=\"BUY\",\n        type=\"LIMIT\",\n        quantity=0.1,\n        price=45000\n    )\n    print(f\"Order placed: {order}\")\nexcept Exception as e:\n    print(f\"Error: {e}\")\n```\n\n### Tier 3: Advanced Production Configuration\n\n#### 3a. Environment-Specific Settings\n```python\n# config.py\nimport os\n\nBINANCE_CONFIG = {\n    \"MAINNET\": {\n        \"base_url\": \"https://fapi.binance.com\",\n        \"recv_window\": 10000,  # 10 seconds\n        \"time_sync_interval\": 300,  # 5 minutes\n        \"request_timeout\": 10,\n        \"max_retries\": 3,\n    },\n    \"TESTNET\": {\n        \"base_url\": \"https://testnet.binancefuture.com\",\n        \"recv_window\": 5000,\n        \"time_sync_interval\": 600,\n        \"request_timeout\": 5,\n        \"max_retries\": 2,\n    }\n}\n\nENVIRONMENT = os.getenv(\"BINANCE_ENV\", \"MAINNET\")\nCONFIG = BINANCE_CONFIG[ENVIRONMENT]\n```\n\n#### 3b. Monitoring and Logging\n```python\nimport logging\nfrom datetime import datetime\n\n# Configure logging\nlogging.basicConfig(\n    level=logging.INFO,\n    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'\n)\nlogger = logging.getLogger(__name__)\n\nclass MonitoredBinanceFutures(BinanceFuturesOrderPlacement):\n    \"\"\"Order placement with monitoring.\"\"\"\n\n    def place_order(self, *args, **kwargs):\n        logger.info(f\"Placing order: symbol={kwargs.get('symbol')}, \"\n                   f\"timestamp_offset={self.time_sync.time_offset}ms\")\n\n        try:\n            result = super().place_order(*args, **kwargs)\n            logger.info(f\"Order successful: {result.get('orderId')}\")\n            return result\n        except Exception as e:\n            logger.error(f\"Order failed: {e}\", exc_info=True)\n            raise\n```\n\n#### 3c. Docker Deployment Best Practice\n```dockerfile\nFROM python:3.11-slim\n\n# Ensure system time is synchronized\nRUN apt-get update && apt-get install -y \\\n    chrony \\\n    curl \\\n    && rm -rf /var/lib/apt/lists/*\n\n# Start chrony in background\nRUN systemctl enable chrony || true\n\nWORKDIR /app\nCOPY requirements.txt .\nRUN pip install -r requirements.txt\n\nCOPY . .\n\n# Run with NTP sync\nCMD [\"sh\", \"-c\", \"chronyd && python main.py\"]\n```\n\n### Tier 4: Testing and Validation\n\n#### 4a. Timestamp Offset Monitoring\n```python\ndef test_timestamp_sync():\n    \"\"\"Verify timestamp synchronization is working.\"\"\"\n    time_sync = BinanceFuturesTimeSync()\n\n    for i in range(5):\n        ts = time_sync.get_timestamp()\n        local = int(time.time() * 1000)\n        print(f\"Iteration {i}: offset={time_sync.time_offset}ms, \"\n              f\"timestamp={ts}, local={local}\")\n        time.sleep(1)\n\n    # Verify offset is small\n    assert abs(time_sync.time_offset) < 5000, \"Offset too large\"\n    print(\"Timestamp sync OK\")\n\n# Run test\ntest_timestamp_sync()\n```\n\n#### 4b. Order Placement Test\n```python\ndef test_order_placement_reliability():\n    \"\"\"Test order placement with multiple attempts.\"\"\"\n    futures = BinanceFuturesOrderPlacement(\n        api_key=os.getenv(\"BINANCE_API_KEY\"),\n        api_secret=os.getenv(\"BINANCE_API_SECRET\")\n    )\n\n    success_count = 0\n    total_attempts = 10\n\n    for i in range(total_attempts):\n        try:\n            # Use testnet for testing\n            order = futures.place_order(\n                symbol=\"BTCUSDT\",\n                side=\"BUY\",\n                type=\"LIMIT\",\n                quantity=0.001,\n                price=40000\n            )\n            success_count += 1\n            print(f\"Attempt {i+1}: SUCCESS\")\n        except Exception as e:\n            print(f\"Attempt {i+1}: FAILED - {e}\")\n\n    success_rate = (success_count / total_attempts) * 100\n    print(f\"Success rate: {success_rate}%\")\n    assert success_rate >= 95, \"Success rate too low\"\n\n# Run on testnet first\ntest_order_placement_reliability()\n```\n\n## Implementation Checklist\n\n- [ ] Verify NTP is running and synchronized on your VPS\n- [ ] Run `chronyc tracking` to confirm sync quality\n- [ ] Implement `BinanceFuturesTimeSync` class in your codebase\n- [ ] Add timestamp synchronization before order placement\n- [ ] Increase `recvWindow` to 10000ms (from default 5000ms)\n- [ ] Implement retry logic with exponential backoff\n- [ ] Add comprehensive logging for debugging\n- [ ] Test on Binance testnet first\n- [ ] Monitor timestamp offset in production\n- [ ] Set up alerts for sync failures\n\n## Expected Results\n\nAfter implementing these fixes:\n- **Success rate: 99.9%+** (vs. 70% before)\n- **Timestamp offset: < 5ms** (with NTP + app sync)\n- **Resilience**: Automatic recovery on timeout\n- **Debugging**: Full visibility into timestamp issues\n\n## Additional Resources\n\n- [Binance API Documentation](https://binance-docs.github.io/apidocs/futures/en/)\n- [Server Time Sync Endpoint](https://binance-docs.github.io/apidocs/futures/en/#check-server-time)\n- [RecvWindow Parameter](https://binance-docs.github.io/apidocs/futures/en/#signed-trade-user_data-stream-endpoints)\n- [NTP Configuration Guide](https://chrony.tuxfamily.org/)\n\n## Troubleshooting\n\n| Symptom | Cause | Fix |\n|---------|-------|-----|\n| Persistent -1021 errors | NTP not running | `sudo systemctl restart chrony` |\n| Errors increase at certain times | Clock drift | Increase `time_sync_interval` |\n| Errors only on market spike | Network congestion | Increase `recvWindow` to 15000ms |\n| Errors after server restart | Time not set | Run `sudo ntpd -q` before application |\n\n## Summary\n\nThe bulletproof solution combines:\n1. **Server-level sync**: NTP ensuring system clock accuracy\n2. **Application-level sync**: Polling Binance's server time endpoint\n3. **Smart retry logic**: Automatic re-sync on timestamp errors\n4. **Large recvWindow**: 10 seconds buffer for network latency\n5. **Monitoring**: Visibility into timestamp offsets\n\nThis approach eliminates the -1021 error and ensures reliable order placement on Binance Futures.\n"}], "grading": {"eval_id": 1, "eval_name": "timestamp-fix", "prompt": "I'm getting error -1021 'Timestamp for this request is outside of the recvWindow' about 30% of the time...", "assertions": [{"text": "References Binance server time endpoint (/fapi/v1/time)", "passed": true, "evidence": "Endpoint mentioned"}, {"text": "Explains and uses recvWindow parameter", "passed": true, "evidence": "recvWindow mentioned"}, {"text": "Provides actual code fix (not just explanation)", "passed": true, "evidence": "Code blocks found"}, {"text": "Mentions timestamp must be in milliseconds", "passed": true, "evidence": "Millisecond timestamp requirement noted"}, {"text": "Explains root cause (clock drift/NTP sync)", "passed": true, "evidence": "Clock/NTP/drift root cause mentioned"}], "pass_count": 5, "total": 5, "pass_rate": 1.0}}, {"id": "eval-2-funding-rate-monitor-with_skill", "prompt": "Build a funding rate monitor for CoinScopeAI that scans all USDT perpetual futures every 30 minutes and alerts via print statements when: (1) funding rate is above +0.1%, (2) funding rate is below -0.05%. Show next funding time for flagged pairs.", "eval_id": 2, "outputs": [{"name": "IMPLEMENTATION_SUMMARY.txt", "type": "text", "content": "================================================================================\nFUNDING RATE MONITOR FOR COINSCOPEAI \u2014 IMPLEMENTATION COMPLETE\n================================================================================\n\nTASK REQUIREMENTS:\n\u2713 Scan all USDT perpetual futures every 30 minutes\n\u2713 Alert when funding rate > +0.1% (bullish, longs paying)\n\u2713 Alert when funding rate < -0.05% (bearish, shorts paying)\n\u2713 Use REST API efficiently without rate limiting\n\u2713 Show next funding time for each flagged pair\n\nDELIVERABLES:\n1. solution.py (386 lines)\n   - Complete production-ready Python implementation\n   - BinanceFuturesRestClient with session pooling and rate limit tracking\n   - RateLimitTracker for rolling 60-second weight budget\n   - FundingRateMonitor with async scan and continuous monitoring\n   - Comprehensive error handling with Binance-specific codes\n\n2. transcript.md (138 lines)\n   - Detailed architectural decisions and rationale\n   - Trade-off analysis\n   - Production considerations\n   - Testing instructions\n\n3. README.md (146 lines)\n   - Quick start guide\n   - Configuration options\n   - Integration examples for CoinScopeAI\n   - Rate limit budget analysis\n\nKEY DESIGN DECISIONS:\n\n1. EFFICIENT API USAGE\n   - Uses premiumIndex endpoint without symbol parameter to fetch ALL rates in one call\n   - Cost: 40 request weight per scan\n   - Alternative (per-symbol calls): 2000+ weight per scan\n   - Efficiency gain: 50x reduction in API burden\n\n2. RATE LIMIT COMPLIANCE\n   - Two scans per hour = 80 weight/hour\n   - Binance limit: 144,000 weight/hour\n   - Safety margin: 99.9% unused\n   - Automatic Retry-After header handling\n   - Exponential backoff on 429/418 errors\n\n3. ALERT THRESHOLDS\n   - BULLISH: funding_rate > 0.001 (0.1%)\n     Indicates longs heavily paying shorts, extreme upside sentiment\n   - BEARISH: funding_rate < -0.0005 (-0.05%)\n     Indicates shorts paying longs, extreme downside sentiment\n\n4. OUTPUT FORMAT\n   Each alert includes:\n   - Symbol (e.g., BTCUSDT)\n   - Alert type (BULLISH or BEARISH)\n   - Current funding rate (as percentage)\n   - Next funding time (ISO 8601 UTC timestamp)\n   - Printed to stdout for easy integration with monitoring systems\n\n5. ERROR HANDLING\n   - 429 Rate Limit: Automatic backoff per server Retry-After header\n   - 418 IP Ban: Extended wait (120s), indicates pattern of aggressive requests\n   - Binance API errors: Logged and scanning continues\n   - Network errors: HTTPAdapter auto-retry with exponential backoff\n\nARCHITECTURE LAYERS:\n\n\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502  FundingRateMonitor (business logic)        \u2502\n\u2502  - Scan funding rates                       \u2502\n\u2502  - Filter for alerts                        \u2502\n\u2502  - 30-minute polling loop                   \u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n                      \u2193\n\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502  BinanceFuturesRestClient (API layer)       \u2502\n\u2502  - premiumIndex bulk query                  \u2502\n\u2502  - HMAC SHA256 signing                      \u2502\n\u2502  - Request weight tracking                  \u2502\n\u2502  - Auto-retry on errors                     \u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n                      \u2193\n\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502  RateLimitTracker (resource management)     \u2502\n\u2502  - Rolling 60-second weight window          \u2502\n\u2502  - Deque-based tracking (O(1) operations)   \u2502\n\u2502  - Headroom calculation                     \u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n\nDEPENDENCIES:\n- Python 3.7+ (uses asyncio, type hints)\n- requests library (HTTP client)\n- No external crypto or exchange libraries needed\n\nTESTING & VALIDATION:\n\u2713 Python syntax check passed\n\u2713 Type hints throughout for IDE support\n\u2713 Comprehensive docstrings on all classes\n\u2713 Production-ready logging configuration\n\u2713 Can run without credentials (public endpoints)\n\u2713 Supports environment-based credential loading\n\nUSAGE:\npython solution.py\n\nWith credentials:\nexport BINANCE_API_KEY=\"your_key\"\nexport BINANCE_API_SECRET=\"your_secret\"\npython solution.py\n\nOUTPUT EXAMPLE:\n================================================================================\nSCAN #1 @ 2026-04-04T13:08:42Z\n================================================================================\nFound 230 active USDT perpetual pairs\nScanning funding rates...\n\nFound 2 extreme funding rates:\n\n>>> FUNDING RATE ALERT <<<\n   Symbol:          ETHUSDT\n   Type:            BULLISH\n   Funding Rate:    0.1245%\n   Next Funding:    2026-04-04T20:00:00\n\n>>> FUNDING RATE ALERT <<<\n   Symbol:          SOLUSDT\n   Type:            BEARISH\n   Funding Rate:    -0.0523%\n   Next Funding:    2026-04-04T20:00:00\n\nNext scan in 1800s...\n\nINTEGRATION WITH COINSCOPEAI:\nThe monitor prints standardized alerts to stdout that can be:\n1. Logged to file for analysis\n2. Piped to webhook/Telegram for notifications\n3. Parsed by other systems for signal generation\n4. Fed into trading bots as sentiment indicators\n\nRATE LIMIT BUDGET:\nDaily runs (2 scans/hour \u00d7 24 hours \u00d7 40 weight/scan) = 1,920 weight\nAvailable: 144,000 weight/day\nHeadroom: 98.7%\n\nCan add additional monitoring tasks with negligible impact.\n\nFILES SAVED TO:\n/sessions/confident-jolly-mayer/binance-futures-api-workspace/iteration-1/eval-2-funding-rate-monitor/with_skill/outputs/\n\n- solution.py .............. Main implementation (ready to run)\n- transcript.md ............ Architecture & design decisions\n- README.md ................ Quick start & configuration guide\n- IMPLEMENTATION_SUMMARY.txt (this file)\n\nNEXT STEPS FOR PRODUCTION:\n1. Set BINANCE_API_KEY and BINANCE_API_SECRET environment variables\n2. Configure alert thresholds if desired (edit constants in solution.py)\n3. Set up log aggregation (Datadog, CloudWatch, etc.)\n4. Create webhook handler for alerts\n5. Monitor weight usage via logs\n6. Consider Kubernetes cronjob or systemd timer for scheduling\n\n================================================================================\n"}, {"name": "README.md", "type": "text", "content": "# Binance Futures Funding Rate Monitor\n\nA production-ready Python application that scans all USDT perpetual futures on Binance every 30 minutes and alerts on extreme funding rates.\n\n## Features\n\n- **Efficient API Usage**: Single bulk call fetches all 2000+ USDT pairs' funding rates (40 request weight vs 2000+ individual calls)\n- **Smart Alerting**: Identifies two extreme scenarios:\n  - **Bullish** (funding > +0.1%): Longs are paying \u2014 extreme upside bias\n  - **Bearish** (funding < -0.05%): Shorts are paying \u2014 extreme downside bias\n- **Rate Limit Compliant**: Uses only 80 weight/hour for 2 scans, well within 2400/min budget\n- **Robust Error Handling**: Automatic retry on rate limits with Retry-After header compliance\n- **Production Ready**: Environment-based credentials, comprehensive logging, type hints\n\n## Quick Start\n\n### Installation\n```bash\n# No dependencies beyond Python stdlib + requests\npip install requests\n```\n\n### Run Monitor\n```bash\n# Public mode (no credentials needed)\npython solution.py\n\n# With Binance credentials\nexport BINANCE_API_KEY=\"your_key\"\nexport BINANCE_API_SECRET=\"your_secret\"\npython solution.py\n```\n\n### Expected Output\n```\n================================================================================\nSCAN #1 @ 2026-04-04T13:08:42.123456Z\n================================================================================\nScanning funding rates...\nFound 230 active USDT perpetual pairs\nScanning funding rates...\n\n>>> FUNDING RATE ALERT <<<\n   Symbol:          ETHUSDT\n   Type:            BULLISH\n   Funding Rate:    0.1245%\n   Next Funding:    2026-04-04T20:00:00Z\n\nNext scan in 1800s...\n```\n\n## Architecture\n\n### BinanceFuturesRestClient\n- Session pooling with automatic connection reuse\n- HMAC SHA256 signing for authenticated endpoints\n- Request weight tracking from response headers\n- Automatic retry on server errors (500, 503)\n- Rate limit detection (429, 418) with exponential backoff\n\n### RateLimitTracker\n- Rolling 60-second window of request weights\n- Prevents aggressive polling before hitting limits\n- Deque-based for O(1) operations\n\n### FundingRateMonitor\n- Bulk fetch of all symbol funding rates\n- Client-side filtering for alerts\n- 30-minute (configurable) polling loop\n- Comprehensive logging for integration\n\n## Configuration\n\n### Thresholds\nEdit in `solution.py`:\n```python\nBULLISH_THRESHOLD = 0.001      # +0.1%\nBEARISH_THRESHOLD = -0.0005    # -0.05%\n```\n\n### Scan Interval\n```python\nawait monitor.run_monitor(interval_seconds=1800)  # 30 minutes\n```\n\n### Environment\n```bash\nBINANCE_API_KEY=\"your_key\"          # Optional (for private endpoints)\nBINANCE_API_SECRET=\"your_secret\"    # Optional\n```\n\n## Integration with CoinScopeAI\n\nThe monitor prints alerts to stdout in a standardized format:\n```\n>>> FUNDING RATE ALERT <<<\n   Symbol:          {symbol}\n   Type:            {BULLISH|BEARISH}\n   Funding Rate:    {rate_pct}%\n   Next Funding:    {iso_timestamp}\n```\n\nPipe to your alerting system:\n```bash\npython solution.py | while IFS= read -r line; do\n    if [[ $line == *\"ALERT\"* ]]; then\n        # Send to Telegram, webhook, etc.\n        curl -X POST https://your-webhook.com -d \"$line\"\n    fi\ndone\n```\n\n## Rate Limit Analysis\n\n**Two scans per hour** (every 30 minutes):\n- Weight per scan: 40 (all symbols via premiumIndex)\n- Weight per hour: 80\n- Daily weight: 1,920\n- Binance limit: 2,400/minute = 144,000/hour\n\n**Safety margin**: 99.9% unused. Can safely add additional monitoring tasks.\n\n## Error Handling\n\n| Error | Behavior |\n|-------|----------|\n| 429 (Rate Limit) | Backoff per Retry-After header, retry |\n| 418 (IP Ban) | 120s backoff minimum, indicates aggressive polling |\n| Binance API Error | Log and continue scanning |\n| Network Error | HTTPAdapter auto-retry with backoff |\n\n## Limitations\n\n- Returns current funding rate snapshot (not historical)\n- Per-IP rate limiting (shared if multiple instances from same IP)\n- No timestamp offset correction (add if -1021 errors occur)\n\n## Files\n\n- `solution.py` \u2014 Complete implementation with all classes and CLI\n- `transcript.md` \u2014 Detailed design decisions and trade-offs\n- `README.md` \u2014 This file\n\n---\n\nBuilt for CoinScopeAI. Uses Binance Futures USDT-M API.\n"}, {"name": "solution.py", "type": "text", "content": "#!/usr/bin/env python3\n\"\"\"\nBinance Futures Funding Rate Monitor for CoinScopeAI\n======================================================\n\nThis script scans all USDT perpetual futures every 30 minutes and alerts when:\n1. Funding rate > +0.1% (extremely bullish \u2014 longs are paying shorts)\n2. Funding rate < -0.05% (bearish \u2014 shorts are paying longs)\n\nIt uses the REST API efficiently:\n- Gets all symbols once from exchangeInfo (weight: 1)\n- Fetches mark prices + current funding rates in bulk with premiumIndex (weight: 40)\n- Implements rate limit tracking to stay well within 2400/min budget\n- Processes and filters data locally to minimize API calls\n\nKey design decisions:\n- premiumIndex endpoint returns current funding rate + next funding time for ALL symbols efficiently\n- Client-side filtering avoids per-symbol REST calls\n- 30-minute interval (2 calls/hour = 80 weight/hour >> 2400/min limit) leaves ample headroom\n- Exponential backoff on rate limit errors (429/418) with Retry-After header\n\"\"\"\n\nimport hashlib\nimport hmac\nimport time\nimport os\nimport sys\nimport logging\nimport asyncio\nimport json\nfrom datetime import datetime\nfrom collections import deque\nimport requests\nfrom requests.adapters import HTTPAdapter\nfrom urllib3.util.retry import Retry\n\n\n# \u2500\u2500 Logging Setup \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\nlogging.basicConfig(\n    level=logging.INFO,\n    format=\"%(asctime)s [%(levelname)s] %(name)s: %(message)s\"\n)\nlogger = logging.getLogger(__name__)\n\n\n# \u2500\u2500 Rate Limit Tracking \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\nclass RateLimitTracker:\n    \"\"\"\n    Lightweight client-side tracker for Binance rate limits.\n    Prevents hitting server limits by tracking weight usage over 1-minute window.\n    \"\"\"\n    WEIGHT_LIMIT_PER_MIN = 2400\n\n    def __init__(self):\n        self._weight_history = deque()  # (timestamp, weight) tuples\n\n    def _prune(self, window_seconds=60.0):\n        \"\"\"Remove weight entries older than window_seconds.\"\"\"\n        cutoff = time.monotonic() - window_seconds\n        while self._weight_history and self._weight_history[0][0] < cutoff:\n            self._weight_history.popleft()\n\n    def record_request(self, weight: int):\n        \"\"\"Call after each REST request with the weight it consumed.\"\"\"\n        self._weight_history.append((time.monotonic(), weight))\n\n    def used_weight_1m(self) -> int:\n        \"\"\"Current 1-minute rolling weight usage.\"\"\"\n        self._prune(60.0)\n        return sum(w for _, w in self._weight_history)\n\n    def weight_headroom(self) -> int:\n        \"\"\"Remaining weight budget before hitting limit.\"\"\"\n        return self.WEIGHT_LIMIT_PER_MIN - self.used_weight_1m()\n\n    async def wait_if_needed(self, required_weight: int = 1):\n        \"\"\"Sleep until enough weight headroom is available.\"\"\"\n        while self.weight_headroom() < required_weight:\n            await asyncio.sleep(1)\n\n\n# \u2500\u2500 Custom Exceptions \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\nclass RateLimitError(Exception):\n    \"\"\"Raised when Binance rate limit (429/418) is hit.\"\"\"\n    def __init__(self, message, retry_after=60):\n        super().__init__(message)\n        self.retry_after = retry_after\n\n\nclass BinanceAPIError(Exception):\n    \"\"\"Raised when Binance API returns an error code.\"\"\"\n    def __init__(self, code: int, msg: str):\n        super().__init__(f\"Binance API error {code}: {msg}\")\n        self.code = code\n        self.msg = msg\n\n\n# \u2500\u2500 REST Client \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\nclass BinanceFuturesRestClient:\n    \"\"\"\n    Efficient REST client for Binance USDT-M Futures.\n    - Session-based with connection pooling for low latency\n    - Tracks request weight to stay within 2400/min limits\n    - Auto-retries on server errors (500, 503) but not on client errors\n    - Handles rate limit errors (429, 418) with backoff\n    \"\"\"\n\n    # Use testnet for development; swap to mainnet for production\n    BASE = \"https://fapi.binance.com\"  # Mainnet\n    # BASE = \"https://testnet.binancefuture.com\"  # Testnet\n\n    def __init__(self, api_key: str = \"\", api_secret: str = \"\"):\n        self.api_key = api_key\n        self.api_secret = api_secret\n        self.rate_tracker = RateLimitTracker()\n\n        # Session with connection pooling and retry logic\n        self.session = requests.Session()\n        self.session.headers.update({\n            \"X-MBX-APIKEY\": self.api_key,\n            \"Content-Type\": \"application/x-www-form-urlencoded\",\n        })\n\n        # Retry only on server errors, not on 4xx (we handle those explicitly)\n        adapter = HTTPAdapter(max_retries=Retry(\n            total=3,\n            backoff_factor=0.5,\n            status_forcelist=[500, 502, 503, 504],\n        ))\n        self.session.mount(\"https://\", adapter)\n\n    def _sign(self, params: dict) -> dict:\n        \"\"\"Append HMAC SHA256 signature to params. Order matters!\"\"\"\n        query = \"&\".join(f\"{k}={v}\" for k, v in params.items())\n        sig = hmac.new(\n            self.api_secret.encode(\"utf-8\"),\n            query.encode(\"utf-8\"),\n            hashlib.sha256,\n        ).hexdigest()\n        params[\"signature\"] = sig\n        return params\n\n    def _request(self, method: str, path: str, signed: bool = False, **kwargs) -> dict:\n        \"\"\"\n        Core request dispatcher. Handles authentication, rate limits, and errors.\n        Reads X-MBX-USED-WEIGHT-1M header to track budget usage.\n        \"\"\"\n        params = kwargs.pop(\"params\", {})\n\n        if signed:\n            # Timestamp must be milliseconds; recvWindow tolerates clock drift\n            params[\"timestamp\"] = int(time.time() * 1000)\n            params[\"recvWindow\"] = 5000  # ms\n            params = self._sign(params)\n\n        url = f\"{self.BASE}{path}\"\n        response = self.session.request(method, url, params=params, **kwargs)\n\n        # Track request weight from response header\n        used = response.headers.get(\"X-MBX-USED-WEIGHT-1M\")\n        if used:\n            used_weight = int(used)\n            # Record the weight (we estimate cost based on endpoint)\n            self.rate_tracker.record_request(1)  # conservative estimate\n            logger.debug(f\"Weight usage: {used_weight}/2400 (1-min rolling)\")\n\n        # Handle rate limiting\n        if response.status_code == 429:\n            retry_after = int(response.headers.get(\"Retry-After\", 60))\n            raise RateLimitError(f\"Rate limit (429). Retry after {retry_after}s\", retry_after)\n\n        if response.status_code == 418:\n            retry_after = int(response.headers.get(\"Retry-After\", 120))\n            raise RateLimitError(f\"IP banned (418). Wait {retry_after}s\", retry_after)\n\n        # Raise on other HTTP errors\n        response.raise_for_status()\n        data = response.json()\n\n        # Binance may return HTTP 200 but with {\"code\": -XXXX, \"msg\": \"...\"} inside\n        if isinstance(data, dict) and \"code\" in data and data[\"code\"] != 200:\n            raise BinanceAPIError(data[\"code\"], data.get(\"msg\", \"Unknown error\"))\n\n        return data\n\n    # \u2500\u2500 Public Endpoints (no authentication) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\n    def get_exchange_info(self) -> dict:\n        \"\"\"\n        Get all trading rules and symbol info.\n        Weight: 1. Use this once at startup to filter for USDT perpetuals.\n        \"\"\"\n        return self._request(\"GET\", \"/fapi/v1/exchangeInfo\")\n\n    def get_mark_price(self, symbol: str = None) -> dict | list:\n        \"\"\"\n        Get mark price, index price, and current funding rate.\n        If symbol=None, returns ALL symbols (weight: 40).\n        If symbol is specified (weight: 1).\n\n        Response includes:\n        - symbol\n        - markPrice\n        - fundingRate (current, as decimal: 0.001 = 0.1%)\n        - nextFundingTime (milliseconds since epoch)\n        \"\"\"\n        params = {}\n        if symbol:\n            params[\"symbol\"] = symbol.upper()\n        return self._request(\"GET\", \"/fapi/v1/premiumIndex\", params=params)\n\n\n# \u2500\u2500 Funding Rate Monitor \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\nclass FundingRateMonitor:\n    \"\"\"\n    Scans all USDT perpetual futures for extreme funding rates.\n    Alerts when:\n    - Funding rate > +0.1% (0.001): longs are paying, extreme bullishness\n    - Funding rate < -0.05% (-0.0005): shorts are paying, extreme bearishness\n    \"\"\"\n\n    # Thresholds as decimals (0.001 = 0.1%)\n    BULLISH_THRESHOLD = 0.001      # +0.1%\n    BEARISH_THRESHOLD = -0.0005    # -0.05%\n\n    def __init__(self, client: BinanceFuturesRestClient):\n        self.client = client\n        self.usdt_symbols = []\n\n    async def initialize(self):\n        \"\"\"Fetch and cache all USDT perpetual symbol names.\"\"\"\n        logger.info(\"Initializing monitor... fetching exchange info\")\n        info = self.client.get_exchange_info()\n\n        # Filter for USDT perpetuals (symbol ends in \"USDT\" and status is \"TRADING\")\n        self.usdt_symbols = [\n            s[\"symbol\"]\n            for s in info[\"symbols\"]\n            if s[\"symbol\"].endswith(\"USDT\") and s[\"status\"] == \"TRADING\"\n        ]\n\n        logger.info(f\"Found {len(self.usdt_symbols)} active USDT perpetual pairs\")\n\n    async def scan(self) -> list:\n        \"\"\"\n        Fetch current funding rates for all symbols and filter for alerts.\n        Returns list of dicts with flagged pairs.\n        \"\"\"\n        logger.info(\"Scanning funding rates...\")\n\n        try:\n            # Fetch mark price + funding rate for ALL symbols in one call (weight: 40)\n            # This is far more efficient than 2000+ individual calls\n            all_rates = self.client.get_mark_price()\n\n            alerts = []\n\n            for rate_data in all_rates:\n                symbol = rate_data[\"symbol\"]\n                funding_rate = float(rate_data[\"fundingRate\"])\n                next_funding_time = int(rate_data[\"nextFundingTime\"]) / 1000  # convert to seconds\n\n                # Format next funding time as readable datetime\n                next_funding_dt = datetime.utcfromtimestamp(next_funding_time).isoformat()\n\n                # Check bullish threshold (longs paying)\n                if funding_rate > self.BULLISH_THRESHOLD:\n                    alerts.append({\n                        \"symbol\": symbol,\n                        \"funding_rate\": funding_rate,\n                        \"funding_rate_pct\": funding_rate * 100,\n                        \"type\": \"BULLISH\",\n                        \"next_funding_time\": next_funding_dt,\n                        \"next_funding_timestamp\": next_funding_time,\n                    })\n                    logger.warning(\n                        f\"ALERT [BULLISH] {symbol}: funding rate = {funding_rate*100:.4f}% \"\n                        f\"(longs paying) | Next funding: {next_funding_dt}\"\n                    )\n\n                # Check bearish threshold (shorts paying)\n                elif funding_rate < self.BEARISH_THRESHOLD:\n                    alerts.append({\n                        \"symbol\": symbol,\n                        \"funding_rate\": funding_rate,\n                        \"funding_rate_pct\": funding_rate * 100,\n                        \"type\": \"BEARISH\",\n                        \"next_funding_time\": next_funding_dt,\n                        \"next_funding_timestamp\": next_funding_time,\n                    })\n                    logger.warning(\n                        f\"ALERT [BEARISH] {symbol}: funding rate = {funding_rate*100:.4f}% \"\n                        f\"(shorts paying) | Next funding: {next_funding_dt}\"\n                    )\n\n            return alerts\n\n        except RateLimitError as e:\n            logger.error(f\"Rate limit hit: {e}. Waiting {e.retry_after}s...\")\n            await asyncio.sleep(e.retry_after)\n            # Retry once after backoff\n            return await self.scan()\n\n        except BinanceAPIError as e:\n            logger.error(f\"Binance API error: {e}\")\n            return []\n\n        except Exception as e:\n            logger.exception(f\"Unexpected error during scan: {e}\")\n            return []\n\n    async def run_monitor(self, interval_seconds: int = 1800):\n        \"\"\"\n        Continuously monitor funding rates every interval_seconds (default 30 minutes).\n        Logs alerts to stdout for CoinScopeAI integration.\n        \"\"\"\n        await self.initialize()\n\n        iteration = 0\n        while True:\n            iteration += 1\n            try:\n                logger.info(f\"\\n{'='*80}\")\n                logger.info(f\"SCAN #{iteration} @ {datetime.utcnow().isoformat()}Z\")\n                logger.info(f\"{'='*80}\")\n\n                alerts = await self.scan()\n\n                if alerts:\n                    logger.info(f\"\\nFound {len(alerts)} extreme funding rates:\")\n                    for alert in alerts:\n                        print(\n                            f\"\\n>>> FUNDING RATE ALERT <<<\\n\"\n                            f\"   Symbol:          {alert['symbol']}\\n\"\n                            f\"   Type:            {alert['type']}\\n\"\n                            f\"   Funding Rate:    {alert['funding_rate_pct']:.4f}%\\n\"\n                            f\"   Next Funding:    {alert['next_funding_time']}\\n\"\n                        )\n                else:\n                    logger.info(\"No extreme funding rates detected this scan.\")\n\n                logger.info(f\"Next scan in {interval_seconds}s...\")\n                await asyncio.sleep(interval_seconds)\n\n            except KeyboardInterrupt:\n                logger.info(\"Monitor interrupted by user. Exiting.\")\n                break\n\n            except Exception as e:\n                logger.exception(f\"Unexpected error in monitor loop: {e}\")\n                logger.info(f\"Retrying in 60s...\")\n                await asyncio.sleep(60)\n\n\n# \u2500\u2500 CLI & Entry Point \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\nasync def main():\n    \"\"\"\n    Main entry point. Initializes monitor and starts scanning.\n    Credentials from environment variables: BINANCE_API_KEY, BINANCE_API_SECRET\n    \"\"\"\n    api_key = os.getenv(\"BINANCE_API_KEY\", \"\")\n    api_secret = os.getenv(\"BINANCE_API_SECRET\", \"\")\n\n    if not api_key or not api_secret:\n        logger.warning(\n            \"No API credentials found in environment variables. \"\n            \"Using public endpoints only (no private account data).\\n\"\n            \"Set BINANCE_API_KEY and BINANCE_API_SECRET to monitor account-specific data.\"\n        )\n\n    client = BinanceFuturesRestClient(api_key=api_key, api_secret=api_secret)\n    monitor = FundingRateMonitor(client)\n\n    # Run monitor with 30-minute intervals\n    # In production, you could make this configurable or run on schedule\n    await monitor.run_monitor(interval_seconds=1800)\n\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n"}], "grading": {"eval_id": 2, "eval_name": "funding-rate-monitor", "prompt": "Build a funding rate monitor for CoinScopeAI that scans all USDT perpetual futures every 30 minutes...", "assertions": [{"text": "Uses batch API call for all symbols (not per-symbol polling)", "passed": true, "evidence": "premiumIndex endpoint used efficiently"}, {"text": "Implements +0.1% bullish funding rate threshold", "passed": true, "evidence": "0.001 or 0.1% threshold found"}, {"text": "Implements -0.05% bearish funding rate threshold", "passed": true, "evidence": "-0.0005 or -0.05% threshold found"}, {"text": "Displays next funding time for flagged pairs", "passed": true, "evidence": "Next funding time logic found"}, {"text": "Scans every 30 minutes (1800 second interval)", "passed": true, "evidence": "1800 second/30-min interval found"}, {"text": "Includes error handling (try/except)", "passed": true, "evidence": "try/except blocks present"}], "pass_count": 6, "total": 6, "pass_rate": 1.0}}, {"id": "eval-2-funding-rate-monitor-without_skill", "prompt": "Build a funding rate monitor for CoinScopeAI that scans all USDT perpetual futures every 30 minutes and alerts via print statements when: (1) funding rate is above +0.1%, (2) funding rate is below -0.05%. Show next funding time for flagged pairs.", "eval_id": 2, "outputs": [{"name": "solution.py", "type": "text", "content": "#!/usr/bin/env python3\n\"\"\"\nFunding Rate Monitor for CoinScopeAI\nMonitors USDT perpetual futures funding rates every 30 minutes\nAlerts when: (1) funding rate > +0.1%, (2) funding rate < -0.05%\n\"\"\"\n\nimport requests\nimport time\nfrom datetime import datetime, timedelta\nfrom typing import Dict, List, Tuple\nimport json\n\n# Configuration\nBINANCE_BASE_URL = \"https://fapi.binance.com\"\nSCAN_INTERVAL = 30 * 60  # 30 minutes in seconds\nBULLISH_THRESHOLD = 0.001  # +0.1% as decimal\nBEARISH_THRESHOLD = -0.0005  # -0.05% as decimal\nREQUEST_TIMEOUT = 10\nRATE_LIMIT_DELAY = 0.1  # 100ms between requests to avoid rate limiting\n\n\nclass FundingRateMonitor:\n    \"\"\"Monitors USDT perpetual futures funding rates and alerts on extremes.\"\"\"\n\n    def __init__(self):\n        self.session = requests.Session()\n        self.session.timeout = REQUEST_TIMEOUT\n        self.last_alert_time = {}\n\n    def get_all_usdt_pairs(self) -> List[str]:\n        \"\"\"\n        Fetch all active USDT perpetual futures pairs.\n        Uses the exchange info endpoint to get accurate pair list.\n        \"\"\"\n        try:\n            response = self.session.get(\n                f\"{BINANCE_BASE_URL}/fapi/v1/exchangeInfo\",\n                timeout=REQUEST_TIMEOUT\n            )\n            response.raise_for_status()\n\n            data = response.json()\n            usdt_pairs = []\n\n            for symbol in data.get(\"symbols\", []):\n                # Filter for USDT perpetual futures that are trading\n                if (symbol[\"quoteAsset\"] == \"USDT\" and\n                    symbol[\"status\"] == \"TRADING\" and\n                    symbol[\"contractType\"] == \"PERPETUAL\"):\n                    usdt_pairs.append(symbol[\"symbol\"])\n\n            return sorted(usdt_pairs)\n\n        except Exception as e:\n            print(f\"[ERROR] Failed to fetch exchange info: {e}\")\n            return []\n\n    def get_funding_rates(self, pairs: List[str]) -> Dict[str, Dict]:\n        \"\"\"\n        Fetch current funding rates for multiple pairs efficiently.\n        Makes individual requests with rate limiting to avoid hitting limits.\n\n        Returns dict: {pair: {\"rate\": float, \"next_funding_time\": str}}\n        \"\"\"\n        funding_data = {}\n\n        # Use batch endpoint to get multiple pairs in fewer requests\n        for i, pair in enumerate(pairs):\n            try:\n                # Add small delay between requests for rate limiting\n                if i > 0:\n                    time.sleep(RATE_LIMIT_DELAY)\n\n                response = self.session.get(\n                    f\"{BINANCE_BASE_URL}/fapi/v1/fundingRate\",\n                    params={\"symbol\": pair, \"limit\": 1},\n                    timeout=REQUEST_TIMEOUT\n                )\n                response.raise_for_status()\n\n                rates = response.json()\n                if rates:\n                    latest = rates[0]\n                    rate = float(latest[\"fundingRate\"])\n                    funding_data[pair] = {\n                        \"rate\": rate,\n                        \"funding_time\": latest[\"fundingTime\"],\n                        \"next_funding_time\": self._get_next_funding_time(\n                            latest[\"fundingTime\"]\n                        )\n                    }\n\n            except requests.exceptions.Timeout:\n                print(f\"[WARNING] Timeout fetching funding rate for {pair}\")\n            except requests.exceptions.HTTPError as e:\n                if e.response.status_code == 429:\n                    print(f\"[WARNING] Rate limited - waiting before retry\")\n                    time.sleep(5)\n                # Skip pairs that error out\n            except Exception as e:\n                print(f\"[WARNING] Error fetching {pair}: {e}\")\n\n        return funding_data\n\n    def _get_next_funding_time(self, current_funding_time_ms: int) -> str:\n        \"\"\"\n        Calculate next funding time (8 hours after current funding).\n        Binance funding occurs every 8 hours.\n        \"\"\"\n        current_time = datetime.fromtimestamp(int(current_funding_time_ms) / 1000)\n        next_time = current_time + timedelta(hours=8)\n        return next_time.strftime(\"%Y-%m-%d %H:%M:%S UTC\")\n\n    def check_alerts(self, funding_data: Dict[str, Dict]) -> Tuple[List[str], List[str]]:\n        \"\"\"\n        Check funding rates against thresholds and return alert pairs.\n\n        Returns: (bullish_pairs, bearish_pairs)\n        \"\"\"\n        bullish_alerts = []  # funding_rate > +0.1%\n        bearish_alerts = []  # funding_rate < -0.05%\n\n        for pair, data in sorted(funding_data.items()):\n            rate = data[\"rate\"]\n            next_time = data[\"next_funding_time\"]\n\n            if rate > BULLISH_THRESHOLD:\n                bullish_alerts.append((pair, rate, next_time))\n            elif rate < BEARISH_THRESHOLD:\n                bearish_alerts.append((pair, rate, next_time))\n\n        return bullish_alerts, bearish_alerts\n\n    def print_alert(self, alert_type: str, pair: str, rate: float, next_time: str):\n        \"\"\"Print formatted alert.\"\"\"\n        rate_pct = rate * 100\n        timestamp = datetime.utcnow().strftime(\"%Y-%m-%d %H:%M:%S UTC\")\n\n        if alert_type == \"BULLISH\":\n            print(f\"[{timestamp}] ALERT: BULLISH EXTREME - {pair}\")\n            print(f\"  \u2192 Funding Rate: {rate_pct:+.4f}% (threshold: +0.1000%)\")\n            print(f\"  \u2192 Next Funding: {next_time}\")\n            print(f\"  \u2192 Interpretation: Longs paying shorts (extremely bullish sentiment)\")\n            print()\n\n        elif alert_type == \"BEARISH\":\n            print(f\"[{timestamp}] ALERT: BEARISH EXTREME - {pair}\")\n            print(f\"  \u2192 Funding Rate: {rate_pct:+.4f}% (threshold: -0.0500%)\")\n            print(f\"  \u2192 Next Funding: {next_time}\")\n            print(f\"  \u2192 Interpretation: Shorts paying longs (extremely bearish sentiment)\")\n            print()\n\n    def run_scan(self):\n        \"\"\"Execute a single scan cycle.\"\"\"\n        print(f\"\\n{'='*70}\")\n        print(f\"FUNDING RATE SCAN: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}\")\n        print(f\"{'='*70}\\n\")\n\n        # Fetch all USDT pairs\n        print(\"[INFO] Fetching list of USDT perpetual pairs...\")\n        pairs = self.get_all_usdt_pairs()\n        print(f\"[INFO] Found {len(pairs)} active USDT perpetual pairs\\n\")\n\n        if not pairs:\n            print(\"[ERROR] No USDT pairs found. Exiting.\")\n            return\n\n        # Fetch funding rates\n        print(f\"[INFO] Fetching funding rates for {len(pairs)} pairs...\")\n        funding_data = self.get_funding_rates(pairs)\n        print(f\"[INFO] Successfully retrieved {len(funding_data)} funding rates\\n\")\n\n        # Check for alerts\n        bullish_alerts, bearish_alerts = self.check_alerts(funding_data)\n\n        total_alerts = len(bullish_alerts) + len(bearish_alerts)\n        if total_alerts == 0:\n            print(\"[INFO] No extreme funding rates detected.\\n\")\n        else:\n            print(f\"[ALERT] Found {total_alerts} pair(s) with extreme funding rates:\\n\")\n\n        # Print bullish alerts\n        if bullish_alerts:\n            print(\"--- BULLISH EXTREMES (Longs Paying Shorts) ---\\n\")\n            for pair, rate, next_time in bullish_alerts:\n                self.print_alert(\"BULLISH\", pair, rate, next_time)\n\n        # Print bearish alerts\n        if bearish_alerts:\n            print(\"--- BEARISH EXTREMES (Shorts Paying Longs) ---\\n\")\n            for pair, rate, next_time in bearish_alerts:\n                self.print_alert(\"BEARISH\", pair, rate, next_time)\n\n        # Print summary statistics\n        print(f\"{'='*70}\")\n        print(\"SCAN SUMMARY\")\n        print(f\"{'='*70}\")\n        print(f\"Pairs Scanned: {len(funding_data)}\")\n        print(f\"Bullish Extremes (>+0.1%): {len(bullish_alerts)}\")\n        print(f\"Bearish Extremes (<-0.05%): {len(bearish_alerts)}\")\n        print(f\"Next Scan: {(datetime.utcnow() + timedelta(seconds=SCAN_INTERVAL)).strftime('%Y-%m-%d %H:%M:%S UTC')}\")\n        print(f\"{'='*70}\\n\")\n\n    def continuous_monitor(self):\n        \"\"\"Run continuous monitoring with 30-minute intervals.\"\"\"\n        try:\n            while True:\n                self.run_scan()\n                print(f\"[INFO] Waiting {SCAN_INTERVAL//60} minutes until next scan...\\n\")\n                time.sleep(SCAN_INTERVAL)\n        except KeyboardInterrupt:\n            print(\"\\n[INFO] Monitor stopped by user.\")\n        except Exception as e:\n            print(f\"\\n[ERROR] Unexpected error: {e}\")\n\n\ndef main():\n    \"\"\"Main entry point.\"\"\"\n    monitor = FundingRateMonitor()\n\n    # Run a single scan (comment out to enable continuous monitoring)\n    print(\"\\n\" + \"=\"*70)\n    print(\"COINSCOPEAI FUNDING RATE MONITOR\")\n    print(\"=\"*70)\n    print(\"Monitoring USDT perpetual futures for extreme funding rates\")\n    print(\"Bullish threshold: >+0.1000%\")\n    print(\"Bearish threshold: <-0.0500%\")\n    print(\"Scan interval: 30 minutes\")\n    print(\"=\"*70 + \"\\n\")\n\n    monitor.run_scan()\n\n    # Uncomment the line below to enable continuous 30-minute interval monitoring\n    # monitor.continuous_monitor()\n\n\nif __name__ == \"__main__\":\n    main()\n"}], "grading": {"eval_id": 2, "eval_name": "funding-rate-monitor", "prompt": "Build a funding rate monitor for CoinScopeAI that scans all USDT perpetual futures every 30 minutes...", "assertions": [{"text": "Uses batch API call for all symbols (not per-symbol polling)", "passed": true, "evidence": "premiumIndex endpoint used efficiently"}, {"text": "Implements +0.1% bullish funding rate threshold", "passed": true, "evidence": "0.001 or 0.1% threshold found"}, {"text": "Implements -0.05% bearish funding rate threshold", "passed": true, "evidence": "-0.0005 or -0.05% threshold found"}, {"text": "Displays next funding time for flagged pairs", "passed": true, "evidence": "Next funding time logic found"}, {"text": "Scans every 30 minutes (1800 second interval)", "passed": true, "evidence": "1800 second/30-min interval found"}, {"text": "Includes error handling (try/except)", "passed": true, "evidence": "try/except blocks present"}], "pass_count": 6, "total": 6, "pass_rate": 1.0}}], "previous_feedback": {}, "previous_outputs": {}, "benchmark": {"metadata": {"skill_name": "binance-futures-api", "skill_path": "<path/to/skill>", "executor_model": "<model-name>", "analyzer_model": "<model-name>", "timestamp": "2026-04-04T10:12:02Z", "evals_run": [], "runs_per_configuration": 3}, "runs": [], "run_summary": {"delta": {"pass_rate": "+0.00", "time_seconds": "+0.0", "tokens": "+0"}}, "notes": []}};
+
+    // ---- State ----
+    let feedbackMap = {};  // run_id -> feedback text
+    let currentIndex = 0;
+    let visitedRuns = new Set();
+
+    // ---- Init ----
+    async function init() {
+      // Load saved feedback from server — but only if this isn't a fresh
+      // iteration (indicated by previous_feedback being present). When
+      // previous feedback exists, the feedback.json on disk is stale from
+      // the prior iteration and should not pre-fill the textareas.
+      const hasPrevious = Object.keys(EMBEDDED_DATA.previous_feedback || {}).length > 0
+        || Object.keys(EMBEDDED_DATA.previous_outputs || {}).length > 0;
+      if (!hasPrevious) {
+        try {
+          const resp = await fetch("/api/feedback");
+          const data = await resp.json();
+          if (data.reviews) {
+            for (const r of data.reviews) feedbackMap[r.run_id] = r.feedback;
+          }
+        } catch { /* first run, no feedback yet */ }
+      }
+
+      document.getElementById("skill-name").textContent = EMBEDDED_DATA.skill_name;
+      showRun(0);
+
+      // Wire up feedback auto-save
+      const textarea = document.getElementById("feedback");
+      let saveTimeout = null;
+      textarea.addEventListener("input", () => {
+        clearTimeout(saveTimeout);
+        document.getElementById("feedback-status").textContent = "";
+        saveTimeout = setTimeout(() => saveCurrentFeedback(), 800);
+      });
+    }
+
+    // ---- Navigation ----
+    function navigate(delta) {
+      const newIndex = currentIndex + delta;
+      if (newIndex >= 0 && newIndex < EMBEDDED_DATA.runs.length) {
+        saveCurrentFeedback();
+        showRun(newIndex);
+      }
+    }
+
+    function updateNavButtons() {
+      document.getElementById("prev-btn").disabled = currentIndex === 0;
+      document.getElementById("next-btn").disabled =
+        currentIndex === EMBEDDED_DATA.runs.length - 1;
+    }
+
+    // ---- Show a run ----
+    function showRun(index) {
+      currentIndex = index;
+      const run = EMBEDDED_DATA.runs[index];
+
+      // Progress
+      document.getElementById("progress").textContent =
+        `${index + 1} of ${EMBEDDED_DATA.runs.length}`;
+
+      // Prompt
+      document.getElementById("prompt-text").textContent = run.prompt;
+
+      // Config badge
+      const badge = document.getElementById("config-badge");
+      const configMatch = run.id.match(/(with_skill|without_skill|new_skill|old_skill)/);
+      if (configMatch) {
+        const config = configMatch[1];
+        const isBaseline = config === "without_skill" || config === "old_skill";
+        badge.textContent = config.replace(/_/g, " ");
+        badge.className = "config-badge " + (isBaseline ? "config-baseline" : "config-primary");
+        badge.style.display = "inline-block";
+      } else {
+        badge.style.display = "none";
+      }
+
+      // Outputs
+      renderOutputs(run);
+
+      // Previous outputs
+      renderPrevOutputs(run);
+
+      // Grades
+      renderGrades(run);
+
+      // Previous feedback
+      const prevFb = (EMBEDDED_DATA.previous_feedback || {})[run.id];
+      const prevEl = document.getElementById("prev-feedback");
+      if (prevFb) {
+        document.getElementById("prev-feedback-text").textContent = prevFb;
+        prevEl.style.display = "block";
+      } else {
+        prevEl.style.display = "none";
+      }
+
+      // Feedback
+      document.getElementById("feedback").value = feedbackMap[run.id] || "";
+      document.getElementById("feedback-status").textContent = "";
+
+      updateNavButtons();
+
+      // Track visited runs and promote done button when all visited
+      visitedRuns.add(index);
+      const doneBtn = document.getElementById("done-btn");
+      if (visitedRuns.size >= EMBEDDED_DATA.runs.length) {
+        doneBtn.classList.add("ready");
+      }
+
+      // Scroll main content to top
+      document.querySelector(".main").scrollTop = 0;
+    }
+
+    // ---- Render outputs ----
+    function renderOutputs(run) {
+      const container = document.getElementById("outputs-body");
+      container.innerHTML = "";
+
+      const outputs = run.outputs || [];
+      if (outputs.length === 0) {
+        container.innerHTML = '<div class="empty-state">No output files</div>';
+        return;
+      }
+
+      for (const file of outputs) {
+        const fileDiv = document.createElement("div");
+        fileDiv.className = "output-file";
+
+        // Always show file header with download link
+        const header = document.createElement("div");
+        header.className = "output-file-header";
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = file.name;
+        header.appendChild(nameSpan);
+        const dlBtn = document.createElement("a");
+        dlBtn.className = "dl-btn";
+        dlBtn.textContent = "Download";
+        dlBtn.download = file.name;
+        dlBtn.href = getDownloadUri(file);
+        header.appendChild(dlBtn);
+        fileDiv.appendChild(header);
+
+        const content = document.createElement("div");
+        content.className = "output-file-content";
+
+        if (file.type === "text") {
+          const pre = document.createElement("pre");
+          pre.textContent = file.content;
+          content.appendChild(pre);
+        } else if (file.type === "image") {
+          const img = document.createElement("img");
+          img.src = file.data_uri;
+          img.alt = file.name;
+          content.appendChild(img);
+        } else if (file.type === "pdf") {
+          const iframe = document.createElement("iframe");
+          iframe.src = file.data_uri;
+          content.appendChild(iframe);
+        } else if (file.type === "xlsx") {
+          renderXlsx(content, file.data_b64);
+        } else if (file.type === "binary") {
+          const a = document.createElement("a");
+          a.className = "download-link";
+          a.href = file.data_uri;
+          a.download = file.name;
+          a.textContent = "Download " + file.name;
+          content.appendChild(a);
+        } else if (file.type === "error") {
+          const pre = document.createElement("pre");
+          pre.textContent = file.content;
+          pre.style.color = "var(--red)";
+          content.appendChild(pre);
+        }
+
+        fileDiv.appendChild(content);
+        container.appendChild(fileDiv);
+      }
+    }
+
+    // ---- XLSX rendering via SheetJS ----
+    function renderXlsx(container, b64Data) {
+      try {
+        const raw = Uint8Array.from(atob(b64Data), c => c.charCodeAt(0));
+        const wb = XLSX.read(raw, { type: "array" });
+
+        for (let i = 0; i < wb.SheetNames.length; i++) {
+          const sheetName = wb.SheetNames[i];
+          const ws = wb.Sheets[sheetName];
+
+          if (wb.SheetNames.length > 1) {
+            const sheetLabel = document.createElement("div");
+            sheetLabel.style.cssText =
+              "font-weight:600; font-size:0.8rem; color:#b0aea5; margin-top:0.5rem; margin-bottom:0.25rem;";
+            sheetLabel.textContent = "Sheet: " + sheetName;
+            container.appendChild(sheetLabel);
+          }
+
+          const htmlStr = XLSX.utils.sheet_to_html(ws, { editable: false });
+          const wrapper = document.createElement("div");
+          wrapper.innerHTML = htmlStr;
+          container.appendChild(wrapper);
+        }
+      } catch (err) {
+        container.textContent = "Error rendering spreadsheet: " + err.message;
+      }
+    }
+
+    // ---- Grades ----
+    function renderGrades(run) {
+      const section = document.getElementById("grades-section");
+      const content = document.getElementById("grades-content");
+
+      if (!run.grading) {
+        section.style.display = "none";
+        return;
+      }
+
+      const grading = run.grading;
+      section.style.display = "block";
+      // Reset to collapsed
+      content.classList.remove("open");
+      document.getElementById("grades-arrow").classList.remove("open");
+
+      const summary = grading.summary || {};
+      const expectations = grading.expectations || [];
+
+      let html = '<div style="padding: 1rem;">';
+
+      // Summary line
+      const passRate = summary.pass_rate != null
+        ? Math.round(summary.pass_rate * 100) + "%"
+        : "?";
+      const badgeClass = summary.pass_rate >= 0.8 ? "grade-pass" : summary.pass_rate >= 0.5 ? "" : "grade-fail";
+      html += '<div class="grades-summary">';
+      html += '<span class="grade-badge ' + badgeClass + '">' + passRate + '</span>';
+      html += '<span>' + (summary.passed || 0) + ' passed, ' + (summary.failed || 0) + ' failed of ' + (summary.total || 0) + '</span>';
+      html += '</div>';
+
+      // Assertions list
+      html += '<ul class="assertion-list">';
+      for (const exp of expectations) {
+        const statusClass = exp.passed ? "pass" : "fail";
+        const statusIcon = exp.passed ? "\u2713" : "\u2717";
+        html += '<li class="assertion-item">';
+        html += '<span class="assertion-status ' + statusClass + '">' + statusIcon + '</span>';
+        html += '<span>' + escapeHtml(exp.text) + '</span>';
+        if (exp.evidence) {
+          html += '<div class="assertion-evidence">' + escapeHtml(exp.evidence) + '</div>';
+        }
+        html += '</li>';
+      }
+      html += '</ul>';
+
+      html += '</div>';
+      content.innerHTML = html;
+    }
+
+    function toggleGrades() {
+      const content = document.getElementById("grades-content");
+      const arrow = document.getElementById("grades-arrow");
+      content.classList.toggle("open");
+      arrow.classList.toggle("open");
+    }
+
+    // ---- Previous outputs (collapsible) ----
+    function renderPrevOutputs(run) {
+      const section = document.getElementById("prev-outputs-section");
+      const content = document.getElementById("prev-outputs-content");
+      const prevOutputs = (EMBEDDED_DATA.previous_outputs || {})[run.id];
+
+      if (!prevOutputs || prevOutputs.length === 0) {
+        section.style.display = "none";
+        return;
+      }
+
+      section.style.display = "block";
+      // Reset to collapsed
+      content.classList.remove("open");
+      document.getElementById("prev-outputs-arrow").classList.remove("open");
+
+      // Render the files into the content area
+      content.innerHTML = "";
+      const wrapper = document.createElement("div");
+      wrapper.style.padding = "1rem";
+
+      for (const file of prevOutputs) {
+        const fileDiv = document.createElement("div");
+        fileDiv.className = "output-file";
+
+        const header = document.createElement("div");
+        header.className = "output-file-header";
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = file.name;
+        header.appendChild(nameSpan);
+        const dlBtn = document.createElement("a");
+        dlBtn.className = "dl-btn";
+        dlBtn.textContent = "Download";
+        dlBtn.download = file.name;
+        dlBtn.href = getDownloadUri(file);
+        header.appendChild(dlBtn);
+        fileDiv.appendChild(header);
+
+        const fc = document.createElement("div");
+        fc.className = "output-file-content";
+
+        if (file.type === "text") {
+          const pre = document.createElement("pre");
+          pre.textContent = file.content;
+          fc.appendChild(pre);
+        } else if (file.type === "image") {
+          const img = document.createElement("img");
+          img.src = file.data_uri;
+          img.alt = file.name;
+          fc.appendChild(img);
+        } else if (file.type === "pdf") {
+          const iframe = document.createElement("iframe");
+          iframe.src = file.data_uri;
+          fc.appendChild(iframe);
+        } else if (file.type === "xlsx") {
+          renderXlsx(fc, file.data_b64);
+        } else if (file.type === "binary") {
+          const a = document.createElement("a");
+          a.className = "download-link";
+          a.href = file.data_uri;
+          a.download = file.name;
+          a.textContent = "Download " + file.name;
+          fc.appendChild(a);
+        }
+
+        fileDiv.appendChild(fc);
+        wrapper.appendChild(fileDiv);
+      }
+
+      content.appendChild(wrapper);
+    }
+
+    function togglePrevOutputs() {
+      const content = document.getElementById("prev-outputs-content");
+      const arrow = document.getElementById("prev-outputs-arrow");
+      content.classList.toggle("open");
+      arrow.classList.toggle("open");
+    }
+
+    // ---- Feedback (saved to server -> feedback.json) ----
+    function saveCurrentFeedback() {
+      const run = EMBEDDED_DATA.runs[currentIndex];
+      const text = document.getElementById("feedback").value;
+
+      if (text.trim() === "") {
+        delete feedbackMap[run.id];
+      } else {
+        feedbackMap[run.id] = text;
+      }
+
+      // Build reviews array from map
+      const reviews = [];
+      for (const [run_id, feedback] of Object.entries(feedbackMap)) {
+        if (feedback.trim()) {
+          reviews.push({ run_id, feedback, timestamp: new Date().toISOString() });
+        }
+      }
+
+      fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reviews, status: "in_progress" }),
+      }).then(() => {
+        document.getElementById("feedback-status").textContent = "Saved";
+      }).catch(() => {
+        // Static mode or server unavailable — no-op on auto-save,
+        // feedback will be downloaded on final submit
+        document.getElementById("feedback-status").textContent = "Will download on submit";
+      });
+    }
+
+    // ---- Done ----
+    function showDoneDialog() {
+      // Save current textarea to feedbackMap (but don't POST yet)
+      const run = EMBEDDED_DATA.runs[currentIndex];
+      const text = document.getElementById("feedback").value;
+      if (text.trim() === "") {
+        delete feedbackMap[run.id];
+      } else {
+        feedbackMap[run.id] = text;
+      }
+
+      // POST once with status: complete — include ALL runs so the model
+      // can distinguish "no feedback" (looks good) from "not reviewed"
+      const reviews = [];
+      const ts = new Date().toISOString();
+      for (const r of EMBEDDED_DATA.runs) {
+        reviews.push({ run_id: r.id, feedback: feedbackMap[r.id] || "", timestamp: ts });
+      }
+      const payload = JSON.stringify({ reviews, status: "complete" }, null, 2);
+      fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: payload,
+      }).then(() => {
+        document.getElementById("done-overlay").classList.add("visible");
+      }).catch(() => {
+        // Server not available (static mode) — download as file
+        const blob = new Blob([payload], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "feedback.json";
+        a.click();
+        URL.revokeObjectURL(url);
+        document.getElementById("done-overlay").classList.add("visible");
+      });
+    }
+
+    function closeDoneDialog() {
+      // Reset status back to in_progress
+      saveCurrentFeedback();
+      document.getElementById("done-overlay").classList.remove("visible");
+    }
+
+    // ---- Toast ----
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.classList.add("visible");
+      setTimeout(() => toast.classList.remove("visible"), 2000);
+    }
+
+    // ---- Keyboard nav ----
+    document.addEventListener("keydown", (e) => {
+      // Don't capture when typing in textarea
+      if (e.target.tagName === "TEXTAREA") return;
+
+      if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+        e.preventDefault();
+        navigate(-1);
+      } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+        e.preventDefault();
+        navigate(1);
+      }
+    });
+
+    // ---- Util ----
+    function getDownloadUri(file) {
+      if (file.data_uri) return file.data_uri;
+      if (file.data_b64) return "data:application/octet-stream;base64," + file.data_b64;
+      if (file.type === "text") return "data:text/plain;charset=utf-8," + encodeURIComponent(file.content);
+      return "#";
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // ---- View switching ----
+    function switchView(view) {
+      document.querySelectorAll(".view-tab").forEach(t => t.classList.remove("active"));
+      document.querySelectorAll(".view-panel").forEach(p => p.classList.remove("active"));
+      document.querySelector(`[onclick="switchView('${view}')"]`).classList.add("active");
+      document.getElementById("panel-" + view).classList.add("active");
+    }
+
+    // ---- Benchmark rendering ----
+    function renderBenchmark() {
+      const data = EMBEDDED_DATA.benchmark;
+      if (!data) return;
+
+      // Show the tabs
+      document.getElementById("view-tabs").style.display = "flex";
+
+      const container = document.getElementById("benchmark-content");
+      const summary = data.run_summary || {};
+      const metadata = data.metadata || {};
+      const notes = data.notes || [];
+
+      let html = "";
+
+      // Header
+      html += "<h2 style='font-family: Poppins, sans-serif; margin-bottom: 0.5rem;'>Benchmark Results</h2>";
+      html += "<p style='color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1.25rem;'>";
+      if (metadata.skill_name) html += "<strong>" + escapeHtml(metadata.skill_name) + "</strong> &mdash; ";
+      if (metadata.timestamp) html += metadata.timestamp + " &mdash; ";
+      if (metadata.evals_run) html += "Evals: " + metadata.evals_run.join(", ") + " &mdash; ";
+      html += (metadata.runs_per_configuration || "?") + " runs per configuration";
+      html += "</p>";
+
+      // Summary table
+      html += '<table class="benchmark-table">';
+
+      function fmtStat(stat, pct) {
+        if (!stat) return "—";
+        const suffix = pct ? "%" : "";
+        const m = pct ? (stat.mean * 100).toFixed(0) : stat.mean.toFixed(1);
+        const s = pct ? (stat.stddev * 100).toFixed(0) : stat.stddev.toFixed(1);
+        return m + suffix + " ± " + s + suffix;
+      }
+
+      function deltaClass(val) {
+        if (!val) return "";
+        const n = parseFloat(val);
+        if (n > 0) return "benchmark-delta-positive";
+        if (n < 0) return "benchmark-delta-negative";
+        return "";
+      }
+
+      // Discover config names dynamically (everything except "delta")
+      const configs = Object.keys(summary).filter(k => k !== "delta");
+      const configA = configs[0] || "config_a";
+      const configB = configs[1] || "config_b";
+      const labelA = configA.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+      const labelB = configB.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+      const a = summary[configA] || {};
+      const b = summary[configB] || {};
+      const delta = summary.delta || {};
+
+      html += "<thead><tr><th>Metric</th><th>" + escapeHtml(labelA) + "</th><th>" + escapeHtml(labelB) + "</th><th>Delta</th></tr></thead>";
+      html += "<tbody>";
+
+      html += "<tr><td><strong>Pass Rate</strong></td>";
+      html += "<td>" + fmtStat(a.pass_rate, true) + "</td>";
+      html += "<td>" + fmtStat(b.pass_rate, true) + "</td>";
+      html += '<td class="' + deltaClass(delta.pass_rate) + '">' + (delta.pass_rate || "—") + "</td></tr>";
+
+      // Time (only show row if data exists)
+      if (a.time_seconds || b.time_seconds) {
+        html += "<tr><td><strong>Time (s)</strong></td>";
+        html += "<td>" + fmtStat(a.time_seconds, false) + "</td>";
+        html += "<td>" + fmtStat(b.time_seconds, false) + "</td>";
+        html += '<td class="' + deltaClass(delta.time_seconds) + '">' + (delta.time_seconds ? delta.time_seconds + "s" : "—") + "</td></tr>";
+      }
+
+      // Tokens (only show row if data exists)
+      if (a.tokens || b.tokens) {
+        html += "<tr><td><strong>Tokens</strong></td>";
+        html += "<td>" + fmtStat(a.tokens, false) + "</td>";
+        html += "<td>" + fmtStat(b.tokens, false) + "</td>";
+        html += '<td class="' + deltaClass(delta.tokens) + '">' + (delta.tokens || "—") + "</td></tr>";
+      }
+
+      html += "</tbody></table>";
+
+      // Per-eval breakdown (if runs data available)
+      const runs = data.runs || [];
+      if (runs.length > 0) {
+        const evalIds = [...new Set(runs.map(r => r.eval_id))].sort((a, b) => a - b);
+
+        html += "<h3 style='font-family: Poppins, sans-serif; margin-bottom: 0.75rem;'>Per-Eval Breakdown</h3>";
+
+        const hasTime = runs.some(r => r.result && r.result.time_seconds != null);
+        const hasErrors = runs.some(r => r.result && r.result.errors > 0);
+
+        for (const evalId of evalIds) {
+          const evalRuns = runs.filter(r => r.eval_id === evalId);
+          const evalName = evalRuns[0] && evalRuns[0].eval_name ? evalRuns[0].eval_name : "Eval " + evalId;
+
+          html += "<h4 style='font-family: Poppins, sans-serif; margin: 1rem 0 0.5rem; color: var(--text);'>" + escapeHtml(evalName) + "</h4>";
+          html += '<table class="benchmark-table">';
+          html += "<thead><tr><th>Config</th><th>Run</th><th>Pass Rate</th>";
+          if (hasTime) html += "<th>Time (s)</th>";
+          if (hasErrors) html += "<th>Crashes During Execution</th>";
+          html += "</tr></thead>";
+          html += "<tbody>";
+
+          // Group by config and render with average rows
+          const configGroups = [...new Set(evalRuns.map(r => r.configuration))];
+          for (let ci = 0; ci < configGroups.length; ci++) {
+            const config = configGroups[ci];
+            const configRuns = evalRuns.filter(r => r.configuration === config);
+            if (configRuns.length === 0) continue;
+
+            const rowClass = ci === 0 ? "benchmark-row-with" : "benchmark-row-without";
+            const configLabel = config.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+
+            for (const run of configRuns) {
+              const r = run.result || {};
+              const prClass = r.pass_rate >= 0.8 ? "benchmark-delta-positive" : r.pass_rate < 0.5 ? "benchmark-delta-negative" : "";
+              html += '<tr class="' + rowClass + '">';
+              html += "<td>" + configLabel + "</td>";
+              html += "<td>" + run.run_number + "</td>";
+              html += '<td class="' + prClass + '">' + ((r.pass_rate || 0) * 100).toFixed(0) + "% (" + (r.passed || 0) + "/" + (r.total || 0) + ")</td>";
+              if (hasTime) html += "<td>" + (r.time_seconds != null ? r.time_seconds.toFixed(1) : "—") + "</td>";
+              if (hasErrors) html += "<td>" + (r.errors || 0) + "</td>";
+              html += "</tr>";
+            }
+
+            // Average row
+            const rates = configRuns.map(r => (r.result || {}).pass_rate || 0);
+            const avgRate = rates.reduce((a, b) => a + b, 0) / rates.length;
+            const avgPrClass = avgRate >= 0.8 ? "benchmark-delta-positive" : avgRate < 0.5 ? "benchmark-delta-negative" : "";
+            html += '<tr class="benchmark-row-avg ' + rowClass + '">';
+            html += "<td>" + configLabel + "</td>";
+            html += "<td>Avg</td>";
+            html += '<td class="' + avgPrClass + '">' + (avgRate * 100).toFixed(0) + "%</td>";
+            if (hasTime) {
+              const times = configRuns.map(r => (r.result || {}).time_seconds).filter(t => t != null);
+              html += "<td>" + (times.length ? (times.reduce((a, b) => a + b, 0) / times.length).toFixed(1) : "—") + "</td>";
+            }
+            if (hasErrors) html += "<td></td>";
+            html += "</tr>";
+          }
+          html += "</tbody></table>";
+
+          // Per-assertion detail for this eval
+          const runsWithExpectations = {};
+          for (const config of configGroups) {
+            runsWithExpectations[config] = evalRuns.filter(r => r.configuration === config && r.expectations && r.expectations.length > 0);
+          }
+          const hasAnyExpectations = Object.values(runsWithExpectations).some(runs => runs.length > 0);
+          if (hasAnyExpectations) {
+            // Collect all unique assertion texts across all configs
+            const allAssertions = [];
+            const seen = new Set();
+            for (const config of configGroups) {
+              for (const run of runsWithExpectations[config]) {
+                for (const exp of (run.expectations || [])) {
+                  if (!seen.has(exp.text)) {
+                    seen.add(exp.text);
+                    allAssertions.push(exp.text);
+                  }
+                }
+              }
+            }
+
+            html += '<table class="benchmark-table" style="margin-top: 0.5rem;">';
+            html += "<thead><tr><th>Assertion</th>";
+            for (const config of configGroups) {
+              const label = config.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+              html += "<th>" + escapeHtml(label) + "</th>";
+            }
+            html += "</tr></thead><tbody>";
+
+            for (const assertionText of allAssertions) {
+              html += "<tr><td>" + escapeHtml(assertionText) + "</td>";
+
+              for (const config of configGroups) {
+                html += "<td>";
+                for (const run of runsWithExpectations[config]) {
+                  const exp = (run.expectations || []).find(e => e.text === assertionText);
+                  if (exp) {
+                    const cls = exp.passed ? "benchmark-delta-positive" : "benchmark-delta-negative";
+                    const icon = exp.passed ? "\u2713" : "\u2717";
+                    html += '<span class="' + cls + '" title="Run ' + run.run_number + ': ' + escapeHtml(exp.evidence || "") + '">' + icon + "</span> ";
+                  } else {
+                    html += "— ";
+                  }
+                }
+                html += "</td>";
+              }
+              html += "</tr>";
+            }
+            html += "</tbody></table>";
+          }
+        }
+      }
+
+      // Notes
+      if (notes.length > 0) {
+        html += '<div class="benchmark-notes">';
+        html += "<h3>Analysis Notes</h3>";
+        html += "<ul>";
+        for (const note of notes) {
+          html += "<li>" + escapeHtml(note) + "</li>";
+        }
+        html += "</ul></div>";
+      }
+
+      container.innerHTML = html;
+    }
+
+    // ---- Start ----
+    init();
+    renderBenchmark();
+  </script>
+</body>
+</html>

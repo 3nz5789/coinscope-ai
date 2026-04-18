@@ -1,0 +1,37 @@
+# CODEOWNERS - CoinScopeAI
+#
+# Review ownership for the repository. Lines later in the file take precedence.
+# This is a placeholder until the team scales beyond a single maintainer.
+# Update in Phase 6 (post-validation) once reviewers are assigned per area.
+#
+# Format: path_pattern  @owner1 @owner2
+
+# Default owner - everything
+*                                   @3nz5789
+
+# Risk-critical paths require the project lead for any change
+/coinscope_trading_engine/risk/     @3nz5789
+/coinscope_trading_engine/execution/ @3nz5789
+/coinscope_trading_engine/risk_gate.py @3nz5789
+/coinscope_trading_engine/kelly_position_sizer.py @3nz5789
+
+# Exchange integrations
+/coinscope_trading_engine/binance_*.py @3nz5789
+/coinscope_trading_engine/data/     @3nz5789
+
+# Billing
+/billing/                           @3nz5789
+/billing_server.py                  @3nz5789
+/coinscope_trading_engine/billing/  @3nz5789
+
+# ML
+/ml/                                @3nz5789
+/coinscope_trading_engine/intelligence/ @3nz5789
+
+# Docs - open to the whole team once it exists
+/docs/                              @3nz5789
+
+# Infra and CI
+/.github/                           @3nz5789
+/docker-compose.yml                 @3nz5789
+/prometheus.yml                     @3nz5789

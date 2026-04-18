@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CoinScopeAI — Live PnL Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    /* ── Reset & Base ─────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:          #0a0d12;
+      --surface:     #10141c;
+      --card:        #151a25;
+      --border:      #1e2535;
+      --border-hi:   #2a3450;
+      --text:        #e2e8f0;
+      --muted:       #64748b;
+      --accent:      #2de8a8;
+      --accent-glow: rgba(45,232,168,0.18);
+      --green:       #2de8a8;
+      --green-dim:   rgba(45,232,168,0.12);
+      --red:         #ef4444;
+      --red-dim:     rgba(239,68,68,0.12);
+      --yellow:      #f59e0b;
+      --yellow-dim:  rgba(245,158,11,0.12);
+      --font:        'Inter', 'SF Pro Display', -apple-system, sans-serif;
+    }
+    html { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; }
+    body { min-height: 100vh; padding: 20px; }
+
+    /* ── Layout ───────────────────────────────────────────────── */
+    .header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 0 20px 0; border-bottom: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .logo { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; color: var(--text); }
+    .logo span { color: var(--accent); }
+    .badge {
+      font-size: 10px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase;
+      background: var(--accent-glow); color: var(--accent); border: 1px solid var(--accent);
+      padding: 2px 8px; border-radius: 20px;
+    }
+    .header-right { display: flex; align-items: center; gap: 16px; }
+    .engine-status {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; color: var(--muted);
+    }
+    .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--muted); flex-shrink: 0;
+      transition: background 0.3s;
+    }
+    .dot.online  { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .dot.offline { background: var(--red);   box-shadow: 0 0 6px var(--red); }
+    .last-update { font-size: 11px; color: var(--muted); }
+
+    /* ── Top KPI Row ──────────────────────────────────────────── */
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 900px) { .kpi-row { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 580px) { .kpi-row { grid-template-columns: repeat(2, 1fr); } }
+
+    .kpi-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 10px; padding: 16px;
+      display: flex; flex-direction: column; gap: 6px;
+      transition: border-color 0.2s;
+    }
+    .kpi-card:hover { border-color: var(--border-hi); }
+    .kpi-label { font-size: 11px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; }
+    .kpi-value { font-size: 26px; font-weight: 700; letter-spacing: -1px; line-height: 1; }
+    .kpi-sub   { font-size: 11px; color: var(--muted); }
+    .kpi-value.positive { color: var(--green); }
+    .kpi-value.negative { color: var(--red); }
+    .kpi-value.neutral  { color: var(--text); }
+
+    /* ── Circuit Breaker Banner ───────────────────────────────── */
+    .cb-banner {
+      display: none; align-items: center; gap: 10px;
+      background: var(--red-dim); border: 1px solid var(--red);
+      border-radius: 8px; padding: 10px 16px; margin-bottom: 16px;
+      font-size: 13px; font-weight: 600; color: var(--red);
+    }
+    .cb-banner.active { display: flex; }
+    .cb-banner svg { flex-shrink: 0; }
+
+    /* ── Main Grid ────────────────────────────────────────────── */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      grid-template-rows: auto auto;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    @media (max-width: 840px) { .main-grid { grid-template-columns: 1fr; } }
+
+    /* ── Cards ────────────────────────────────────────────────── */
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 10px; overflow: hidden;
+    }
+    .card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px; border-bottom: 1px solid var(--border);
+    }
+    .card-title { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; }
+    .card-badge { font-size: 10px; color: var(--muted); }
+    .card-body  { padding: 16px; }
+
+    /* ── Equity Chart ─────────────────────────────────────────── */
+    .chart-container { position: relative; height: 180px; width: 100%; }
+
+    /* ── Today Progress ───────────────────────────────────────── */
+    .today-stats { display: flex; flex-direction: column; gap: 14px; }
+    .today-row   { display: flex; flex-direction: column; gap: 4px; }
+    .today-row-header { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
+    .prog-bar    { height: 6px; border-radius: 3px; background: var(--border); overflow: hidden; }
+    .prog-fill   { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+    .prog-fill.green  { background: var(--green); }
+    .prog-fill.red    { background: var(--red); }
+    .prog-fill.yellow { background: var(--yellow); }
+    .today-value { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
+
+    /* ── Open Positions ───────────────────────────────────────── */
+    .positions-table { width: 100%; border-collapse: collapse; }
+    .positions-table th {
+      text-align: left; font-size: 10px; font-weight: 600; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.6px;
+      padding: 6px 10px; border-bottom: 1px solid var(--border);
+    }
+    .positions-table td {
+      padding: 8px 10px; font-size: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .positions-table tr:last-child td { border-bottom: none; }
+    .positions-table tr:hover td { background: rgba(255,255,255,0.02); }
+    .dir-long  { color: var(--green); font-weight: 600; font-size: 11px; }
+    .dir-short { color: var(--red);   font-weight: 600; font-size: 11px; }
+    .pnl-pos { color: var(--green); font-weight: 600; }
+    .pnl-neg { color: var(--red);   font-weight: 600; }
+    .empty-state { text-align: center; padding: 24px; color: var(--muted); font-size: 12px; }
+
+    /* ── Trade History ────────────────────────────────────────── */
+    .trade-list { display: flex; flex-direction: column; gap: 0; max-height: 280px; overflow-y: auto; }
+    .trade-list::-webkit-scrollbar { width: 4px; }
+    .trade-list::-webkit-scrollbar-track { background: transparent; }
+    .trade-list::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 2px; }
+    .trade-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 4px; border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+    .trade-row:last-child { border-bottom: none; }
+    .trade-row:hover { background: rgba(255,255,255,0.02); }
+    .trade-sym  { font-weight: 600; font-size: 12px; min-width: 80px; }
+    .trade-dir  { font-size: 10px; font-weight: 700; min-width: 40px; }
+    .trade-meta { font-size: 11px; color: var(--muted); flex: 1; }
+    .trade-pnl  { font-size: 13px; font-weight: 700; text-align: right; min-width: 60px; }
+
+    /* ── Risk Gauges ──────────────────────────────────────────── */
+    .gauges-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .gauge-card  {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 12px;
+    }
+    .gauge-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .gauge-value { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
+    .gauge-bar   { height: 4px; border-radius: 2px; background: var(--border); margin-top: 6px; overflow: hidden; }
+    .gauge-fill  { height: 100%; border-radius: 2px; transition: width 0.5s ease; }
+
+    /* ── Footer ───────────────────────────────────────────────── */
+    .footer {
+      display: flex; align-items: center; justify-content: space-between;
+      padding-top: 16px; border-top: 1px solid var(--border);
+      font-size: 11px; color: var(--muted);
+      margin-top: 4px;
+    }
+    .footer a { color: var(--accent); text-decoration: none; }
+
+    /* ── Refresh Pulse ────────────────────────────────────────── */
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.4; }
+    }
+    .refreshing .dot.online { animation: pulse 0.8s ease-in-out infinite; }
+
+    /* ── Number animation ─────────────────────────────────────── */
+    .counting { transition: color 0.3s; }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ──────────────────────────────────────────────────────────────── -->
+<div class="header">
+  <div class="header-left">
+    <div class="logo">Coin<span>Scope</span>AI</div>
+    <div class="badge">Live PnL</div>
+  </div>
+  <div class="header-right">
+    <div class="engine-status" id="engineStatus">
+      <div class="dot" id="engineDot"></div>
+      <span id="engineLabel">Connecting…</span>
+    </div>
+    <div class="last-update" id="lastUpdate">—</div>
+  </div>
+</div>
+
+<!-- ── Circuit Breaker Banner ──────────────────────────────────────────────── -->
+<div class="cb-banner" id="cbBanner">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+    <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+  </svg>
+  <span id="cbReason">Circuit breaker tripped — trading halted</span>
+</div>
+
+<!-- ── KPI Row ─────────────────────────────────────────────────────────────── -->
+<div class="kpi-row">
+  <div class="kpi-card">
+    <div class="kpi-label">Daily PnL</div>
+    <div class="kpi-value neutral counting" id="kpiDailyPnl">—</div>
+    <div class="kpi-sub" id="kpiDailyTrades">— trades today</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Total PnL</div>
+    <div class="kpi-value neutral counting" id="kpiTotalPnl">—</div>
+    <div class="kpi-sub" id="kpiTotalTrades">— total trades</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Win Rate</div>
+    <div class="kpi-value neutral counting" id="kpiWinRate">—</div>
+    <div class="kpi-sub" id="kpiWinRateSub">all-time</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Sharpe Ratio</div>
+    <div class="kpi-value neutral counting" id="kpiSharpe">—</div>
+    <div class="kpi-sub">annualised</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Max Drawdown</div>
+    <div class="kpi-value neutral counting" id="kpiDrawdown">—</div>
+    <div class="kpi-sub" id="kpiProfitFactor">PF —</div>
+  </div>
+</div>
+
+<!-- ── Main Grid ───────────────────────────────────────────────────────────── -->
+<div class="main-grid">
+
+  <!-- Equity Curve -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Equity Curve</div>
+      <div class="card-badge" id="equityBadge">last 30 trades</div>
+    </div>
+    <div class="card-body">
+      <div class="chart-container">
+        <canvas id="equityChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Today's Performance -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Today</div>
+      <div class="card-badge" id="todayDate">—</div>
+    </div>
+    <div class="card-body">
+      <div class="today-stats">
+        <div class="today-row">
+          <div class="today-value" id="todayPnl">—</div>
+          <div class="today-row-header">
+            <span>P&amp;L today</span>
+            <span id="todayWinRate">—% WR</span>
+          </div>
+        </div>
+        <div class="today-row">
+          <div class="today-row-header">
+            <span>Daily loss limit</span>
+            <span id="dailyLossLabel">—</span>
+          </div>
+          <div class="prog-bar">
+            <div class="prog-fill red" id="dailyLossBar" style="width:0%"></div>
+          </div>
+        </div>
+        <div class="today-row">
+          <div class="today-row-header">
+            <span>Win rate (today)</span>
+            <span id="todayWrBar">—</span>
+          </div>
+          <div class="prog-bar">
+            <div class="prog-fill green" id="todayWrFill" style="width:0%"></div>
+          </div>
+        </div>
+        <div class="today-row">
+          <div class="today-row-header">
+            <span>Best trade</span>
+            <span id="todayBest" class="pnl-pos">—</span>
+          </div>
+          <div class="today-row-header">
+            <span>Worst trade</span>
+            <span id="todayWorst" class="pnl-neg">—</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Open Positions -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Open Positions</div>
+      <div class="card-badge" id="positionCount">0 open</div>
+    </div>
+    <div class="card-body" style="padding:0">
+      <table class="positions-table">
+        <thead>
+          <tr>
+            <th>Symbol</th>
+            <th>Dir</th>
+            <th>Entry</th>
+            <th>Mark</th>
+            <th>Qty</th>
+            <th>Unrealised PnL</th>
+          </tr>
+        </thead>
+        <tbody id="positionsBody">
+          <tr><td colspan="6" class="empty-state">No open positions</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Risk Gauges -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Risk Exposure</div>
+      <div class="card-badge" id="cbState">—</div>
+    </div>
+    <div class="card-body">
+      <div class="gauges-grid">
+        <div class="gauge-card">
+          <div class="gauge-label">Balance</div>
+          <div class="gauge-value neutral" id="gaugeBalance">—</div>
+        </div>
+        <div class="gauge-card">
+          <div class="gauge-label">Exposure</div>
+          <div class="gauge-value neutral" id="gaugeExposure">—</div>
+          <div class="gauge-bar">
+            <div class="gauge-fill" id="gaugeExposureFill" style="width:0%; background: var(--yellow)"></div>
+          </div>
+        </div>
+        <div class="gauge-card">
+          <div class="gauge-label">Unrealised PnL</div>
+          <div class="gauge-value neutral" id="gaugeUnreal">—</div>
+        </div>
+        <div class="gauge-card">
+          <div class="gauge-label">Realised PnL</div>
+          <div class="gauge-value neutral" id="gaugeReal">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Recent Trade Journal ─────────────────────────────────────────────────── -->
+<div class="card" style="margin-bottom: 16px;">
+  <div class="card-header">
+    <div class="card-title">Recent Trades (7 days)</div>
+    <div class="card-badge" id="tradeCount">— trades</div>
+  </div>
+  <div class="card-body" style="padding: 4px 16px 12px;">
+    <div class="trade-list" id="tradeList">
+      <div class="empty-state">Loading…</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Footer ──────────────────────────────────────────────────────────────── -->
+<div class="footer">
+  <span>CoinScopeAI · Engine API: <a href="http://localhost:8001/health" target="_blank">localhost:8001</a> · Testnet Mode</span>
+  <span>Auto-refresh every <span id="refreshInterval">10</span>s · <a href="http://localhost:8001/docs" target="_blank">API Docs</a></span>
+</div>
+
+<!-- ── JavaScript ──────────────────────────────────────────────────────────── -->
+<script>
+// ── Config ──────────────────────────────────────────────────────────────────
+const ENGINE_URL      = 'http://localhost:8001';
+const REFRESH_MS      = 10_000;
+const INITIAL_CAPITAL = 10_000;
+
+// ── State ───────────────────────────────────────────────────────────────────
+let equityChart   = null;
+let lastTrades    = [];
+let isOnline      = false;
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+function fmt(v, decimals=2) {
+  if (v == null || v === undefined || v !== v) return '—';
+  return Number(v).toFixed(decimals);
+}
+function fmtPct(v) {
+  if (v == null) return '—';
+  const sign = v >= 0 ? '+' : '';
+  return sign + (v * 100).toFixed(2) + '%';
+}
+function fmtUSD(v) {
+  if (v == null) return '—';
+  const sign = v >= 0 ? '+' : '';
+  return sign + '$' + Math.abs(v).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function colorClass(v) {
+  if (v == null) return 'neutral';
+  return v > 0 ? 'positive' : v < 0 ? 'negative' : 'neutral';
+}
+function clamp(v, lo=0, hi=100) { return Math.min(hi, Math.max(lo, v)); }
+function tsAgo(ts) {
+  if (!ts) return '—';
+  const d = new Date(ts * 1000);
+  const now = new Date();
+  const diff = Math.floor((now - d) / 60000);
+  if (diff < 1)  return 'just now';
+  if (diff < 60) return diff + 'm ago';
+  const h = Math.floor(diff / 60);
+  if (h < 24) return h + 'h ago';
+  return Math.floor(h/24) + 'd ago';
+}
+
+// ── Fetch helpers ────────────────────────────────────────────────────────────
+async function fetchJSON(path, fallback={}) {
+  try {
+    const r = await fetch(ENGINE_URL + path, { signal: AbortSignal.timeout(5000) });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return await r.json();
+  } catch(e) {
+    console.warn('Fetch failed:', path, e.message);
+    return fallback;
+  }
+}
+
+// ── Engine Status ────────────────────────────────────────────────────────────
+async function checkHealth() {
+  try {
+    const r = await fetch(ENGINE_URL + '/health', { signal: AbortSignal.timeout(3000) });
+    return r.ok;
+  } catch { return false; }
+}
+
+function setOnline(online) {
+  isOnline = online;
+  const dot   = document.getElementById('engineDot');
+  const label = document.getElementById('engineLabel');
+  dot.className   = 'dot ' + (online ? 'online' : 'offline');
+  label.textContent = online ? 'Engine Online' : 'Engine Offline';
+}
+
+// ── Circuit Breaker ──────────────────────────────────────────────────────────
+function updateCircuitBreaker(cb) {
+  const banner = document.getElementById('cbBanner');
+  const state  = document.getElementById('cbState');
+  const reason = document.getElementById('cbReason');
+  if (!cb || !cb.state) {
+    state.textContent = '—';
+    banner.classList.remove('active');
+    return;
+  }
+  const tripped = cb.state !== 'CLOSED';
+  state.textContent = cb.state;
+  if (tripped) {
+    reason.textContent = cb.last_trip
+      ? 'Circuit breaker tripped: ' + cb.last_trip
+      : 'Circuit breaker tripped — trading halted';
+    banner.classList.add('active');
+  } else {
+    banner.classList.remove('active');
+  }
+}
+
+// ── KPI Cards ─────────────────────────────────────────────────────────────────
+function updateKPIs(perf, daily) {
+  // Daily PnL from journal
+  const dailyPnlPct = daily.total_pnl;
+  const dailyPnlEl  = document.getElementById('kpiDailyPnl');
+  dailyPnlEl.textContent = daily.trades > 0 ? fmtPct(dailyPnlPct) : '—';
+  dailyPnlEl.className   = 'kpi-value counting ' + (daily.trades > 0 ? colorClass(dailyPnlPct) : 'neutral');
+  document.getElementById('kpiDailyTrades').textContent = (daily.trades || 0) + ' trades today';
+
+  // Total PnL
+  const totalPnlEl = document.getElementById('kpiTotalPnl');
+  totalPnlEl.textContent = perf.total_trades > 0 ? fmtPct(perf.total_pnl) : '—';
+  totalPnlEl.className   = 'kpi-value counting ' + (perf.total_trades > 0 ? colorClass(perf.total_pnl) : 'neutral');
+  document.getElementById('kpiTotalTrades').textContent = (perf.total_trades || 0) + ' total trades';
+
+  // Win Rate
+  const wrEl = document.getElementById('kpiWinRate');
+  wrEl.textContent = perf.total_trades > 0 ? fmt(perf.win_rate * 100, 1) + '%' : '—';
+  wrEl.className   = 'kpi-value counting ' + (perf.win_rate >= 0.5 ? 'positive' : perf.win_rate > 0 ? 'negative' : 'neutral');
+
+  // Sharpe
+  const sharpeEl = document.getElementById('kpiSharpe');
+  sharpeEl.textContent = perf.total_trades > 0 ? fmt(perf.sharpe, 2) : '—';
+  sharpeEl.className   = 'kpi-value counting ' + (perf.sharpe >= 1 ? 'positive' : perf.sharpe > 0 ? 'neutral' : 'negative');
+
+  // Max Drawdown
+  const ddEl = document.getElementById('kpiDrawdown');
+  ddEl.textContent = perf.total_trades > 0 ? fmtPct(perf.max_drawdown) : '—';
+  ddEl.className   = 'kpi-value counting ' + (perf.max_drawdown < -0.1 ? 'negative' : perf.max_drawdown < 0 ? 'neutral' : 'neutral');
+  document.getElementById('kpiProfitFactor').textContent = perf.profit_factor ? 'PF ' + fmt(perf.profit_factor, 2) : 'PF —';
+}
+
+// ── Today Panel ───────────────────────────────────────────────────────────────
+function updateToday(daily, positions) {
+  const d = new Date();
+  document.getElementById('todayDate').textContent =
+    d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+
+  const todayPnlEl = document.getElementById('todayPnl');
+  if (daily.trades > 0) {
+    todayPnlEl.textContent = fmtPct(daily.total_pnl);
+    todayPnlEl.className   = 'today-value ' + (daily.total_pnl >= 0 ? 'pnl-pos' : 'pnl-neg');
+  } else {
+    todayPnlEl.textContent = '—';
+    todayPnlEl.className   = 'today-value';
+  }
+
+  document.getElementById('todayWinRate').textContent =
+    daily.win_rate != null ? (daily.win_rate * 100).toFixed(0) + '% WR' : '—% WR';
+
+  // Daily loss bar — using exposure daily_loss_pct
+  const dailyLossPct  = Math.abs(positions.daily_loss_pct || 0) * 100;
+  const dailyLossLim  = 5; // default 5%
+  const dailyLossUsed = clamp((dailyLossPct / dailyLossLim) * 100);
+  document.getElementById('dailyLossLabel').textContent =
+    dailyLossPct.toFixed(2) + '% / ' + dailyLossLim + '% limit';
+  document.getElementById('dailyLossBar').style.width = dailyLossUsed + '%';
+
+  // WR bar
+  const wrPct = daily.win_rate != null ? clamp(daily.win_rate * 100) : 0;
+  document.getElementById('todayWrBar').textContent =
+    daily.win_rate != null ? (wrPct.toFixed(0) + '%') : '—';
+  document.getElementById('todayWrFill').style.width = wrPct + '%';
+
+  // Best/worst
+  document.getElementById('todayBest').textContent =
+    daily.best_trade != null ? fmtPct(daily.best_trade) : '—';
+  document.getElementById('todayWorst').textContent =
+    daily.worst_trade != null ? fmtPct(daily.worst_trade) : '—';
+}
+
+// ── Open Positions ────────────────────────────────────────────────────────────
+function updatePositions(data) {
+  const tbody = document.getElementById('positionsBody');
+  const badge = document.getElementById('positionCount');
+  const positions = data.positions || [];
+  badge.textContent = positions.length + ' open';
+
+  if (positions.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No open positions</td></tr>';
+    return;
+  }
+  tbody.innerHTML = positions.map(p => {
+    const dir = p.direction === 1 ? 'LONG' : 'SHORT';
+    const dirClass = p.direction === 1 ? 'dir-long' : 'dir-short';
+    const pnlClass = p.pnl >= 0 ? 'pnl-pos' : 'pnl-neg';
+    return `<tr>
+      <td style="font-weight:600;">${p.symbol}</td>
+      <td><span class="${dirClass}">${dir}</span></td>
+      <td>$${Number(p.entry).toLocaleString('en-US',{minimumFractionDigits:2})}</td>
+      <td>$${Number(p.mark).toLocaleString('en-US',{minimumFractionDigits:2})}</td>
+      <td>${fmt(p.qty, 4)}</td>
+      <td class="${pnlClass}">$${fmt(p.pnl)} <small>(${fmtPct(p.pnl_pct)})</small></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Risk Gauges ───────────────────────────────────────────────────────────────
+function updateRiskGauges(data) {
+  document.getElementById('gaugeBalance').textContent =
+    data.balance != null ? '$' + Number(data.balance).toLocaleString('en-US',{minimumFractionDigits:2}) : '—';
+
+  const exposurePct = data.total_exposure_pct || 0;
+  const exposureEl  = document.getElementById('gaugeExposure');
+  exposureEl.textContent = exposurePct.toFixed(1) + '%';
+  exposureEl.className   = 'gauge-value ' + (exposurePct > 70 ? 'negative' : exposurePct > 40 ? 'neutral' : 'positive');
+  const fillColor = exposurePct > 70 ? 'var(--red)' : exposurePct > 40 ? 'var(--yellow)' : 'var(--green)';
+  const fillEl = document.getElementById('gaugeExposureFill');
+  fillEl.style.width = clamp(exposurePct) + '%';
+  fillEl.style.background = fillColor;
+
+  const unreal   = data.unrealised_pnl || 0;
+  const unrealEl = document.getElementById('gaugeUnreal');
+  unrealEl.textContent = fmtUSD(unreal);
+  unrealEl.className   = 'gauge-value ' + colorClass(unreal);
+
+  const real   = data.realised_pnl || 0;
+  const realEl = document.getElementById('gaugeReal');
+  realEl.textContent = fmtUSD(real);
+  realEl.className   = 'gauge-value ' + colorClass(real);
+}
+
+// ── Trade Journal ─────────────────────────────────────────────────────────────
+function updateTradeList(trades) {
+  const list  = document.getElementById('tradeList');
+  const badge = document.getElementById('tradeCount');
+  badge.textContent = (trades.length || 0) + ' trades';
+
+  if (!trades || trades.length === 0) {
+    list.innerHTML = '<div class="empty-state">No recent trades</div>';
+    return;
+  }
+
+  list.innerHTML = trades.slice().reverse().map(t => {
+    const dir      = t.side === 'LONG' ? 'LONG' : 'SHORT';
+    const dirClass = t.side === 'LONG' ? 'dir-long' : 'dir-short';
+    const pnlClass = (t.pnl_pct || 0) >= 0 ? 'pnl-pos' : 'pnl-neg';
+    const ago      = t.closed_at ? tsAgo(Date.parse(t.closed_at)/1000) : '—';
+    const regime   = t.regime ? `<span style="color:var(--muted);font-size:10px;">${t.regime}</span>` : '';
+    return `<div class="trade-row">
+      <div class="trade-sym">${t.symbol || '—'}</div>
+      <div class="trade-dir ${dirClass}">${dir}</div>
+      <div class="trade-meta">${ago} ${regime}</div>
+      <div class="trade-pnl ${pnlClass}">${fmtPct(t.pnl_pct)}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Equity Curve Chart ────────────────────────────────────────────────────────
+function buildEquityChart(trades) {
+  const canvas = document.getElementById('equityChart');
+  const ctx    = canvas.getContext('2d');
+
+  // Build equity series from closed trades
+  const closed = trades.filter(t => t.status === 'CLOSED' && t.pnl_pct != null);
+  const labels = [];
+  const values = [];
+  let equity   = INITIAL_CAPITAL;
+
+  if (closed.length > 0) {
+    closed.forEach((t, i) => {
+      equity += equity * (t.pnl_pct || 0);
+      labels.push('#' + (i + 1));
+      values.push(parseFloat(equity.toFixed(2)));
+    });
+  } else {
+    // Flat line placeholder
+    for (let i = 0; i < 5; i++) {
+      labels.push('#' + (i + 1));
+      values.push(INITIAL_CAPITAL);
+    }
+  }
+
+  const isUp = values.length >= 2 ? values[values.length-1] >= values[0] : true;
+  const lineColor  = isUp ? '#2de8a8' : '#ef4444';
+  const fillColor  = isUp ? 'rgba(45,232,168,0.08)' : 'rgba(239,68,68,0.08)';
+
+  document.getElementById('equityBadge').textContent = `last ${closed.length || 0} trades`;
+
+  if (equityChart) equityChart.destroy();
+
+  equityChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        borderColor: lineColor,
+        backgroundColor: fillColor,
+        borderWidth: 2,
+        pointRadius: values.length > 30 ? 0 : 3,
+        pointHoverRadius: 5,
+        pointBackgroundColor: lineColor,
+        fill: true,
+        tension: 0.3,
+      }]
+    },
+    options: {
+      animation: { duration: 400 },
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          backgroundColor: '#1e2535',
+          borderColor: '#2a3450',
+          borderWidth: 1,
+          titleColor: '#64748b',
+          bodyColor: '#e2e8f0',
+          callbacks: {
+            label: ctx => ' $' + ctx.parsed.y.toLocaleString('en-US',{minimumFractionDigits:2}),
+          }
+        },
+      },
+      scales: {
+        x: {
+          display: false,
+          grid: { display: false },
+        },
+        y: {
+          position: 'right',
+          grid: { color: 'rgba(255,255,255,0.04)' },
+          border: { display: false },
+          ticks: {
+            color: '#64748b',
+            font: { size: 10 },
+            maxTicksLimit: 4,
+            callback: v => '$' + v.toLocaleString('en-US',{maximumFractionDigits:0}),
+          }
+        }
+      },
+      interaction: { mode: 'nearest', axis: 'x', intersect: false },
+    }
+  });
+}
+
+// ── Main Refresh Cycle ────────────────────────────────────────────────────────
+async function refresh() {
+  document.querySelector('.engine-status').classList.add('refreshing');
+
+  const [health, perf, daily, positions, journal, cb] = await Promise.all([
+    checkHealth(),
+    fetchJSON('/performance'),
+    fetchJSON('/performance/daily'),
+    fetchJSON('/positions'),
+    fetchJSON('/journal?days=7'),
+    fetchJSON('/circuit-breaker'),
+  ]);
+
+  setOnline(health);
+  updateCircuitBreaker(cb);
+  updateKPIs(perf, daily);
+  updateToday(daily, positions);
+  updatePositions(positions);
+  updateRiskGauges(positions);
+
+  const trades = journal.trades || [];
+  if (JSON.stringify(trades) !== JSON.stringify(lastTrades)) {
+    lastTrades = trades;
+    updateTradeList(trades);
+    buildEquityChart(trades);
+  }
+
+  document.getElementById('lastUpdate').textContent =
+    'Updated ' + new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+
+  document.querySelector('.engine-status').classList.remove('refreshing');
+}
+
+// ── Countdown Timer ───────────────────────────────────────────────────────────
+let countdown = REFRESH_MS / 1000;
+setInterval(() => {
+  countdown--;
+  if (countdown <= 0) countdown = REFRESH_MS / 1000;
+  document.getElementById('refreshInterval').textContent = countdown;
+}, 1000);
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+refresh();
+setInterval(refresh, REFRESH_MS);
+</script>
+</body>
+</html>
