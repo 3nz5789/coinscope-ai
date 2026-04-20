@@ -72,6 +72,19 @@ class BacktestConfig:
     slippage_pct:          float        = 0.01    # 0.01% slippage assumption
     use_tp1_partial:       bool         = True    # take 50% off at TP1
     tp1_close_pct:         float        = 0.50    # fraction closed at TP1
+    # ATR-based entry/exit multipliers (default to EntryExitCalculator defaults)
+    atr_sl_mult:           float        = 1.5
+    atr_tp1_mult:          float        = 1.5
+    atr_tp2_mult:          float        = 3.0
+    atr_tp3_mult:           float        = 4.5
+    min_rr:                Optional[float] = None
+    # Direction filter — restrict to one side. Values: "BOTH", "LONG_ONLY", "SHORT_ONLY".
+    allowed_directions:    str          = "BOTH"
+    # Multi-timeframe trend filter: require the 4h EMA trend to agree with
+    # signal direction. Drops signals that fire counter to higher-timeframe.
+    mtf_filter_enabled:    bool         = False
+    mtf_block_neutral:     bool         = True
+    mtf_htf_timeframe:     str          = "4h"    # higher-timeframe bars used for the trend
 
 
 # ---------------------------------------------------------------------------
@@ -228,7 +241,29 @@ class Backtester:
             min_score=config.min_confluence_score,
             require_indicator_alignment=True,
         )
-        self._calculator = EntryExitCalculator()
+        self._calculator = EntryExitCalculator(
+            atr_sl_mult  = config.atr_sl_mult,
+            atr_tp1_mult = config.atr_tp1_mult,
+            atr_tp2_mult = config.atr_tp2_mult,
+            atr_tp3_mult = config.atr_tp3_mult,
+            min_rr       = config.min_rr,
+        )
+
+        # Multi-timeframe trend gate (computed from resampled 1h→4h closes)
+        self._mtf_filter = None
+        if config.mtf_filter_enabled:
+            from core.multi_timeframe_filter import MultiTimeframeFilter
+            self._mtf_filter = MultiTimeframeFilter(ema_fast=9, ema_slow=21)
+
+    def _htf_ratio(self) -> int:
+        """How many base-TF bars make one HTF bar (1h→4h = 4, 15m→4h = 16)."""
+        tf = self._config.timeframe
+        htf = self._config.mtf_htf_timeframe
+        unit = {"1m": 1, "3m": 3, "5m": 5, "15m": 15, "30m": 30,
+                "1h": 60, "2h": 120, "4h": 240, "6h": 360, "12h": 720, "1d": 1440}
+        base = unit.get(tf, 60)
+        high = unit.get(htf, 240)
+        return max(1, high // base)
 
     async def run(self, rest: BinanceRESTClient) -> BacktestResults:
         """
@@ -296,6 +331,29 @@ class Backtester:
             signal = self._generate_signal(symbol, window)
             if not signal or not signal.is_actionable:
                 continue
+            # Direction filter
+            if self._config.allowed_directions == "LONG_ONLY" and signal.direction != SignalDirection.LONG:
+                continue
+            if self._config.allowed_directions == "SHORT_ONLY" and signal.direction != SignalDirection.SHORT:
+                continue
+
+            # Multi-timeframe trend filter — only fire with the 4h trend
+            if self._mtf_filter is not None:
+                import numpy as _np
+                ratio = self._htf_ratio()
+                # Resample base-TF closes to HTF: take every `ratio`-th close
+                htf_closes = _np.array(
+                    [c.close for c in window[::ratio]],
+                    dtype=float,
+                )
+                htf_trend = self._mtf_filter.get_4h_trend(htf_closes)
+                want = "bull" if signal.direction == SignalDirection.LONG else "bear"
+                agreed = (htf_trend == want)
+                if not agreed:
+                    if htf_trend == "neutral" and not self._config.mtf_block_neutral:
+                        pass
+                    else:
+                        continue
 
             setup = self._calculator.calculate(signal, window)
             if not setup.valid or setup.entry <= 0:
@@ -494,11 +552,48 @@ class Backtester:
     async def _fetch_candles(
         self, rest: BinanceRESTClient, symbol: str
     ) -> list[Candle]:
-        """Fetch historical candles for the backtest window."""
+        """Fetch historical candles for the backtest window.
+
+        Order of preference:
+          1. Local SQLite store at `logs/klines.sqlite` — zero network, 10×
+             faster, works offline. Requires the (symbol, timeframe) to be
+             present in the store (backfilled on engine startup).
+          2. Fallback to Binance REST if the local coverage is insufficient.
+        """
         end_ms   = now_ms()
         start_ms = end_ms - self._config.lookback_days * 24 * 3600 * 1000
 
-        # Binance returns max 1500 candles per request
+        # ── 1. Try the local historical-klines store ──────────────────
+        try:
+            from storage.historical_klines import HistoricalKlinesStore
+            store = HistoricalKlinesStore(path="logs/klines.sqlite")
+            # Ask for more than lookback so we capture full coverage
+            rows = store.query(
+                symbol=symbol, interval=self._config.timeframe,
+                since_ms=start_ms, until_ms=end_ms,
+                limit=50_000,     # plenty for any reasonable window
+            )
+            if rows:
+                bars_expected = int((end_ms - start_ms) // _tf_ms(self._config.timeframe))
+                if len(rows) >= bars_expected * 0.95:   # 95% coverage threshold
+                    raw = [
+                        [
+                            r["open_time"], str(r["open"]), str(r["high"]),
+                            str(r["low"]), str(r["close"]), str(r["volume"]),
+                            r["close_time"], "0", r.get("num_trades") or 0,
+                            "0", "0", "0",       # ignored fields
+                        ]
+                        for r in rows
+                    ]
+                    candles = self._normalizer.klines_to_candles(
+                        symbol, self._config.timeframe, raw
+                    )
+                    logger.info("Backtest %s: used %d local klines (skipped Binance)", symbol, len(candles))
+                    return candles
+        except Exception as exc:
+            logger.debug("Local klines lookup failed (%s) — falling back to REST", exc)
+
+        # ── 2. Fallback: Binance REST pagination ──────────────────────
         all_raw: list = []
         cursor = start_ms
         while cursor < end_ms:
@@ -517,5 +612,15 @@ class Backtester:
         candles = self._normalizer.klines_to_candles(
             symbol, self._config.timeframe, all_raw
         )
-        logger.info("Fetched %d candles for %s", len(candles), symbol)
+        logger.info("Backtest %s: fetched %d candles from Binance REST", symbol, len(candles))
         return candles
+
+
+def _tf_ms(tf: str) -> int:
+    """Convert a Binance timeframe string to milliseconds."""
+    unit_ms = {"m": 60_000, "h": 3_600_000, "d": 86_400_000, "w": 604_800_000}
+    try:
+        n = int(tf[:-1]); u = tf[-1]
+        return n * unit_ms[u]
+    except Exception:
+        return 60 * 60_000  # default 1h

@@ -231,15 +231,27 @@ class RegimeDetector:
     def _label_state(self, model, state: int, features: np.ndarray) -> MarketRegime:
         """
         Assign a regime label to a state by examining mean return and variance.
+
+        hmmlearn returns `means_` and `covars_` with shapes that depend on
+        covariance_type and version. Numpy 2.x refuses `float()` on non-0-D
+        arrays, so we coerce via `.item()` after squeezing.
         """
-        means  = model.means_[:, 0]    # mean log-return per state
-        vars_  = model.covars_[:, 0]   # variance of log-return per state (diag)
+        def _scalar(x) -> float:
+            return float(np.asarray(x).ravel()[0])
 
-        mean_r = float(means[state])
-        var_r  = float(vars_[state])
-
-        # Global variance threshold for "volatile"
-        global_var = float(np.mean(vars_))
+        # Per-state mean return and variance of the first feature (log-return)
+        mean_r = _scalar(model.means_[state, 0])
+        # covars_ shape is (n_components, n_features) for diag, but some
+        # versions return (n_components, n_features, n_features). Index safely.
+        covars = np.asarray(model.covars_)
+        if covars.ndim == 3:
+            var_r_arr = covars[state, 0, 0]
+            all_vars  = covars[:, 0, 0]
+        else:
+            var_r_arr = covars[state, 0] if covars.ndim == 2 else covars[state]
+            all_vars  = covars[:, 0]    if covars.ndim == 2 else covars
+        var_r = _scalar(var_r_arr)
+        global_var = _scalar(np.mean(all_vars))
 
         if var_r > global_var * 2:
             return MarketRegime.VOLATILE

@@ -101,12 +101,12 @@ class Settings(BaseSettings):
         ..., description="[REQUIRED] Binance Testnet API secret"
     )
     binance_testnet_base_url: str = Field(
-        "https://testnet.binancefuture.com",
-        description="Testnet REST base URL",
+        "https://demo-fapi.binance.com",
+        description="Futures Demo REST base URL (replaces retired testnet.binancefuture.com)",
     )
     binance_testnet_ws_url: str = Field(
-        "wss://stream.binancefuture.com",
-        description="Testnet WebSocket base URL",
+        "wss://demo-fstream.binance.com",
+        description="Futures Demo WebSocket base URL (replaces retired stream.binancefuture.com)",
     )
 
     # ── Binance Mainnet ───────────────────────────────────────────────────
@@ -144,6 +144,9 @@ class Settings(BaseSettings):
     # ── Database ──────────────────────────────────────────────────────────
     database_url: str = Field(
         "sqlite:///./coinscope.db", description="SQLAlchemy database URL"
+    )
+    decisions_pg_url: str = Field(
+        "", description="Postgres DSN for the DecisionJournal mirror (empty = JSONL-only)"
     )
     db_pool_size: int = Field(5, ge=1, description="DB connection pool size")
     db_reset_on_startup: bool = Field(
@@ -231,10 +234,27 @@ class Settings(BaseSettings):
         None, description="Stripe webhook signing secret (whsec_...)"
     )
     # Price IDs — populate after running setup_stripe_products.py
-    stripe_starter_price_id: str = Field("", description="Stripe Price ID: Starter $19/mo")
-    stripe_pro_price_id: str = Field("", description="Stripe Price ID: Pro $49/mo")
-    stripe_elite_price_id: str = Field("", description="Stripe Price ID: Elite $99/mo")
-    stripe_team_price_id: str = Field("", description="Stripe Price ID: Team $299/mo")
+    # Monthly prices — these match what /billing/checkout uses by default.
+    # Pydantic maps them from env vars STRIPE_STARTER_PRICE_ID etc.
+    stripe_starter_price_id: str = Field("", description="Stripe Price ID: Starter monthly")
+    stripe_pro_price_id: str = Field("", description="Stripe Price ID: Pro monthly")
+    stripe_elite_price_id: str = Field("", description="Stripe Price ID: Elite monthly")
+    stripe_team_price_id: str = Field("", description="Stripe Price ID: Team monthly")
+    # Aliased monthly fields — accept the setup-script naming convention
+    # (STRIPE_PRICE_<TIER>_MONTHLY) without renaming the canonical env keys.
+    stripe_price_starter_monthly: str = Field("", description="Alias for stripe_starter_price_id")
+    stripe_price_pro_monthly:     str = Field("", description="Alias for stripe_pro_price_id")
+    stripe_price_elite_monthly:   str = Field("", description="Alias for stripe_elite_price_id")
+    stripe_price_team_monthly:    str = Field("", description="Alias for stripe_team_price_id")
+    # Annual prices
+    stripe_price_starter_annual:  str = Field("", description="Stripe Price ID: Starter annual")
+    stripe_price_pro_annual:      str = Field("", description="Stripe Price ID: Pro annual")
+    stripe_price_elite_annual:    str = Field("", description="Stripe Price ID: Elite annual")
+    stripe_price_team_annual:     str = Field("", description="Stripe Price ID: Team annual")
+    stripe_webhook_secret:        str = Field("", description="Stripe webhook signing secret (whsec_…)")
+    billing_success_url:          str = Field("", description="Post-checkout success URL")
+    billing_cancel_url:           str = Field("", description="Post-checkout cancel URL")
+    billing_portal_return_url:    str = Field("", description="Stripe portal return URL")
     stripe_success_url: str = Field(
         "http://localhost:3000/billing/success",
         description="Redirect URL after successful checkout"
@@ -307,6 +327,24 @@ class Settings(BaseSettings):
         pwd = self.redis_password.get_secret_value() if self.redis_password else ""
         auth = f":{pwd}@" if pwd else ""
         return f"redis://{auth}{self.redis_host}:{self.redis_port}/{self.redis_db}"
+
+    @property
+    def environment(self) -> Environment:
+        """Alias for `env` — some callers use this name."""
+        return self.env
+
+    @property
+    def max_position_size_pct(self) -> float:
+        """Alias for `max_single_position_pct` — legacy caller name."""
+        return self.max_single_position_pct
+
+    @property
+    def risk_per_trade_pct(self) -> float:
+        """
+        Fixed-fraction risk per trade as % of equity.
+        Defaults to 1.0% (Kelly hard ceiling is 2.0% per risk framework).
+        """
+        return 1.0
 
     # ── Validators ────────────────────────────────────────────────────────
 

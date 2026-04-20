@@ -94,7 +94,7 @@ logger = get_logger(__name__)
 
 # Pub/sub market data stream endpoints (NOT the ws-fapi/v1 API endpoint)
 STREAM_MAINNET_BASE = "wss://fstream.binance.com"
-STREAM_TESTNET_BASE = "wss://stream.binancefuture.com"
+STREAM_TESTNET_BASE = "wss://demo-fstream.binance.com"  # Binance Futures Demo WS (2026-04)
 
 # Reconnect backoff config
 RECONNECT_INITIAL_S = 1

@@ -13,10 +13,20 @@ from dataclasses import dataclass, asdict
 
 @dataclass
 class JournalEntry:
-    """Single trade journal entry"""
+    """Full provenance record for a single trade.
+
+    Fields are grouped into:
+      * Identity       — id, symbol, side, leverage
+      * Signal origin  — source, regime, confidence, signal_score, scanner_hits, indicators_at_entry, reasons
+      * Entry order    — entry_client_id, entry_order_id, entry_submit_ms, entry_fill_ms, entry_price, quantity, kelly_usd
+      * Bracket        — sl_price, tp_price, sl_algo_id, tp_algo_id
+      * Exit           — exit_trigger, exit_order_id, exit_price, closed_at, pnl_pct, pnl_usd
+      * Status         — status ("OPEN" | "CLOSED")
+    """
+    # ── Identity ──────────────────────────────────────────────────
     id: str
     symbol: str
-    side: str
+    side: str                         # "BUY" / "SELL"
     regime: str
     confidence: float
     entry_price: float
@@ -28,8 +38,35 @@ class JournalEntry:
     status: str
     opened_at: str
     closed_at: str = ""
-    signal_score: float = 0.0
-    sentiment_score: float = 0.0
+
+    # ── Signal origin ─────────────────────────────────────────────
+    signal_score:     float = 0.0
+    sentiment_score:  float = 0.0
+    strength:         str   = ""       # "STRONG" / "MODERATE" etc
+    htf_trend:        str   = ""       # "bull"/"bear"/"neutral" at entry
+    leverage:         int   = 0
+    source:           str   = ""       # "manual" / "auto" / "api"
+    reasons:          list  = None     # scanner reason strings (e.g. "Bid wall @ …")
+    scanner_hits:     list  = None     # full per-scanner breakdown
+    indicators_at_entry: dict = None   # {rsi, adx, macd, atr_pct, trend, momentum, volatility}
+
+    # ── Entry order details ──────────────────────────────────────
+    entry_client_id:  str = ""         # our idempotency token (cs-… / auto-…)
+    entry_order_id:   int = 0          # Binance orderId
+    entry_submit_ms:  int = 0          # when we sent the order to Binance
+    entry_fill_ms:    int = 0          # when Binance reported fill
+    slippage_bps:     float = 0.0      # entry_price vs setup.entry
+
+    # ── Protective bracket (algo orders) ─────────────────────────
+    sl_price:         float = 0.0
+    tp_price:         float = 0.0
+    sl_algo_id:       int   = 0
+    tp_algo_id:       int   = 0
+
+    # ── Exit details ──────────────────────────────────────────────
+    exit_trigger:     str = ""         # "manual" / "killswitch" / "sl_hit" / "tp_hit" / "reconcile" / ""
+    exit_order_id:    int = 0          # Binance orderId of the closing order
+    closed_by:        str = ""         # who/what called close (user id / "engine")
 
 
 class TradeJournal:
@@ -66,14 +103,30 @@ class TradeJournal:
         entry_price,
         quantity,
         kelly_usd,
-        signal_score=0.0
+        signal_score: float = 0.0,
+        leverage: int = 0,
+        source: str = "",
+        reasons: list = None,
+        strength: str = "",
+        htf_trend: str = "",
+        scanner_hits: list = None,
+        indicators_at_entry: dict = None,
+        entry_client_id: str = "",
+        entry_order_id:  int = 0,
+        entry_submit_ms: int = 0,
+        entry_fill_ms:   int = 0,
+        slippage_bps:    float = 0.0,
+        sl_price: float = 0.0,
+        tp_price: float = 0.0,
+        sl_algo_id: int = 0,
+        tp_algo_id: int = 0,
     ):
-        """Log trade open"""
+        """Log a trade open with full provenance."""
         entry = JournalEntry(
             id=f"{symbol}_{datetime.utcnow():%Y%m%d%H%M%S}",
             symbol=symbol,
             side=side,
-            regime=regime,
+            regime=regime or "UNKNOWN",
             confidence=confidence,
             entry_price=entry_price,
             exit_price=0.0,
@@ -83,14 +136,50 @@ class TradeJournal:
             pnl_usd=0.0,
             status="OPEN",
             opened_at=datetime.utcnow().isoformat(),
-            signal_score=signal_score
+            signal_score=signal_score,
+            strength=strength or "",
+            htf_trend=htf_trend or "",
+            leverage=int(leverage or 0),
+            source=source or "",
+            reasons=list(reasons or []),
+            scanner_hits=list(scanner_hits or []),
+            indicators_at_entry=dict(indicators_at_entry or {}),
+            entry_client_id=entry_client_id or "",
+            entry_order_id=int(entry_order_id or 0),
+            entry_submit_ms=int(entry_submit_ms or 0),
+            entry_fill_ms=int(entry_fill_ms or 0),
+            slippage_bps=float(slippage_bps or 0.0),
+            sl_price=float(sl_price or 0.0),
+            tp_price=float(tp_price or 0.0),
+            sl_algo_id=int(sl_algo_id or 0),
+            tp_algo_id=int(tp_algo_id or 0),
         )
         self.entries.append(entry)
         self._save()
         return entry
 
-    def log_close(self, entry_id: str, exit_price: float, pnl_pct: float, pnl_usd: float):
-        """Log trade close"""
+    def update_bracket(self, entry_id: str, sl_algo_id: int = 0, tp_algo_id: int = 0) -> bool:
+        """Attach algo-order IDs to an existing OPEN entry after the bracket
+        is confirmed live on Binance."""
+        for e in self.entries:
+            if e.id == entry_id and e.status == "OPEN":
+                if sl_algo_id: e.sl_algo_id = int(sl_algo_id)
+                if tp_algo_id: e.tp_algo_id = int(tp_algo_id)
+                self._save()
+                return True
+        return False
+
+    def log_close(
+        self,
+        entry_id: str,
+        exit_price: float,
+        pnl_pct: float,
+        pnl_usd: float,
+        exit_trigger: str = "",
+        exit_order_id: int = 0,
+        closed_by: str = "",
+    ):
+        """Log trade close with the reason + exit order reference."""
         for e in self.entries:
             if e.id == entry_id and e.status == "OPEN":
                 e.exit_price = exit_price
@@ -98,6 +187,9 @@ class TradeJournal:
                 e.pnl_usd = round(pnl_usd, 2)
                 e.status = "CLOSED"
                 e.closed_at = datetime.utcnow().isoformat()
+                e.exit_trigger = exit_trigger or e.exit_trigger or ""
+                e.exit_order_id = int(exit_order_id or e.exit_order_id or 0)
+                e.closed_by = closed_by or e.closed_by or ""
                 self._save()
                 return True
         return False

@@ -51,7 +51,13 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 WS_MAINNET_URL  = "wss://ws-fapi.binance.com/ws-fapi/v1"
-WS_TESTNET_URL  = "wss://testnet.binancefuture.com/ws-fapi/v1"
+# NOTE: Binance retired the futures testnet (`testnet.binancefuture.com`).
+# The Futures Demo at `demo-fapi.binance.com` exposes REST + market-streams
+# (`wss://demo-fstream.binance.com`) but signed WS (`/ws-fapi/v1`) is NOT
+# enabled on demo as of 2026-04 — an upgrade attempt gets HTTP 403.
+# This client is currently unused by api.py; use REST + listen-key user-data
+# stream on the market-streams host instead.
+WS_TESTNET_URL  = "wss://ws-fapi.binance.com/ws-fapi/v1"  # mainnet fallback; DO NOT use for demo trading
 
 # Reconnect 60 s before the hard 24-hour server limit
 CONNECTION_MAX_AGE_S   = 23 * 3600 + 0 * 60   # 23 h

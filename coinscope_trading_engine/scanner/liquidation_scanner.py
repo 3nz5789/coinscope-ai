@@ -141,27 +141,29 @@ class LiquidationScanner(BaseScanner):
     # ── Helpers ──────────────────────────────────────────────────────────
 
     async def _fetch_liquidations(self, symbol: str) -> list:
-        """Fetch recent liquidations, using cache to avoid repeated API calls."""
-        cache_key = f"liquidations:{symbol}:{self._lookback_minutes}m"
-        cached = await self.cache.get(cache_key)
-        if cached is not None:
-            # Re-normalise from plain dicts
-            return [_dict_to_liq(d) for d in cached]
+        """Read liquidations from the WS-fed in-memory buffer in api.py.
 
-        end_ms   = now_ms()
-        start_ms = end_ms - self._lookback_minutes * 60 * 1000
-        raw      = await self.rest.get_liquidation_orders(
-            symbol=symbol, limit=200,
-            start_time=start_ms, end_time=end_ms,
-        )
-        orders = [
-            o for r in raw
-            if (o := self._normalizer.liquidation_to_schema(r)) is not None
-        ]
+        Binance retired `GET /fapi/v1/allForceOrders` in 2025. We now
+        subscribe to `<symbol>@forceOrder` WS streams and buffer events
+        in `api._liq_buffer`. The scanner simply reads the last
+        `lookback_minutes` worth of events from that buffer.
 
-        # Cache for 60 s (liquidations are relatively infrequent)
-        await self.cache.set(cache_key, [_liq_to_dict(o) for o in orders], ttl=60)
-        return orders
+        Note on Binance's 2026-04-10 change: `<symbol>@forceOrder` now
+        only emits the *largest single* liquidation per 1000ms. Enough
+        to detect cascades, not enough to estimate full cumulative volume.
+        """
+        try:
+            import api  # late import to avoid circular at module load
+            return api._get_recent_liquidations(symbol, self._lookback_minutes)
+        except Exception as exc:
+            # If the WS feed module isn't available (e.g. scanner run from
+            # a script outside api.py), fall back to an empty result.
+            if not getattr(self, "_feed_warned", False):
+                logger.warning(
+                    "LiquidationScanner: WS feed not available (%s) — no-op.", exc,
+                )
+                self._feed_warned = True
+            return []
 
     def _classify(self, total_notional: float, dominance: float) -> tuple[HitStrength, float]:
         """Classify the cascade severity into (HitStrength, score)."""

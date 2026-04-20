@@ -1,0 +1,32 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "coinscope-engine",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "cd coinscope_trading_engine && exec ../venv/bin/uvicorn api:app --host 127.0.0.1 --port 8001"
+      ],
+      "port": 8001
+    },
+    {
+      "name": "coinscope-dashboard-static",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "cd dashboard && exec ../venv/bin/python -m http.server 5173 --bind 127.0.0.1"
+      ],
+      "port": 5173
+    },
+    {
+      "name": "coinscope-dashboard",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "cd coinscopeai-dashboard && exec pnpm dev --port 5174 --host 127.0.0.1"
+      ],
+      "port": 5174
+    }
+  ]
+}

@@ -55,7 +55,11 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 REST_MAINNET_BASE = "https://fapi.binance.com"
-REST_TESTNET_BASE = "https://testnet.binancefuture.com"
+# Binance migrated the Futures Testnet into the unified Demo Trading platform.
+# The old host `testnet.binancefuture.com` redirects; `demo-fapi.binance.com`
+# is the documented Futures Demo API base (see demo.binance.com API-management
+# page, 2026-04). Same /fapi/v*/* paths; HMAC-signed the same way.
+REST_TESTNET_BASE = "https://demo-fapi.binance.com"
 
 # Default recv window for signed requests (milliseconds)
 DEFAULT_RECV_WINDOW = 5_000
@@ -95,8 +99,15 @@ class APIResponse:
 # ---------------------------------------------------------------------------
 
 def _sign(secret: str, params: dict[str, Any]) -> str:
-    """HMAC-SHA256 of alphabetically-sorted key=value& payload."""
-    payload = urlencode(sorted(params.items()))
+    """HMAC-SHA256 of the exact query string that will be sent.
+
+    Binance verifies the signature against the raw query string it receives;
+    we must hash in the same order aiohttp will serialise. Python dicts
+    preserve insertion order (3.7+), so iterating the dict directly matches
+    what `params=req_params` sends to the wire. Sorting here would produce a
+    hash that disagrees with the on-wire order and yield HTTP 400 -1022.
+    """
+    payload = urlencode(list(params.items()))
     return hmac.new(
         secret.encode("utf-8"),
         payload.encode("utf-8"),

@@ -24,8 +24,8 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+/lib/
+/lib64/
 parts/
 sdist/
 var/
@@ -107,3 +107,9 @@ coinscope_trading_engine 4/
 *.docx
 *.pptx
 CLAUDE.md
+
+# coinscopeai-dashboard (flattened in — built on deploy)
+coinscopeai-dashboard/node_modules/
+coinscopeai-dashboard/dist/
+coinscopeai-dashboard/.manus-logs/
+coinscopeai-dashboard/pnpm-lock.yaml.bak

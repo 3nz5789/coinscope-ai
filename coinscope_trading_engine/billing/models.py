@@ -114,6 +114,9 @@ class CheckoutRequest(BaseModel):
     tier:             PlanTier
     customer_email:   EmailStr
     customer_name:    Optional[str] = None
+    cycle:            Optional[str] = "monthly"   # "monthly" | "annual"
+    success_url:      Optional[str] = None
+    cancel_url:       Optional[str] = None
 
     class Config:
         json_schema_extra = {
@@ -121,6 +124,7 @@ class CheckoutRequest(BaseModel):
                 "tier": "pro",
                 "customer_email": "trader@example.com",
                 "customer_name": "Mohammed A.",
+                "cycle": "monthly",
             }
         }
 

@@ -84,21 +84,36 @@ def _save_state(state: dict) -> None:
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _price_id_for_tier(tier: PlanTier) -> str:
-    """Look up the Stripe Price ID for a plan tier from config."""
-    mapping = {
-        PlanTier.STARTER: settings.stripe_starter_price_id,
-        PlanTier.PRO:     settings.stripe_pro_price_id,
-        PlanTier.ELITE:   settings.stripe_elite_price_id,
-        PlanTier.TEAM:    settings.stripe_team_price_id,
+def _price_id_for_tier(tier: PlanTier, cycle: str = "monthly") -> str:
+    """Look up the Stripe Price ID for a tier + billing cycle.
+
+    Accepts env vars either form:
+      * STRIPE_<TIER>_PRICE_ID              (monthly, canonical)
+      * STRIPE_PRICE_<TIER>_MONTHLY         (from setup_stripe_test_products.py)
+      * STRIPE_PRICE_<TIER>_ANNUAL          (annual)
+    """
+    cycle = (cycle or "monthly").lower()
+    monthly = {
+        PlanTier.STARTER: settings.stripe_starter_price_id or settings.stripe_price_starter_monthly,
+        PlanTier.PRO:     settings.stripe_pro_price_id     or settings.stripe_price_pro_monthly,
+        PlanTier.ELITE:   settings.stripe_elite_price_id   or settings.stripe_price_elite_monthly,
+        PlanTier.TEAM:    settings.stripe_team_price_id    or settings.stripe_price_team_monthly,
     }
+    annual = {
+        PlanTier.STARTER: settings.stripe_price_starter_annual,
+        PlanTier.PRO:     settings.stripe_price_pro_annual,
+        PlanTier.ELITE:   settings.stripe_price_elite_annual,
+        PlanTier.TEAM:    settings.stripe_price_team_annual,
+    }
+    mapping = annual if cycle in ("annual", "yearly", "year") else monthly
     price_id = mapping.get(tier, "")
     if not price_id:
         raise HTTPException(
             status_code=400,
             detail=(
-                f"Price ID for tier '{tier}' not configured. "
-                "Run setup_stripe_products.py and add the IDs to .env."
+                f"Price ID for tier '{tier}' ({cycle}) not configured. "
+                "Run scripts/setup_stripe_test_products.py and add the "
+                "STRIPE_PRICE_*_MONTHLY / _ANNUAL lines from its output to .env."
             ),
         )
     return price_id
@@ -114,12 +129,12 @@ def _require_stripe() -> None:
 
 
 def _enriched_catalogue() -> list[PlanInfo]:
-    """Return plan catalogue enriched with price IDs from config."""
+    """Return plan catalogue enriched with monthly price IDs from config."""
     id_map = {
-        PlanTier.STARTER: settings.stripe_starter_price_id,
-        PlanTier.PRO:     settings.stripe_pro_price_id,
-        PlanTier.ELITE:   settings.stripe_elite_price_id,
-        PlanTier.TEAM:    settings.stripe_team_price_id,
+        PlanTier.STARTER: settings.stripe_starter_price_id or settings.stripe_price_starter_monthly,
+        PlanTier.PRO:     settings.stripe_pro_price_id     or settings.stripe_price_pro_monthly,
+        PlanTier.ELITE:   settings.stripe_elite_price_id   or settings.stripe_price_elite_monthly,
+        PlanTier.TEAM:    settings.stripe_team_price_id    or settings.stripe_price_team_monthly,
     }
     result = []
     for plan in PLAN_CATALOGUE:
@@ -206,7 +221,7 @@ async def create_checkout(body: CheckoutRequest) -> CheckoutResponse:
     to complete payment. On success Stripe redirects to STRIPE_SUCCESS_URL;
     on cancel to STRIPE_CANCEL_URL.
     """
-    price_id = _price_id_for_tier(body.tier)
+    price_id = _price_id_for_tier(body.tier, cycle=body.cycle or "monthly")
 
     try:
         # Look up or create Stripe customer
