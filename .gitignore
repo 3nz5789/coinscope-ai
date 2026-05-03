@@ -113,3 +113,20 @@ coinscopeai-dashboard/node_modules/
 coinscopeai-dashboard/dist/
 coinscopeai-dashboard/.manus-logs/
 coinscopeai-dashboard/pnpm-lock.yaml.bak
+
+# ── Triage 2026-05-03 ─────────────────────────────────────────
+# Backups (CLAUDE.md is already ignored above; .bak of any kind shouldn't track)
+*.bak
+*.bak.*
+
+# Throwaway write-tests
+.write_test*
+
+# Sensitive admin documents — EIN, mailing forms (PII, never to GitHub)
+admin/
+
+# Backups of already-ignored CLAUDE.md
+archive/_backups/
+
+# Drive sync companion: when the .git dir is excluded via xattr, also
+# avoid letting any local backup tooling pick up other transient artifacts

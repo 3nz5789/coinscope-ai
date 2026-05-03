@@ -227,8 +227,8 @@ curl -s "http://localhost:8001/position-size?symbol=BTCUSDT" | python3 -m json.t
 | Daily loss | 5% of account |
 | Max drawdown | 10% from peak |
 | Position heat (total deployed) | 80% of available capital |
-| Max leverage | 20× |
-| Max open positions | 3 simultaneously |
+| Max leverage | 10× |
+| Max open positions | 5 simultaneously |
 
 **If the recommended size exceeds your risk tolerance at current drawdown level:** Scale down manually. The sizer is advisory — position heat cap is a hard rule.
 
