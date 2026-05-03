@@ -78,9 +78,9 @@ normalised     = (raw_score / MAX_RAW_SCORE) × 100  # MAX_RAW_SCORE = 300
 **Risk gate thresholds (canonical — `coinscopeai-trading-rules`):**
 - Daily loss limit: 5%
 - Max drawdown: 10%
-- Max leverage: 20x
+- Max leverage: 10x
 - Position heat cap: 80%
-- Max 3 open positions
+- Max 5 open positions
 **Kill switch:** armed state halts C4 to zero regardless of upstream score.
 
 ---

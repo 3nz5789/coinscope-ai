@@ -92,8 +92,8 @@ Changing any of these between 2026-04-10 and 2026-04-30 requires explicit sign-o
 | --- | --- | --- |
 | `MAX_DAILY_LOSS_PCT` | `5.0` | Hard daily loss budget, as percent of equity. |
 | `MAX_DRAWDOWN_PCT` | `10.0` | Peak-to-trough drawdown cap. |
-| `MAX_LEVERAGE` | `20` | Per-trade leverage ceiling. |
-| `MAX_OPEN_POSITIONS` | `3` | Cap on simultaneously open positions. |
+| `MAX_LEVERAGE` | `10` | Per-trade leverage ceiling. Locked 2026-05-01 via PCC v2 §8 Capital Cap. |
+| `MAX_OPEN_POSITIONS` | `5` | Cap on simultaneously open positions. |
 | `POSITION_HEAT_CAP_PCT` | `80` | Total portfolio heat cap, as percent of equity. |
 | `KELLY_FRACTION` | `0.25` | Fractional-Kelly factor. |
 | `KELLY_HARD_CAP_PCT` | `2.0` | Absolute size cap per trade. |

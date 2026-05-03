@@ -12,7 +12,7 @@ How the engine turns a gate-accepted candidate into a position size in base curr
 Kelly-full → × fractional factor (0.25)
            → clamp to hard cap (2% of equity)
            → × regime multiplier (bull 1.0 / chop 0.5 / bear 0.3)
-           → × leverage respecting MAX_LEVERAGE (20x)
+           → × leverage respecting MAX_LEVERAGE (10x)
            → round to exchange step size
 ```
 
@@ -54,7 +54,7 @@ The v3 classifier's labels do not enter the sizing pipeline today — they adjus
 
 ## Step 5 — Leverage ceiling
 
-The sized trade is converted to a notional and checked against `MAX_LEVERAGE = 20x`. If the implied leverage exceeds the cap, size shrinks further.
+The sized trade is converted to a notional and checked against `MAX_LEVERAGE = 10x`. If the implied leverage exceeds the cap, size shrinks further.
 
 ## Step 6 — Exchange step size
 

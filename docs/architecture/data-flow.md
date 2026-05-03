@@ -109,8 +109,8 @@ For each candidate, the gate checks:
 - **Portfolio heat.** Would this trade push total open risk past `POSITION_HEAT_CAP_PCT` (80%)? Reject.
 - **Correlation cap.** Too many correlated longs already? Reject.
 - **Daily loss budget.** Have we spent the day's loss budget (`MAX_DAILY_LOSS_PCT`, 5%)? Reject.
-- **Max open positions.** At 3 already? Reject.
-- **Leverage cap.** Would the sized trade exceed `MAX_LEVERAGE` (20x)? Reject.
+- **Max open positions.** At 5 already? Reject.
+- **Leverage cap.** Would the sized trade exceed `MAX_LEVERAGE` (10x)? Reject.
 - **Circuit breaker state.** Tripped? Reject everything until reset.
 - **Kill switch.** Engaged? Reject everything.
 

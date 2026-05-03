@@ -38,8 +38,8 @@ All values are locked between 2026-04-10 and 2026-04-30. Env-var names and the a
 | Per-trade size cap | 2% of equity | `KELLY_HARD_CAP_PCT` |
 | Fractional Kelly factor | 0.25 | `KELLY_FRACTION` |
 | Portfolio heat cap | 80% | `POSITION_HEAT_CAP_PCT` |
-| Max open positions | 3 | `MAX_OPEN_POSITIONS` |
-| Max leverage per trade | 20x | `MAX_LEVERAGE` |
+| Max open positions | 5 | `MAX_OPEN_POSITIONS` |
+| Max leverage per trade | 10x | `MAX_LEVERAGE` |
 | Consecutive losses → breaker | 4 | `CONSECUTIVE_LOSSES_BREAKER` |
 | Breaker reset window | 24 hours | `CIRCUIT_BREAKER_RESET_HOURS` |
 | ATR stop multiplier | 1.5 × ATR | `ATR_STOP_MULTIPLIER` |
