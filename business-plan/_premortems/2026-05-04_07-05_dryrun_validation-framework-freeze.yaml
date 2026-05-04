@@ -1,0 +1,104 @@
+---
+mode: deep
+context: "Lock framework changes during 30-day P0 validation window (May 2026 cohort, cap 40)"
+phase: P0
+gate: G2
+date: 2026-05-04
+dryrun: true
+notes: "Test run of coinscopeai-premortem skill on an undecided real question. Not a final commitment - Mohammed must still decide and log."
+---
+
+# Pre-Mortem - Dry Run
+# Question: should we freeze framework changes (sections 00-16) during the 30-day P0 validation window?
+# Decision pending. This premortem surfaces tigers/elephants to inform the call.
+
+# ---- PASS 1: pattern-match (raw findings) ----
+potential_risks:
+  - "Framework changes during validation could invalidate cohort feedback"
+  - "Without freeze, drift detector load increases"
+  - "Freeze may block a critical risk-threshold change if discovered mid-validation"
+  - "Queue mechanism (_proposed/) doesn't exist yet"
+  - "40-cap cohort may not have started yet - 'validation window' boundaries unclear"
+  - "Decision-log not updated for this freeze policy"
+  - "Cowork project_instructions still has old master prompt - separate freeze concern"
+  - "Scoopy persona references '30-day validation phase' - does it permit mid-phase framework changes?"
+
+# ---- PASS 2: verification gate applied ----
+
+tigers:
+  - risk: "Freeze may block a critical risk-threshold change if discovered mid-validation"
+    location: "business-plan/master-prompt-v2.md (no emergency clause)"
+    severity: high
+    category: risk
+    mitigation_checked: "No emergency exception clause defined for risk thresholds; no escalation path; no named override authority. If a real risk surfaces (e.g., need to drop max_open_positions from 5 to 3 mid-validation for safety), the freeze policy as drafted has no relief valve."
+    suggested_fix: "Add explicit carve-out: risk-threshold tightening (more conservative direction) is exempt from freeze; risk-threshold loosening is blocked. Document override path."
+
+  - risk: "Queue mechanism (_proposed/) doesn't exist yet"
+    location: "business-plan/_proposed/ (folder absent)"
+    severity: medium
+    category: process
+    mitigation_checked: "_proposed/ folder doesn't exist; no template for queued changes; no review cadence; no owner named."
+    suggested_fix: "Create _proposed/ with a queue template before announcing freeze. Mirror the _premortems/ + _handoffs/ pattern - one YAML per proposed change, dated, with rationale."
+
+  - risk: "Framework changes during validation could invalidate cohort feedback"
+    location: "framework sections 05/11/14/16 + master prompt"
+    severity: medium
+    category: data
+    mitigation_checked: "No 'material change' definition exists; no governance doc for what triggers cohort reset; no version pin captured at cohort start."
+    suggested_fix: "Snapshot framework + master prompt + .env at cohort start (git tag like cohort-p0-start-2026-05-XX). Define 'material change' as anything affecting personas, tier matrix, risk thresholds, gates, or phase definitions."
+
+elephants:
+  - risk: "40-cap cohort may not have actually started yet - we may be debating freeze for a window that hasn't opened"
+    severity: medium
+    suggested_fix: "Confirm cohort start date FIRST. If cohort hasn't started, freeze is premature - lock the framework AT cohort start instead of as a separate prior decision."
+
+  - risk: "Freeze creates a 30-day window where framework feedback from doing the work cannot be incorporated - we lose the most valuable learning period"
+    severity: medium
+    suggested_fix: "Capture all 'would have changed' notes in _proposed/ during freeze; bulk-incorporate at validation close; treat the 30 days as a forced learning capture period."
+
+paper_tigers:
+  - risk: "Scoopy persona references 'currently in 30-day validation phase. No core engine changes' - does this also mean no framework changes?"
+    location: "business-plan/master-prompt-v2.md (Environment rules section)"
+    reason: "Phrase explicitly says 'No core engine changes' - it does NOT prohibit framework changes. The freeze under discussion would be a NEW policy on top of this, not an interpretation of existing language. Master prompt is unambiguous about scope."
+
+  - risk: "Decision-log not updated for this freeze policy"
+    location: "business-plan/_decisions/decision-log.md"
+    reason: "By definition, the log entry happens when (and if) the freeze is decided. Pre-decision absence of the entry is not a tiger - it's the natural state."
+
+false_alarms:
+  - finding: "Without freeze, drift detector load increases"
+    reason: "Drift detector is automated per project_state_2026-05-02 memory. Increased run frequency is not a real cost - the detector is the safety net, not a constraint."
+
+  - finding: "Cowork project_instructions still has old master prompt"
+    reason: "Out of scope. Separate deferred handoff (per project_deferred_handoffs memory). Related to overall freeze hygiene but not to the framework-freeze decision specifically."
+
+# ---- Severity policy ----
+# HIGH    blocks. must address OR explicitly accept in business-plan/_decisions/decision-log.md
+# MEDIUM  informs. recommend addressing.
+# LOW     notes for awareness.
+
+# ---- Decision required ----
+decision: "discuss"
+decision_log_ref: "PENDING - Mohammed to choose: accept_with_log | mitigate_first | research_options"
+
+# Recommended path (Claude's read):
+# 1. mitigate_first: address the HIGH tiger by adding an emergency carve-out clause to the freeze policy.
+# 2. address the MEDIUM tigers by creating _proposed/ folder + cohort-start git tag.
+# 3. confirm cohort start date (the elephant) BEFORE finalizing freeze policy.
+# 4. then accept_with_log.
+
+# ---- Cross-reference ----
+related_handoffs:
+  - "(none yet)"
+related_decisions:
+  - "leverage-cap-10x-2026-05-01 (the elephant in that premortem was this freeze question)"
+related_memories:
+  - "project_state_2026-05-02 (validation phase context)"
+  - "project_deferred_handoffs (cohort + Cowork paste status)"
+  - "feedback_risk_threshold_reconciliation (drift detector + 4-surface patching pattern)"
+
+# ---- Verification gate evidence ----
+# 8 potential_risks evaluated -> 3 tigers, 2 elephants, 2 paper_tigers, 2 false_alarms
+# False-positive kill rate: 4 of 8 (50%) - exactly what the gate is designed to catch.
+# This run validates the pattern: pattern-matching alone would have flagged 8 risks;
+# verification reduced to 3 actionable tigers + 2 elephants worth raising.

@@ -1,0 +1,129 @@
+---
+session: "<short kebab-case name, e.g., validation-cohort-p0, leverage-cap-lock>"
+date: YYYY-MM-DD
+status: complete         # complete | partial | blocked
+outcome: SUCCEEDED       # SUCCEEDED | PARTIAL_PLUS | PARTIAL_MINUS | FAILED
+phase: P0                # P0 | P1 | P2 | P5
+gate: G2                 # G1 | G2 | G3 | G4 (or N/A)
+---
+
+# Handoff (CoinScopeAI)
+# Format: ~400 tokens YAML vs ~2000 markdown
+# goal + now are first-class - articulate them tightly in one sentence each.
+
+goal: "<what THIS session accomplished, one sentence, declarative>"
+now: "<what NEXT session should do first, one sentence, imperative>"
+test: "<command or check to verify this work, e.g., 'run drift detector against framework sections 5/11/14/16'>"
+
+done_this_session:
+  - task: "<task 1 description>"
+    files: ["<file1>", "<file2>"]
+  - task: "<task 2 description>"
+    files: ["<file3>"]
+
+blockers:
+  - "<blocker if any, otherwise omit this key>"
+
+questions:
+  - "<unresolved question for next session>"
+
+decisions:
+  - decision_name: "<what was decided>"
+    rationale: "<why>"
+    log_entry: "<link to _decisions/decision-log.md entry if applicable>"
+
+findings:
+  - finding_name: "<key learning>"
+    detail: "<details>"
+
+worked:
+  - "<approach that worked - repeat next time>"
+
+failed:
+  - "<approach that failed - avoid next time, with reason>"
+
+next:
+  - "<first next step, with explicit command or file path if known>"
+  - "<second next step>"
+
+files:
+  created: ["<new files this session>"]
+  modified: ["<changed files this session>"]
+  deleted: ["<removed files this session>"]
+
+memory_updates:
+  - "<Cowork memory file written or updated this session>"
+
+mempalace_writes:
+  - "<MemPalace wing/hall entries created this session>"
+
+related_premortems:
+  - "<business-plan/_premortems/YYYY-MM-DD_HH-MM_topic.yaml>"
+
+# ============================================================
+# EXAMPLE (leverage cap lock session, 2026-05-01)
+# ============================================================
+# ---
+# session: leverage-cap-lock
+# date: 2026-05-01
+# status: partial
+# outcome: PARTIAL_PLUS
+# phase: P0
+# gate: G2
+# ---
+#
+# goal: "Locked leverage cap to 10x across CLAUDE.md, .env, master prompt v2, framework section 8"
+# now: "Re-paste master prompt v2 into Cowork project_instructions field (manual, no API)"
+# test: "Run drift detector against framework sections 5/11/14/16"
+#
+# done_this_session:
+#   - task: "Patched leverage cap 20x to 10x in 4 surfaces"
+#     files: [CLAUDE.md, .env, .env.example, business-plan/master-prompt-v2.md]
+#   - task: "Added risk_threshold_reconciliation feedback memory"
+#     files: [memory/feedback_risk_threshold_reconciliation.md]
+#   - task: "Ran premortem - 1 tiger accepted with log"
+#     files: [business-plan/_premortems/2026-05-01_15-20_leverage-cap-lock.yaml]
+#
+# blockers:
+#   - "Cowork project_instructions field requires manual paste, no API"
+#
+# questions:
+#   - "Should COI-40 (engine restart) wait until G2 closes?"
+#
+# decisions:
+#   - decision_name: leverage_cap_canonical
+#     rationale: "10x per PCC v2 §8 Capital Cap, supersedes earlier 20x"
+#     log_entry: "_decisions/decision-log.md#leverage-cap-10x-2026-05-01"
+#
+# findings:
+#   - finding_name: drift_pattern
+#     detail: "CLAUDE.md and master prompt drift if patched in separate passes"
+#   - finding_name: guardrail_works
+#     detail: "Drift detector caught the 20x->10x mismatch on first run"
+#
+# worked:
+#   - "Patching all 4 surfaces in one pass + running guardrail immediately"
+#
+# failed:
+#   - "Earlier attempt patched only CLAUDE.md, master prompt drifted for 6 hours - now mandatory to patch all surfaces in same pass"
+#
+# next:
+#   - "Re-paste master prompt v2 into Cowork project_instructions (manual)"
+#   - "Run drift detector against framework sections 5/11/14/16"
+#   - "Close COI-40 once VPS engine restart confirmed"
+#
+# files:
+#   created:
+#     - memory/feedback_risk_threshold_reconciliation.md
+#     - business-plan/_premortems/2026-05-01_15-20_leverage-cap-lock.yaml
+#   modified:
+#     - CLAUDE.md
+#     - .env
+#     - .env.example
+#     - business-plan/master-prompt-v2.md
+#
+# memory_updates:
+#   - feedback_risk_threshold_reconciliation.md
+#
+# related_premortems:
+#   - business-plan/_premortems/2026-05-01_15-20_leverage-cap-lock.yaml

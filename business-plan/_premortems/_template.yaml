@@ -1,0 +1,111 @@
+---
+mode: deep              # deep | quick
+context: "<what is being analyzed - plan section, code change, threshold update, gate move>"
+phase: P0               # P0 | P1 | P2 | P5
+gate: G1                # G1 | G2 | G3 | G4 (or N/A)
+date: YYYY-MM-DD
+---
+
+# Pre-Mortem (CoinScopeAI)
+# "Imagine 3 months from now this work has failed. Why?"
+# Reference: business-plan/_decisions/decision-log.md, master-prompt-v2.md
+
+# ---- PASS 1: pattern-match (raw findings, no filtering) ----
+potential_risks:
+  - "<finding 1>"
+  - "<finding 2>"
+
+# ---- PASS 2: verification gate (run BEFORE promoting any finding to tiger) ----
+# 4 questions per finding:
+#   context_read    - did I read +/- 20 lines around the finding?
+#   fallback_check  - is there a try/except, if exists, or else branch I missed?
+#   scope_check     - is this in scope for the current change?
+#   dev_only_check  - is this in main, tests/, or dev-only code?
+# If ANY answer is "no" or "unknown" -> NOT a verified tiger.
+# Demote to paper_tiger (cite the mitigation) or false_alarm (cite the reason).
+
+tigers:
+  - risk: "<verified threat description>"
+    location: "<file:line>"
+    severity: high            # high blocks | medium informs | low notes
+    category: risk            # data | integration | risk | regime | gate | infrastructure | process | dependency
+    mitigation_checked: "<REQUIRED - what you looked for and did NOT find>"
+    suggested_fix: "<how to address>"
+
+elephants:
+  - risk: "<unspoken concern that nobody wants to raise>"
+    severity: medium
+    suggested_fix: "<approach>"
+
+paper_tigers:
+  - risk: "<looked threatening>"
+    location: "<file:line>"
+    reason: "<which mitigation EXISTS - cite the code or memory>"
+
+false_alarms:
+  - finding: "<initial pattern-match concern>"
+    reason: "<why verification cleared it>"
+
+# ---- Severity policy (CoinScopeAI) ----
+# HIGH    blocks. must address OR explicitly accept in business-plan/_decisions/decision-log.md
+# MEDIUM  informs. recommend addressing.
+# LOW     notes for awareness.
+
+# ---- Required decision if any HIGH tigers ----
+# accept_with_log    - add entry to _decisions/decision-log.md with rationale
+# mitigate_first     - update plan, re-run premortem
+# research_options   - spawn research, return with 2-4 mitigation options
+# discuss            - specific risk conversation
+
+decision: "<accept_with_log | mitigate_first | research_options | discuss | none>"
+decision_log_ref: "<link to _decisions/decision-log.md entry if applicable>"
+
+# ---- Cross-reference ----
+related_handoffs:
+  - "<business-plan/_handoffs/YYYY-MM-DD_HH-MM_topic.yaml>"
+related_decisions:
+  - "<entry id from decision-log.md>"
+related_memories:
+  - "<memory file name from Cowork auto-memory>"
+
+# ============================================================
+# EXAMPLE (locking leverage cap to 10x per PCC v2)
+# ============================================================
+# ---
+# mode: deep
+# context: "Lock leverage cap at 10x across CLAUDE.md, .env, master prompt v2, framework section 8"
+# phase: P0
+# gate: G2
+# date: 2026-05-01
+# ---
+#
+# potential_risks:
+#   - Leverage value cited inconsistently across CLAUDE.md and master prompt
+#   - .env files in CoinScopeAI_v2 are mode 0400, plain cp will fail silently
+#   - Drive auto-mirror may hold a stale copy of the framework after lock
+#   - Engine code reads from .env, may cache value
+#
+# tigers:
+#   - risk: "Leverage cap drift between CLAUDE.md and master prompt v2"
+#     location: "business-plan/master-prompt-v2.md"
+#     severity: high
+#     category: data
+#     mitigation_checked: "No drift detector running on master prompt section, no pre-commit hook, no CI check"
+#     suggested_fix: "Add master prompt to drift detector input set; run guardrail in same pass as patch"
+#
+# elephants:
+#   - risk: "30-day validation cohort may slip if framework keeps changing during validation"
+#     severity: medium
+#     suggested_fix: "Freeze framework changes for the validation window; queue proposed changes in business-plan/_proposed/"
+#
+# paper_tigers:
+#   - risk: "max_open_positions value mismatch across surfaces"
+#     location: "CLAUDE.md, master-prompt-v2.md, .env"
+#     reason: "Already verified 5 across all surfaces per memory project_max_open_positions (2026-05-03)"
+#
+# false_alarms:
+#   - finding: "Engine .env file mode 0400 will block writes"
+#     reason: "Verified - we use cp -f per memory feedback_v2_readonly_data_operations"
+#
+# decision: accept_with_log
+# decision_log_ref: "_decisions/decision-log.md#leverage-cap-10x-2026-05-01"
