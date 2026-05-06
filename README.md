@@ -223,6 +223,40 @@ Best-known config (30d backtest, 2026-04-20): `LONG_ONLY · min_score=60 · ATR 
 
 ---
 
+## CoinScopeAI Division
+
+This fork includes a custom `agency-agents/coinscopeai/` division for operating CoinScopeAI with stronger architecture, bug triage, risk governance, and release discipline.
+
+### Agents
+- `coinscopeai-system-architect`
+- `coinscopeai-bug-hunter`
+- `coinscopeai-risk-guardian`
+- `coinscopeai-release-auditor`
+
+### Recommended chains
+
+#### New feature
+1. `engineering-codebase-onboarding-engineer`
+2. `coinscopeai-system-architect`
+3. implementation agent
+4. `engineering-code-reviewer`
+5. `coinscopeai-release-auditor`
+
+#### Bug fix
+1. `engineering-codebase-onboarding-engineer`
+2. `coinscopeai-bug-hunter`
+3. `coinscopeai-risk-guardian`
+4. `testing-reality-checker`
+
+#### High-risk trading or billing change
+1. `coinscopeai-system-architect`
+2. `coinscopeai-risk-guardian`
+3. `testing-api-tester`
+4. `engineering-sre`
+5. `coinscopeai-release-auditor`
+
+---
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for branching, PR expectations,

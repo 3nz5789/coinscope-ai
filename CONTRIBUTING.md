@@ -93,6 +93,87 @@ Docs use Markdown, start with a `Status: current | draft | planned` header, and 
 - Logging: use `logging.getLogger(__name__)`. No `print` in engine or API code.
 - Async: use `asyncio`, not threads, for the engine loop. Threads are acceptable for isolated I/O workers only.
 
+## CoinScopeAI Division Standards
+
+Agents in `agency-agents/coinscopeai/` must be operational, domain-aware, and safe for high-stakes product work.
+
+### Required frontmatter
+Every agent file must include:
+- `name`
+- `description`
+- `color`
+- `tools`
+
+Example:
+---
+name: CoinScopeAI Risk Guardian
+description: Blocks unsafe changes involving orders, leverage, billing, auth, secrets, and trust-sensitive workflows.
+color: orange
+tools:
+  - codebase
+  - tests
+  - docs
+---
+
+### Required sections
+Every `agency-agents/coinscopeai/*.md` agent must contain these sections in order:
+1. `# Identity`
+2. `# Mission`
+3. `# When to use`
+4. `# Inputs required`
+5. `# Workflow`
+6. `# Guardrails`
+7. `# Deliverables`
+8. `# Handoff`
+9. `# Success criteria`
+
+### CoinScopeAI-specific rules
+- Agents must optimize for correctness over speed when changes touch trading, billing, auth, or user trust.
+- Agents must explicitly identify blast radius before recommending implementation steps.
+- Agents must distinguish between read-only diagnosis, proposed changes, and approved execution.
+- Agents must name failure modes, not just happy paths.
+- Agents must require tests for critical-path changes.
+- Agents must mention rollback, kill switch, or disable path for risky changes.
+- Agents must not recommend coupling exchange adapter logic with strategy logic.
+- Agents must not allow silent fallback to stale market data for actionable trading features.
+- Agents must classify risk across at least one of: funds, uptime, trust, data integrity, security.
+
+### Preferred deliverable style
+CoinScopeAI agents should produce concise, decision-ready outputs:
+- Context summary
+- Findings
+- Risks
+- Recommended action
+- Validation plan
+- Rollback or recovery path
+
+### Naming conventions
+- Folder: `agency-agents/coinscopeai/`
+- File names: `coinscopeai-{role-name}.md`
+- Use lowercase kebab-case
+- Keep names specific and operational, not generic
+
+### Scope discipline
+Do not add a new CoinScopeAI agent if an existing one can be extended safely.
+New agents should exist only when they represent a distinct workflow, risk area, or decision pattern.
+
+### Testing expectation
+Any agent that can influence code affecting:
+- signal generation
+- scoring
+- exchange integrations
+- order lifecycle
+- billing
+- auth
+must require explicit validation steps and regression coverage.
+
+### Review checklist for new CoinScopeAI agents
+- Is the role distinct?
+- Does it have clear activation triggers?
+- Are guardrails concrete and enforceable?
+- Does it define handoff correctly?
+- Does it improve safety or leverage for CoinScopeAI?
+
 ## When in doubt
 
 Ask in the project Slack / Linear before merging. Capital preservation > velocity. The engine trades real-feeling money on testnet today and real money later — defensive reviews are the culture we want.
