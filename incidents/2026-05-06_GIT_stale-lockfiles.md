@@ -40,15 +40,27 @@ crash; only the post-commit cleanup of lockfiles was interrupted.
 
 ## Follow-up
 
-- [ ] Identify the crashing client (GUI or IDE extension).
-- [x] Audit other local repos for similar stale locks — sandbox-visible
-  scope (`~/Code` full mount, `~/Documents/Claude/Projects/CoinScopeAI`
-  subtree only) ran clean on 2026-05-06.
-- [ ] Run the same audit on the Mac directly to cover the unmounted
-  portion of `~/Documents`:
-  ```
-  find ~/Code ~/Documents -name "HEAD.lock" -o -name "index.lock" 2>/dev/null
-  ```
-- [ ] If a specific tool is identified as the root cause, add a runbook
-  entry for safe-recovery so future stale-lock incidents don't require
-  diagnosis from scratch.
+- [x] Identify the crashing client.
+  - **Ruled out:** GUI git client (Tower / GitKraken / Fork / Sourcetree /
+    GitHub Desktop) and IDE git integrations (VS Code / Cursor /
+    JetBrains) — none installed.
+  - **Confirmed timing detail:** lockfile mtime (2026-05-04 10:16:10 UTC)
+    matches the author timestamp of commit `230287e` exactly. The commit
+    itself landed cleanly in history, so the locks were not left by a
+    failed commit. They were re-acquired by a subsequent operation that
+    was interrupted before releasing them.
+  - **Inference (not confirmed):** the most plausible class of culprit is
+    an agent-driven git session that was terminated between operations
+    in a multi-step flow. Candidates include any of the agents installed
+    on this machine that drive git on the user's behalf (Claude/Cowork,
+    Manus, ChatGPT Atlas, Comet, Jasper). No log evidence currently
+    available identifies which agent or whether an agent was involved at
+    all; a Terminal-direct `git` session ended by sleep/force-quit/
+    network failure remains a possibility.
+  - **Status:** root cause not definitively established. Detection and
+    recovery procedures (below) cover the failure mode regardless of
+    which actor caused it.
+- [x] Audit other local repos — clean across ~/Code and ~/Documents.
+- [ ] Add runbook entry for safe-recovery from stale .git locks. Cover
+  agent-session interruptions and Terminal-direct interruptions as
+  distinct trigger classes, with the same recovery steps.
