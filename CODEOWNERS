@@ -1,0 +1,24 @@
+# CODEOWNERS
+# Owners are automatically requested for review on PRs touching their areas.
+
+# Default — everything
+* @3nz5789
+
+# Risk logic (2 reviewers required)
+coinscope_trading_engine/risk/ @3nz5789
+coinscope_trading_engine/scanner/ @3nz5789
+app/engine/ @3nz5789
+
+# Exchange adapters (2 reviewers required)
+coinscope_trading_engine/binance_ws_client.py @3nz5789
+coinscope_trading_engine/binance_rest_client.py @3nz5789
+app/integrations/ @3nz5789
+
+# Canonical config and thresholds
+.env.example @3nz5789
+CLAUDE.md @3nz5789
+
+# CI/CD and infra
+.github/ @3nz5789
+docker-compose.yml @3nz5789
+requirements.txt @3nz5789

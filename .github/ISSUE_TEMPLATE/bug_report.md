@@ -1,23 +1,20 @@
 ---
 name: Bug Report
-about: Something is broken in the engine, dashboard, bot, or AI pipeline
-title: "[BUG] "
-labels: bug
-assignees: ''
+about: Something is broken or behaving unexpectedly
+title: "[BUG] <short description>"
+labels: "type: bug"
+assignees: ""
 ---
 
-## Component Affected
+## Summary
 
-- [ ] Trading Engine (services/trading-engine)
-- [ ] Web Dashboard (apps/dashboard)
-- [ ] Telegram Bot (services/telegram-bot)
-- [ ] AI/ML Pipeline (ai/)
-- [ ] Infrastructure (infra/)
-- [ ] Other
+<!-- One-line description of what is broken -->
 
-## What happened?
+## Environment
 
-<!-- Clear description of the bug -->
+- Component: <!-- engine / scanner / risk-gate / dashboard / telegram / VPS / local -->
+- Mode: <!-- testnet / local dev -->
+- Engine version / commit:
 
 ## Steps to reproduce
 
@@ -27,22 +24,23 @@ assignees: ''
 
 ## Expected behaviour
 
+<!-- What should happen -->
+
 ## Actual behaviour
 
-## Environment
-
-- Python version:
-- Node.js version (if frontend):
-- OS:
-- Engine running? (yes/no):
-- TESTNET_MODE: true/false
-
-## Logs / Error output
+<!-- What actually happens — include logs, error messages, curl output -->
 
 ```
-paste error here
+paste logs here
 ```
 
-## Screenshots
+## Impact
 
-<!-- If applicable, add screenshots to help explain the problem -->
+- [ ] Data loss risk (SLO: No Data Loss)
+- [ ] Capital at risk
+- [ ] Silent failure (no error surfaced)
+- [ ] Cosmetic / low impact
+
+## Related
+
+<!-- Linear issue, ADR, or related PR -->

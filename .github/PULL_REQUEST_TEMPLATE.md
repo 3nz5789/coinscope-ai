@@ -1,52 +1,48 @@
-## Description
+## Summary
 
-<!-- Provide a clear summary of the change and which issue it addresses. -->
-
-Fixes # (issue)
+<!-- One sentence: what does this PR do and why? -->
 
 ## Type of change
 
-- [ ] Bug fix (non-breaking change which fixes an issue)
-- [ ] New feature (non-breaking change which adds functionality)
-- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
-- [ ] Documentation update
-- [ ] Infrastructure / DevOps change
-- [ ] Strategy / Risk logic change (requires extra review)
+- [ ] Bug fix (non-breaking)
+- [ ] New feature (non-breaking)
+- [ ] Breaking change
+- [ ] Documentation / config only
+- [ ] Risk logic / threshold change ⚠️ (requires 2 reviewers)
 
-## Components modified
+## Validation-phase check
 
-- [ ] `services/trading-engine/`
-- [ ] `apps/dashboard/`
-- [ ] `services/telegram-bot/`
-- [ ] `ai/`
-- [ ] `strategies/`
-- [ ] `infra/`
-- [ ] `docs/`
-- [ ] `configs/`
-- [ ] Other: ___
+> If ANY box below is checked, **stop and close this PR**. Changes wait until validation phase ends.
 
-## How has this been tested?
+- [ ] Changes a canonical risk threshold (`MAX_DAILY_LOSS_PCT`, `MAX_DRAWDOWN_PCT`, `MAX_LEVERAGE`, `MAX_OPEN_POSITIONS`, `POSITION_HEAT_CAP_PCT`, `KELLY_FRACTION`)
+- [ ] Sets `BINANCE_TESTNET=false`
+- [ ] Removes or bypasses a circuit breaker or kill switch
+- [ ] Retrains or replaces an ML artifact
+- [ ] Changes order submission semantics (entry/stop/TP grouping, reduce-only flags)
 
-<!-- Describe the tests you ran. Provide instructions to reproduce. -->
+## Changes
 
-- [ ] Unit tests pass
-- [ ] Integration tests pass
-- [ ] Manual testing performed
-- [ ] Backtesting results attached (if strategy change)
+-
+-
 
-## Trading safety checklist
+## Testing
 
-- [ ] No hardcoded API keys or secrets
-- [ ] All new configs default to TESTNET mode
-- [ ] Risk management logic unchanged OR flagged for extra review
-- [ ] Position sizing logic unchanged OR flagged for extra review
-- [ ] Order execution logic unchanged OR flagged for extra review
+- [ ] `pytest` passes locally
+- [ ] `ruff check .` passes
+- [ ] New tests added for new behaviour
+- [ ] Smoke tested against Binance testnet (for exchange adapter changes)
 
-## General checklist
+## Risk impact
 
-- [ ] My code follows the project's style guidelines
-- [ ] I have performed a self-review of my code
-- [ ] I have added/updated relevant documentation
-- [ ] I have added tests that prove my fix/feature works
-- [ ] New and existing tests pass locally
-- [ ] I have updated the GitHub Project Board status
+None / [describe]
+
+## Linked issues
+
+Fixes # (issue)
+
+## Checklist
+
+- [ ] Self-reviewed the diff
+- [ ] No `.env` file committed
+- [ ] `CHANGELOG.md` updated under `## Unreleased`
+- [ ] Two reviewers requested (if risk logic / adapter change)

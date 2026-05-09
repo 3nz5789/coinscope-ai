@@ -1,113 +1,68 @@
-name: CoinScopeAI CI
+name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main]
   pull_request:
-    branches: [ main, develop ]
-
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+    branches: [main]
 
 jobs:
-  # ── Backend: Trading Engine ──────────────────────────────────
-  backend-lint-test:
-    name: Backend — Lint & Test
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: "pip"
+      - run: pip install ruff
+      - run: ruff check .
 
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      APP_ENV: TEST
+      BINANCE_TESTNET: "true"
+      REDIS_URL: redis://localhost:6379/0
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt
-          pip install flake8 black mypy pytest pytest-cov
-
-      - name: Create dummy .env for CI
-        run: |
-          cat > .env << 'EOF'
-          BINANCE_FUTURES_TESTNET_API_KEY=ci_dummy_key
-          BINANCE_FUTURES_TESTNET_API_SECRET=ci_dummy_secret
-          BINANCE_FUTURES_TESTNET_BASE_URL=https://testnet.binancefuture.com
-          NOTION_TOKEN=ci_dummy_token
-          TELEGRAM_BOT_TOKEN=ci_dummy_bot
-          TELEGRAM_CHAT_ID=0
-          ENGINE_PORT=8001
-          TESTNET_MODE=true
-          INITIAL_CAPITAL=10000
-          MAX_DAILY_LOSS_PCT=0.03
-          MAX_CONSECUTIVE_LOSSES=5
-          MAX_DRAWDOWN_PCT=0.10
-          MAX_OPEN_POSITIONS=3
-          EOF
-
-      - name: Lint — flake8 (syntax errors)
-        run: |
-          flake8 engine/ risk_management/ bot/ ml_models/ services/ \
-            --count --select=E9,F63,F7,F82 --show-source --statistics \
-            --exclude=__pycache__,*.pyc
-
-      - name: Lint — flake8 (style warnings)
-        run: |
-          flake8 engine/ risk_management/ bot/ ml_models/ services/ \
-            --count --exit-zero --max-line-length=120 --statistics \
-            --exclude=__pycache__,*.pyc
-
+          pip install --upgrade pip
+          pip install -r requirements.txt pytest pytest-asyncio pytest-cov
       - name: Run tests
-        env:
-          TESTNET_MODE: "true"
-        run: |
-          pytest tests/ -v --tb=short || echo "⚠️ No tests found — add tests to tests/"
+        run: pytest -x -q --cov=coinscope_trading_engine --cov-report=term-missing
 
-  # ── Security Scan ────────────────────────────────────────────
-  security-scan:
-    name: Security — Secret Scan
+  security:
+    name: Security Scan
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Scan for hardcoded secrets
+      - uses: actions/checkout@v4
+      - name: Check for committed .env files
         run: |
-          echo "Scanning for hardcoded API keys..."
-          if grep -rn "api_key\s*=\s*['\"][A-Za-z0-9]\{20,\}['\"]" \
-               engine/ risk_management/ bot/ ml_models/ services/ \
-               --include="*.py" | grep -v "os.environ\|os.getenv\|getenv\|#\|example\|dummy\|test"; then
-            echo "❌ Hardcoded API key detected! Move to environment variables."
+          if git ls-files | grep -E '^\.env$|^\.env\.(production|local|staging)$'; then
+            echo "ERROR: .env file committed to repository!"
             exit 1
           fi
-          echo "✅ No hardcoded secrets found."
-
-  # ── Risk Logic Change Detection ──────────────────────────────
-  risk-change-check:
-    name: Safety — Risk Logic Change Detection
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Check for risk-sensitive file changes
+          echo "No .env files tracked. OK"
+      - name: Check for hardcoded API keys
         run: |
-          RISK_FILES=$(git diff --name-only origin/main...HEAD | grep -E "(risk|position_siz|gate|stop_loss|drawdown|kelly)" || true)
-          if [ -n "$RISK_FILES" ]; then
-            echo "⚠️ RISK-SENSITIVE FILES MODIFIED:"
-            echo "$RISK_FILES"
-            echo ""
-            echo "This PR modifies risk management or position sizing logic."
-            echo "Please ensure this PR has the 'high-risk' label and has been reviewed by the lead quant analyst."
-          else
-            echo "✅ No risk-sensitive files modified."
+          if grep -rn "BINANCE_API_KEY=[A-Za-z0-9]\{20,\}" --include="*.py" --include="*.yml" --include="*.yaml" . 2>/dev/null; then
+            echo "ERROR: Possible hardcoded API key detected!"
+            exit 1
           fi
+          echo "No hardcoded API keys found. OK"

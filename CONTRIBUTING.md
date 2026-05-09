@@ -1,60 +1,134 @@
 # Contributing to CoinScopeAI
 
-First off, thank you for considering contributing to CoinScopeAI! It's people like you that make CoinScopeAI such a great tool.
+Thank you for contributing. This document explains how to work with the codebase safely, especially during the active testnet validation phase.
 
-## 1. Where do I go from here?
+---
 
-If you've noticed a bug or have a feature request, make sure to check our [Issues](https://github.com/3nz5789/coinscope-ai/issues) to see if someone else has already created a ticket. If not, go ahead and make one!
+## Validation Phase Rules (Active)
 
-## 2. Fork & create a branch
+The engine is in a **testnet validation freeze**. The following changes are blocked regardless of how reasonable they seem:
 
-If this is something you think you can fix, then fork CoinScopeAI and create a branch with a descriptive name.
+| Blocked change | Reason |
+|---|---|
+| Any canonical risk threshold | Would invalidate the validation cohort |
+| `BINANCE_TESTNET=false` | Real-capital gate is locked |
+| Removing or bypassing a circuit breaker | Safety regression |
+| Retraining or replacing ML artifacts | Changes signal distribution |
+| Order submission semantic changes | Execution integrity |
 
-A good branch name would be (where issue #325 is the ticket you're working on):
+If your PR touches any of the above, close it and wait until validation ends.
 
-```sh
-git checkout -b 325-add-new-indicator
+---
+
+## Branch Strategy
+
+```
+main          production-ready, protected
+feature/*     new capabilities
+fix/*         bug fixes
+docs/*        documentation only
+hotfix/*      emergency production fixes
 ```
 
-## 3. Get the test suite running
+Never push directly to `main`. All changes go through PRs.
 
-Make sure you have the required dependencies installed and run the test suite to ensure everything is working before you start making changes.
+---
 
-```sh
-# Example for backend
-cd services/trading-engine
-pip install -r requirements.txt
-pytest
+## Commit Messages
+
+Follow `<scope>: <summary>` format:
+
+```
+fix(risk-gate): guard against zero account balance in Kelly sizer
+feat(scanner): add CVD divergence signal to confluence score
+docs(runbooks): update daily-ops with new health check endpoint
+config: align .env.example thresholds with canonical values
 ```
 
-## 4. Implement your fix or feature
+Scopes: `engine`, `scanner`, `risk-gate`, `regime`, `alerts`, `journal`, `api`, `config`, `docs`, `ci`, `infra`
 
-At this point, you're ready to make your changes. Feel free to ask for help; everyone is a beginner at first.
+---
 
-## 5. Make a Pull Request
+## PR Process
 
-At this point, you should switch back to your master branch and make sure it's up to date with CoinScopeAI's master branch:
+1. Branch from `main`
+2. Make changes with tests
+3. Run checks locally:
+   ```bash
+   ruff check .
+   pytest -x -q
+   ```
+4. Open PR using the template
+5. Request review — **2 reviewers required** for risk logic, exchange adapters, or position sizing
+6. Squash merge after approval
 
-```sh
-git remote add upstream git@github.com:3nz5789/coinscope-ai.git
-git checkout main
-git pull upstream main
+---
+
+## Code Standards
+
+- Linter: `ruff` (configured in `pyproject.toml`)
+- Formatter: `black`
+- Type hints: required on all new public functions
+- Test coverage: aim for 80%+ on new modules
+- Never commit `.env` — pre-commit hook enforces this
+
+---
+
+## Two-Reviewer Rule
+
+Changes to the following require two approvals before merge:
+
+- `coinscope_trading_engine/risk/`
+- `coinscope_trading_engine/scanner/`
+- `app/engine/`
+- `app/integrations/` (any exchange adapter)
+- Any file containing `MAX_LEVERAGE`, `MAX_OPEN_POSITIONS`, `MAX_DRAWDOWN`, `KELLY_`
+- `.env.example`
+- `CLAUDE.md`
+
+---
+
+## Testing Against Testnet
+
+```bash
+# Set in .env
+BINANCE_TESTNET=true
+BINANCE_TESTNET_API_KEY=<your testnet key>
+BINANCE_TESTNET_API_SECRET=<your testnet secret>
+
+# Smoke test
+python -m scripts.binance_adapter_smoke --symbols BTCUSDT --duration 30
 ```
 
-Then update your feature branch from your local copy of main, and push it!
+Get testnet keys from testnet.binancefuture.com. Never use mainnet keys locally.
 
-```sh
-git checkout 325-add-new-indicator
-git rebase main
-git push --set-upstream origin 325-add-new-indicator
-```
+---
 
-Finally, go to GitHub and make a Pull Request.
+## Issue Labels
 
-## 6. Keeping your Pull Request updated
+Labels match the Linear taxonomy. Use them on all issues and PRs.
 
-If a maintainer asks you to "rebase" your PR, they're saying that a lot of code has changed, and that you need to update your branch so it's easier to merge.
+| Label | Meaning |
+|---|---|
+| `type: bug` | Something broken |
+| `type: feature` | New capability |
+| `type: infra` | Infra / DevOps |
+| `type: docs` | Documentation |
+| `type: research` | Investigation / spike |
+| `dom: scanner` | Signal scoring |
+| `dom: risk` | Risk gate / sizing |
+| `dom: exchange-api` | Exchange integration |
+| `dom: monitoring` | Observability |
+| `SLO: No Data Loss` | Data integrity SLO |
+| `SLO: Code Quality` | Code quality SLO |
+| `P1 - high` | High priority |
+| `P2 - medium` | Medium priority |
+| `P3 - low` | Low priority |
 
-## Code of Conduct
+---
 
-Please note that this project is released with a Contributor Code of Conduct. By participating in this project you agree to abide by its terms.
+## Questions
+
+- Linear: [linear.app/coinscopeai](https://linear.app/coinscopeai)
+- Notion: [CoinScopeAI OS](https://www.notion.so/33a29aaf938e81efa983e47b83e15775)
+- Telegram: `@ScoopyAI_bot`

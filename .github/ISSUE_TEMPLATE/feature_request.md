@@ -1,44 +1,44 @@
 ---
 name: Feature Request
-about: New signal, integration, strategy, or system improvement
-title: "[FEATURE] "
-labels: enhancement
-assignees: ''
+about: Propose a new capability or improvement
+title: "[FEAT] <short description>"
+labels: "type: feature"
+assignees: ""
 ---
 
 ## Summary
 
-<!-- What do you want to add or change? -->
+<!-- What do you want to add and why? -->
 
-## Motivation
+## Phase alignment
 
-<!-- Why is this valuable for CoinScopeAI? -->
+- [ ] P0 — testnet validation (in flight — changes need sign-off)
+- [ ] P1 — soft launch (Jun 2026)
+- [ ] P1.5 — compliance and margin
+- [ ] P2 — Bybit + expansion (Aug-Sep 2026)
+- [ ] P3+ — deferred
 
-## Proposed approach
+## Problem it solves
 
-<!-- How might this be implemented? -->
+<!-- What gap or pain point does this address? -->
 
-## Component affected
+## Proposed solution
 
-- [ ] Trading Engine (services/trading-engine)
-- [ ] Signal Generation / Scoring
-- [ ] HMM Regime Detector
-- [ ] Risk Gate / Position Sizing
-- [ ] Web Dashboard (apps/dashboard)
-- [ ] Telegram Bot (services/telegram-bot)
-- [ ] AI/ML Pipeline (ai/)
-- [ ] Strategies (strategies/)
-- [ ] Infrastructure (infra/)
-- [ ] Documentation (docs/)
-- [ ] Other
+<!-- High-level description of the approach -->
 
 ## Acceptance criteria
 
-<!-- What must be true for this feature to be considered complete? -->
+- [ ]
+- [ ]
 
-## Risk assessment
+## Out of scope
 
-- [ ] This change touches risk management logic (requires extra review)
-- [ ] This change touches order execution logic (requires extra review)
-- [ ] This change modifies trading strategy parameters
-- [ ] This is a low-risk change (documentation, UI, tooling)
+<!-- What this explicitly does NOT include -->
+
+## Dependencies / blockers
+
+<!-- Other issues, ADRs, or external dependencies -->
+
+## Related
+
+<!-- Linear issue, Notion doc, or ADR -->
