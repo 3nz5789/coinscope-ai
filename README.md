@@ -309,7 +309,7 @@ These changes are **blocked** during testnet validation:
 
 ## Contributing
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md). Two reviewers required for changes to `risk_management/`, `engine/integrations/`, `.env.example`, `CLAUDE.md`, or `docker-compose.yml`.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md). Two reviewers required for changes to `risk/`, `risk_management/`, `engine/integrations/`, `.env.example`, `CLAUDE.md`, or `docker-compose.yml`.
 
 ---
 
