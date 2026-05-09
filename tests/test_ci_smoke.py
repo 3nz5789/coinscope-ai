@@ -1,10 +1,11 @@
 """
-CoinScopeAI — CI Smoke Tests
+CoinScopeAI - CI Smoke Tests
 Tests that pass against the actual repo structure on GitHub.
 No heavy ML deps. No assumptions about uncommitted local dirs.
 """
 
 import os
+import re
 import pytest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -81,8 +82,11 @@ class TestSecurity:
 
     def test_no_live_stripe_in_env_example(self):
         c = open(os.path.join(ROOT, ".env.example")).read()
-        assert "sk_live_" not in c
-        assert "pk_live_" not in c
+        # Use regex to detect actual live keys (not the pattern strings themselves)
+        assert not re.search(r'sk_live_[A-Za-z0-9]{10}', c), \
+            "Live Stripe secret key found in .env.example"
+        assert not re.search(r'pk_live_[A-Za-z0-9]{10}', c), \
+            "Live Stripe publishable key found in .env.example"
 
 
 if __name__ == "__main__":

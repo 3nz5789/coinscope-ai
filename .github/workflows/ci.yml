@@ -61,8 +61,9 @@ jobs:
           echo "No hardcoded API keys. OK"
       - name: Check for live Stripe keys
         run: |
-          if grep -rn "sk_live_\|pk_live_" \
-            --include="*.py" --include="*.yml" --include="*.yaml" . 2>/dev/null; then
+          if grep -rn --include="*.py" --include="*.yml" --include="*.yaml" \
+            -e 'sk_live_[A-Za-z0-9]' -e 'pk_live_[A-Za-z0-9]' . 2>/dev/null \
+            | grep -v 'ci.yml' | grep -v 'test_ci_smoke.py'; then
             echo "ERROR: Possible live Stripe key!"
             exit 1
           fi
