@@ -9,25 +9,28 @@ on:
 jobs:
   test:
     name: Tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     env:
       APP_ENV: TEST
       BINANCE_TESTNET: "true"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Install test dependencies
-        run: pip install pytest
+      - name: Install pytest
+        run: python3 -m pip install --upgrade pip pytest
       - name: Run smoke tests
-        run: python3 -m pytest tests/test_ci_smoke.py -v --tb=short
+        run: python3 -m pytest tests/test_ci_smoke.py -v --tb=long
 
   security:
     name: Security Scan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
       - name: Check for committed .env files
         run: |
           if git ls-files | grep -qE '^\.env$|^\.env\.(production|local|staging)$'; then
@@ -35,7 +38,7 @@ jobs:
             exit 1
           fi
           echo "No .env files tracked. OK"
-      - name: No hardcoded API keys
+      - name: Check for hardcoded API keys
         run: |
           found=$(grep -rl "BINANCE_API_KEY=[A-Za-z0-9]\{20,\}" \
             --include="*.py" --include="*.yml" . 2>/dev/null || true)
