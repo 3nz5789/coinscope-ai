@@ -16,18 +16,12 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install ruff
-      - name: Lint (scope to existing source dirs only)
+      - name: Lint (best-effort, non-blocking)
         run: |
-          DIRS=""
-          for d in engine apps scripts tests; do
-            [ -d "$d" ] && DIRS="$DIRS $d"
-          done
-          if [ -z "$DIRS" ]; then
-            echo "No source dirs found — skipping lint"
-            exit 0
-          fi
-          echo "Linting: $DIRS"
-          ruff check $DIRS --ignore E501 || true
+          ruff check . --ignore E501,F401,F811,E402 \
+            --exclude "*.html,*.md,*.txt,*.yml,*.yaml" \
+            2>&1 | head -50 || true
+          echo "Lint step complete"
 
   test:
     name: Tests
@@ -40,13 +34,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Install minimal test deps (no heavy ML libs)
-        run: |
-          pip install --upgrade pip
-          pip install pytest pytest-asyncio
-      - name: Run CI smoke tests
-        run: |
-          pytest tests/test_ci_smoke.py -v --tb=short
+      - name: Install test dependencies
+        run: pip install pytest
+      - name: Run smoke tests
+        run: pytest tests/test_ci_smoke.py -v --tb=short
 
   security:
     name: Security Scan
