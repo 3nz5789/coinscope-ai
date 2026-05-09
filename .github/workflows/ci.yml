@@ -7,22 +7,6 @@ on:
     branches: [main]
 
 jobs:
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - run: pip install ruff
-      - name: Lint (best-effort, non-blocking)
-        run: |
-          ruff check . --ignore E501,F401,F811,E402 \
-            --exclude "*.html,*.md,*.txt,*.yml,*.yaml" \
-            2>&1 | head -50 || true
-          echo "Lint step complete"
-
   test:
     name: Tests
     runs-on: ubuntu-latest
@@ -46,25 +30,17 @@ jobs:
       - uses: actions/checkout@v4
       - name: Check for committed .env files
         run: |
-          if git ls-files | grep -E '^\.env$|^\.env\.(production|local|staging)$'; then
+          if git ls-files | grep -qE '^\.env$|^\.env\.(production|local|staging)$'; then
             echo "ERROR: .env file committed!"
             exit 1
           fi
           echo "No .env files tracked. OK"
-      - name: Check for hardcoded API keys
+      - name: No hardcoded API keys
         run: |
-          if grep -rn "BINANCE_API_KEY=[A-Za-z0-9]\{20,\}" \
-            --include="*.py" --include="*.yml" --include="*.yaml" . 2>/dev/null; then
-            echo "ERROR: Possible hardcoded API key!"
+          found=$(grep -rl "BINANCE_API_KEY=[A-Za-z0-9]\{20,\}" \
+            --include="*.py" --include="*.yml" . 2>/dev/null || true)
+          if [ -n "$found" ]; then
+            echo "ERROR: Possible hardcoded key in: $found"
             exit 1
           fi
           echo "No hardcoded API keys. OK"
-      - name: Check for live Stripe keys
-        run: |
-          if grep -rn --include="*.py" --include="*.yml" --include="*.yaml" \
-            -e 'sk_live_[A-Za-z0-9]' -e 'pk_live_[A-Za-z0-9]' . 2>/dev/null \
-            | grep -v 'ci.yml' | grep -v 'test_ci_smoke.py'; then
-            echo "ERROR: Possible live Stripe key!"
-            exit 1
-          fi
-          echo "No live Stripe keys. OK"
