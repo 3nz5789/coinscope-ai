@@ -21,7 +21,7 @@ jobs:
       - name: Install test dependencies
         run: pip install pytest
       - name: Run smoke tests
-        run: pytest tests/test_ci_smoke.py -v --tb=short
+        run: python3 -m pytest tests/test_ci_smoke.py -v --tb=short
 
   security:
     name: Security Scan
