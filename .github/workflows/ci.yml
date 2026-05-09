@@ -14,23 +14,18 @@ jobs:
       APP_ENV: TEST
       BINANCE_TESTNET: "true"
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Install pytest
-        run: python3 -m pip install --upgrade pip pytest
-      - name: Run smoke tests
-        run: python3 -m pytest tests/test_ci_smoke.py -v --tb=long
+      - run: python3 -m pip install --upgrade pip pytest
+      - run: python3 -m pytest tests/test_ci_smoke.py -v --tb=long -W ignore::pytest.PytestConfigWarning
 
   security:
     name: Security Scan
     runs-on: ubuntu-22.04
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
       - name: Check for committed .env files
         run: |
           if git ls-files | grep -qE '^\.env$|^\.env\.(production|local|staging)$'; then
