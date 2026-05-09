@@ -14,7 +14,7 @@ import urllib.request
 import urllib.error
 import urllib.parse
 
-REPO = "3nz5789/coinscope-ai"
+REPO = "3nz5789/CoinScopeAI"
 API_BASE = "https://api.github.com/repos/{}/labels".format(REPO)
 TOKEN = os.environ.get("GH_TOKEN", "")
 
@@ -75,10 +75,11 @@ def api_call(method, url, data=None):
     req = urllib.request.Request(url, data=body, headers=HEADERS, method=method)
     try:
         with urllib.request.urlopen(req) as r:
-            return json.loads(r.read()), r.status
+            raw = r.read()
+            return (json.loads(raw) if raw else {}), r.status
     except urllib.error.HTTPError as e:
-        body = e.read().decode()
-        return json.loads(body) if body else {}, e.code
+        raw = e.read().decode()
+        return (json.loads(raw) if raw else {}), e.code
 
 
 print("Setting up labels for {}".format(REPO))
