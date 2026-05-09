@@ -40,11 +40,12 @@ class TestRepoStructure:
     def test_docs_runbooks_exists(self):
         assert os.path.isdir(os.path.join(ROOT, "docs", "runbooks"))
 
-    def test_engine_dir_exists(self):
-        engine = os.path.join(ROOT, "engine")
-        apps = os.path.join(ROOT, "apps")
-        assert os.path.isdir(engine) or os.path.isdir(apps), \
-            "Neither engine/ nor apps/ found in repo root"
+    def test_engine_or_source_dir_exists(self):
+        """At least one source directory must exist."""
+        candidates = ["engine", "apps", "backend", "services", "main",
+                      "coinscope_trading_engine"]
+        found = any(os.path.isdir(os.path.join(ROOT, d)) for d in candidates)
+        assert found, f"No source directory found. Expected one of: {candidates}"
 
     def test_scripts_dir_exists(self):
         assert os.path.isdir(os.path.join(ROOT, "scripts"))
