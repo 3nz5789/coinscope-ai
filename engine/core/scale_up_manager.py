@@ -74,7 +74,13 @@ class ScaleUpManager:
         next_p = PROFILES[self.current_index + 1]
         if trades >= next_p.min_trades and sharpe >= next_p.min_sharpe:
             self.current_index += 1
-            self._save_state()  # BUG-15 FIX: persist after promotion
+            if not self._save_state():  # COI-78: rollback if persist fails
+                self.current_index -= 1
+                print(
+                    f"⚠️  Promotion to {next_p.name} aborted: state save failed; "
+                    f"staying on {self.current_profile.name}"
+                )
+                return None
             print(
                 f"🚀 PROMOTED to {next_p.name}: "
                 f"${next_p.account_usd:,} | {next_p.position_pct:.1%} sizing"
