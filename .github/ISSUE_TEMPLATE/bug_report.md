@@ -8,13 +8,16 @@ assignees: ""
 
 ## Summary
 
-<!-- One-line description of what is broken -->
+<!-- One sentence: what is broken? -->
 
 ## Environment
 
-- Component: <!-- engine / scanner / risk-gate / dashboard / telegram / VPS / local -->
-- Mode: <!-- testnet / local dev -->
-- Engine version / commit:
+| Field | Value |
+|---|---|
+| Component | <!-- engine / scanner / risk-gate / regime / executor / journal / dashboard / telegram / billing / VPS / local --> |
+| Mode | <!-- testnet / local dev --> |
+| Commit / version | <!-- git rev-parse --short HEAD --> |
+| OS / Python | <!-- e.g. Ubuntu 22.04 / Python 3.11.9 --> |
 
 ## Steps to reproduce
 
@@ -24,23 +27,26 @@ assignees: ""
 
 ## Expected behaviour
 
-<!-- What should happen -->
-
 ## Actual behaviour
 
-<!-- What actually happens — include logs, error messages, curl output -->
+## Logs / output
 
 ```
-paste logs here
+# For engine: docker compose logs engine --tail=50
+# For risk gate: curl http://localhost:8001/risk-gate | python3 -m json.tool
+# For journal: curl http://localhost:8001/journal | python3 -m json.tool
 ```
 
-## Impact
+## Impact assessment
 
-- [ ] Data loss risk (SLO: No Data Loss)
-- [ ] Capital at risk
-- [ ] Silent failure (no error surfaced)
-- [ ] Cosmetic / low impact
+- [ ] **SLO: No Data Loss** — trade or journal data at risk
+- [ ] **Capital at risk** — incorrect sizing, gate bypass, or order error possible
+- [ ] **Silent failure** — bug occurs with no error surfaced
+- [ ] **Engine unavailable** — health/ready endpoints failing
+- [ ] **Cosmetic / low impact** — UI, logging, or non-critical path
+
+## Possible cause
 
 ## Related
 
-<!-- Linear issue, ADR, or related PR -->
+<!-- Linear issue (COI-NNN), ADR, or PR -->

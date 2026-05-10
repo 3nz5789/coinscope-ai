@@ -1,24 +1,35 @@
 # CODEOWNERS
-# Owners are automatically requested for review on PRs touching their areas.
+# Owners are automatically requested for review on PRs touching their paths.
+# Two approvals required for paths marked with 2-reviewers comment.
 
-# Default — everything
+# Default — everything not matched below
 * @3nz5789
 
-# Risk logic (2 reviewers required)
-coinscope_trading_engine/risk/ @3nz5789
-coinscope_trading_engine/scanner/ @3nz5789
-app/engine/ @3nz5789
+# Risk gate, circuit breakers, kill switch — 2 reviewers
+risk_management/ @3nz5789
 
-# Exchange adapters (2 reviewers required)
-coinscope_trading_engine/binance_ws_client.py @3nz5789
-coinscope_trading_engine/binance_rest_client.py @3nz5789
-app/integrations/ @3nz5789
+# Exchange adapters — 2 reviewers
+engine/exchange/ @3nz5789
+engine/integrations/ @3nz5789
+apps/exchange/ @3nz5789
 
-# Canonical config and thresholds
-.env.example @3nz5789
+# Signal scoring pipeline — 2 reviewers
+engine/signals/ @3nz5789
+apps/signals/ @3nz5789
+
+# Canonical env template and per-env configs — 2 reviewers
+coinscope.env.example @3nz5789
+configs/environments/ @3nz5789
+
+# AI operator instructions — 2 reviewers
 CLAUDE.md @3nz5789
 
 # CI/CD and infra
 .github/ @3nz5789
 docker-compose.yml @3nz5789
+Makefile @3nz5789
 requirements.txt @3nz5789
+pyproject.toml @3nz5789
+
+# Docs (single reviewer OK)
+docs/ @3nz5789

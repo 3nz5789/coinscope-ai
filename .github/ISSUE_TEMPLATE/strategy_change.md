@@ -1,52 +1,56 @@
 ---
 name: Strategy / Risk Change
-about: Propose a change to trading logic, risk parameters, or AI models
-title: "[STRATEGY] "
-labels: high-risk, strategy
-assignees: ''
+about: Propose a change to trading logic, risk thresholds, position sizing, regime detection, or ML models
+title: "[STRATEGY] <short description>"
+labels: "dom: risk, type: research"
+assignees: ""
 ---
+
+> This template is required for any change to risk thresholds, signal scoring, position sizing, circuit breakers, or ML artifacts. Changes in these categories are blocked during P0 validation (through ~May 31, 2026) and require founder sign-off at any phase.
 
 ## Summary
 
-<!-- What trading logic, risk parameter, or AI model change is being proposed? -->
-
 ## Rationale
 
-<!-- Why is this change needed? Include backtesting results or data if available. -->
+## Current behaviour
 
-## Current behavior
+## Proposed behaviour
 
-<!-- What is the current logic / parameter value? -->
+## Affected components
 
-## Proposed behavior
+- [ ] Canonical risk threshold (`MAX_DAILY_LOSS_PCT`, `MAX_DRAWDOWN_PCT`, `MAX_LEVERAGE`, `MAX_OPEN_POSITIONS`, `POSITION_HEAT_CAP_PCT`, `KELLY_FRACTION`, `KELLY_HARD_CAP_PCT`)
+- [ ] Position sizing formula or regime multipliers
+- [ ] Stop-loss / take-profit logic or ATR multiplier
+- [ ] Signal scoring, confluence weighting, or scoring floor
+- [ ] HMM regime classifier or v3 ML model weights/architecture
+- [ ] Circuit breaker trip conditions or reset logic
+- [ ] Kill switch behaviour
+- [ ] Exchange adapter or order submission semantics
 
-<!-- What will the new logic / parameter value be? -->
+## Backtest / validation results
 
-## Backtesting results
+| Metric | Baseline | Proposed | Delta |
+|---|---|---|---|
+| Win rate | | | |
+| Profit factor | | | |
+| Max drawdown | | | |
+| Daily loss frequency | | | |
+| Sharpe ratio | | | |
+| Avg R per trade | | | |
 
-<!-- Attach or summarize backtesting results that validate this change. -->
+## Worst-case analysis
 
-| Metric | Before | After |
-| :--- | :--- | :--- |
-| Win Rate | | |
-| Profit Factor | | |
-| Max Drawdown | | |
-| Sharpe Ratio | | |
+## Validation phase gate
 
-## Risk assessment
-
-- [ ] This modifies the Risk Gate thresholds
-- [ ] This modifies position sizing formulas
-- [ ] This modifies stop-loss / take-profit logic
-- [ ] This modifies signal scoring or generation
-- [ ] This modifies AI model weights or architecture
-- [ ] This affects live trading behavior
-
-## Approval required from
-
-- [ ] Lead Quantitative Analyst
-- [ ] Project Owner
+- [ ] This change is blocked during P0 validation and I confirm it will not be merged until validation ends and founder sign-off is given
 
 ## Rollback plan
 
-<!-- How can this change be safely reverted if it underperforms in production? -->
+## Required approvals
+
+- [ ] Founder / project owner
+- [ ] Second technical reviewer (2-reviewer rule applies)
+
+## Related
+
+<!-- Linear issue (COI-NNN), decision-log entry, or ADR -->

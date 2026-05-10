@@ -2,20 +2,21 @@
 
 ## Scope
 
-This policy covers the CoinScopeAI trading engine, dashboard, and all supporting infrastructure.
-
 **In scope:**
-- Engine API (`api.coinscope.ai`)
-- Dashboard (`app.coinscope.ai`)
+- Engine API (`api.coinscope.ai`) and all endpoints
+- Dashboard (`app.coinscope.ai`) — auth, session, billing
 - Binance exchange adapter and API key handling
-- Authentication and session management
-- Risk gate bypass vulnerabilities
-- Kill-switch circumvention
+- Risk gate bypass or kill-switch circumvention
+- Position sizing manipulation
+- Authentication and access control
 
 **Out of scope:**
-- Binance or third-party exchange vulnerabilities
+- Binance or other third-party exchange vulnerabilities
 - Telegram API vulnerabilities
-- Issues requiring physical access
+- Issues requiring physical access to infrastructure
+- Theoretical vulnerabilities with no demonstrated impact
+
+---
 
 ## Reporting a Vulnerability
 
@@ -24,29 +25,57 @@ This policy covers the CoinScopeAI trading engine, dashboard, and all supporting
 Report privately to: **security@coinscope.ai**
 
 Include:
-- Description of the vulnerability
+- Clear description of the vulnerability
 - Steps to reproduce
-- Potential impact
-- Your suggested fix (optional)
+- Affected component and version/commit
+- Potential impact assessment
+- Suggested fix (optional)
+
+---
 
 ## Response Timeline
 
 | Stage | Target |
 |---|---|
 | Acknowledgement | Within 48 hours |
-| Initial assessment | Within 5 business days |
-| Fix deployed | Within 14 days for critical issues |
-| Public disclosure | After fix is deployed (coordinated) |
+| Initial severity assessment | Within 5 business days |
+| Fix deployed (critical) | Within 14 days |
+| Fix deployed (high) | Within 30 days |
+| Public disclosure | After fix deployed, coordinated with reporter |
 
-## Critical Priorities
+---
 
-The following are treated as Sev-1 and escalated immediately:
+## Severity Definitions
 
-- Any bypass of the risk gate or kill switch
-- Exposure of exchange API keys or secrets
-- Unauthorized order placement
+### Sev-1 — Escalated immediately
+
+- Risk gate bypass — order placed without a logged gate decision
+- Kill-switch circumvention — new entries accepted when kill switch is engaged
+- Circuit breaker bypass — trading continues after a tripped breaker
+- Exchange API key or secret exposure (in logs, URLs, responses, or committed files)
+- Unauthorised order placement on any exchange account
 - Authentication bypass
+- Position size exceeding the 2% hard cap via any code path
+
+### Sev-2 — High priority
+
+- Information disclosure of user trade data or PII
+- Privilege escalation within the dashboard
+- Telegram bot command injection
+
+### Sev-3 — Normal priority
+
+- Logic errors in non-execution paths
+- UI/dashboard vulnerabilities with limited financial impact
+
+---
 
 ## Supported Versions
 
 Only the latest `main` branch is actively supported.
+
+---
+
+## Disclosure Policy
+
+We follow coordinated disclosure. Please give us reasonable time to fix before going public. We will credit reporters in our changelog unless anonymity is requested.
