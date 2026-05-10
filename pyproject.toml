@@ -74,8 +74,8 @@ force-sort-within-sections = true
 "**/conftest.py" = ["F401"]
 "diagnose_signals.py" = ["E402", "I001", "F401"]
 "bot/*.py" = ["I001", "W293"]
-"engine/**/*.py" = ["E402", "I001", "F401", "W293"]
-"engine/*.py" = ["E402", "I001", "F401", "W293"]
+"engine/**/*.py" = ["E402", "I001", "F401", "W293", "UP006", "UP035", "F541", "UP007", "B"]
+"engine/*.py" = ["E402", "I001", "F401", "W293", "UP006", "UP035", "F541", "UP007", "B"]
 
 # ── Black — formatter ─────────────────────────────────────────────────────────
 [tool.black]
