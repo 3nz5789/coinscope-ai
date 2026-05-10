@@ -114,7 +114,7 @@ BINANCE_FUTURES_TESTNET_API_SECRET=<your testnet secret>
 pytest -x -q tests/
 ```
 
-Get testnet keys from [testnet.binancefuture.com](https://testnet.binancefuture.com). Never use mainnet keys in local dev.
+Get testnet keys from [testnet.binancefuture.com](https://demo-fapi.binance.com). Never use mainnet keys in local dev.
 
 ---
 

@@ -199,7 +199,7 @@ CoinScopeAI/
 
 - Python 3.11+
 - Docker + Docker Compose
-- Binance Testnet API keys — [testnet.binancefuture.com](https://testnet.binancefuture.com)
+- Binance Testnet API keys — [testnet.binancefuture.com](https://demo-fapi.binance.com)
 
 ### Setup
 
