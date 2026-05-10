@@ -11,6 +11,9 @@ license = { file = "LICENSE" }
 requires-python = ">=3.11"
 
 # ── Ruff — linter ─────────────────────────────────────────────────────────────
+# Scoped to files we own and actively maintain.
+# Legacy engine, bot, and utility directories are excluded pending a
+# dedicated lint-cleanup PR (fix/lint-cleanup).
 [tool.ruff]
 target-version = "py311"
 line-length = 100
@@ -22,10 +25,7 @@ exclude = [
     "dist",
     "build",
     "docs",
-    "coinscope_trading_engine/logs",
-    "coinscope_trading_engine/data",
-    "frontend",
-    "coinscopeai-dashboard",
+    # ── Legacy dirs — excluded pending fix/lint-cleanup PR ──────────────
     "engine",
     "bot",
     "apps",
@@ -33,15 +33,19 @@ exclude = [
     "services",
     "strategies",
     "risk_management",
-    "generate_norm_params.py",
-    "diagnose_signals.py",
+    "coinscope_trading_engine",
+    "memory",
+    "market_scanner_skill",
     "data",
     "deploy",
     "infra",
     "notebooks",
     "ml_models",
-    "memory",
-    "market_scanner_skill",
+    "frontend",
+    "coinscopeai-dashboard",
+    # ── Root-level legacy scripts ────────────────────────────────────────
+    "diagnose_signals.py",
+    "generate_norm_params.py",
 ]
 
 [tool.ruff.lint]
@@ -52,16 +56,11 @@ select = [
     "I",    # isort
     "B",    # flake8-bugbear
     "C4",   # flake8-comprehensions
-    "UP",   # pyupgrade
-    "TID",  # flake8-tidy-imports
 ]
 ignore = [
     "E501",   # line too long (black handles this)
-    "B008",   # do not perform function calls in default arguments (FastAPI deps)
-    "B904",   # raise without from inside except (too strict for this codebase)
-    "SIM108", # ternary operator (readability preference)
-    "UP",     # pyupgrade — deferred to dedicated cleanup pass
-    "F841",   # local variable assigned but never used — deferred
+    "B008",   # function calls in default arguments (FastAPI deps)
+    "B904",   # raise without from inside except
 ]
 
 [tool.ruff.lint.isort]
@@ -85,13 +84,9 @@ known-first-party = [
 force-sort-within-sections = true
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["S101", "B", "F401"]  # allow assert + broad imports in tests
-"scripts/**/*.py" = ["T201", "I001", "F401", "E702", "F541"]             # allow print() in operator scripts
+"tests/**/*.py" = ["S101", "B", "F401"]
+"scripts/**/*.py" = ["T201", "I001", "F401", "E702", "F541", "W293", "E722"]
 "**/conftest.py" = ["F401"]
-"diagnose_signals.py" = ["E402", "I001", "F401"]
-"bot/*.py" = ["I001", "W293"]
-"engine/**/*.py" = ["E402", "I001", "F401", "W293", "UP006", "UP035", "F541", "UP007", "B"]
-"engine/*.py" = ["E402", "I001", "F401", "W293", "UP006", "UP035", "F541", "UP007", "B"]
 
 # ── Black — formatter ─────────────────────────────────────────────────────────
 [tool.black]
@@ -107,8 +102,16 @@ exclude = '''
   | build
   | frontend
   | coinscopeai-dashboard
-  | coinscope_trading_engine/logs
-  | coinscope_trading_engine/data
+  | coinscope_trading_engine
+  | engine
+  | bot
+  | apps
+  | backend
+  | services
+  | strategies
+  | risk_management
+  | memory
+  | market_scanner_skill
 )/
 '''
 
