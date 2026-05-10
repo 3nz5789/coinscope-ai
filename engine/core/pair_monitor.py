@@ -8,7 +8,7 @@ Tracks per-pair statistics to identify:
 - Regime accuracy per pair (HMM was trained on BTC/ETH/SOL)
 """
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from datetime import datetime
 import json
 import logging
@@ -146,8 +146,20 @@ class PairMonitor:
             {symbol: asdict(stats) for symbol, stats in self.stats.items()},
         )
 
-    def record_trade(self, symbol: str, pnl_pct: float, regime: str, signal_direction: str):
-        """Record a trade for per-pair tracking"""
+    def record_trade(
+        self, symbol: str, pnl_pct: float, regime: str, signal_direction: str,
+    ) -> bool:
+        """Record a trade for per-pair tracking.
+
+        Returns True on successful persist, False on save failure (in which
+        case in-memory ``self.stats`` is restored to its pre-call state so
+        memory and disk stay coherent).
+        """
+        # COI-80: snapshot prior state for rollback on _save() failure
+        prior_snapshot = (
+            replace(self.stats[symbol]) if symbol in self.stats else None
+        )
+
         if symbol not in self.stats:
             self.stats[symbol] = PairStats(symbol=symbol)
 
@@ -180,7 +192,19 @@ class PairMonitor:
             n = stats.regime_directional_trades
             stats.regime_accuracy = (stats.regime_accuracy * (n - 1) + (1 if is_hit else 0)) / n
 
-        self._save()
+        if not self._save():
+            # COI-80: rollback in-memory mutation so disk + memory stay coherent.
+            # atomic_write_json already logged the underlying OSError at ERROR.
+            if prior_snapshot is None:
+                del self.stats[symbol]
+            else:
+                self.stats[symbol] = prior_snapshot
+            logger.warning(
+                "PairMonitor: record_trade(%s) rolled back — _save() failed",
+                symbol,
+            )
+            return False
+        return True
 
     def get_pair_report(self) -> str:
         """Generate per-pair performance report"""
