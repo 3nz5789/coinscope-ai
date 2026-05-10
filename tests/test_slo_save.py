@@ -246,6 +246,55 @@ class TestPairMonitorSave:
         assert isinstance(result, bool)
         assert result is True
 
+    # ---- COI-80: record_trade caller rollback ----
+
+    def test_record_trade_returns_true_on_success(self, tmp_path):
+        m = PairMonitor(path=str(tmp_path / "pair.json"))
+        result = m.record_trade("BTC/USDT", 0.012, "bull", "LONG")
+        assert result is True
+        assert m.stats["BTC/USDT"].trades == 1
+
+    def test_record_trade_rolls_back_when_save_fails_new_symbol(self, tmp_path, caplog):
+        import logging
+        m = PairMonitor(path=str(tmp_path / "pair.json"))
+        # New symbol — was not in stats before
+        assert "BTC/USDT" not in m.stats
+        caplog.set_level(logging.WARNING, logger="engine.core.pair_monitor")
+        with patch("engine.core.pair_monitor.atomic_write_json", return_value=False):
+            result = m.record_trade("BTC/USDT", 0.012, "bull", "LONG")
+        assert result is False
+        # Symbol must NOT be present after rollback
+        assert "BTC/USDT" not in m.stats
+        # Rollback warning logged
+        assert any("rolled back" in r.message for r in caplog.records), caplog.records
+
+    def test_record_trade_rolls_back_when_save_fails_existing_symbol(self, tmp_path):
+        from dataclasses import asdict
+        m = PairMonitor(path=str(tmp_path / "pair.json"))
+        # Seed with a successful trade
+        m.record_trade("BTC/USDT", 0.012, "bull", "LONG")
+        before = asdict(m.stats["BTC/USDT"])
+        # Second trade with save patched to fail
+        with patch("engine.core.pair_monitor.atomic_write_json", return_value=False):
+            result = m.record_trade("BTC/USDT", -0.005, "bear", "SHORT")
+        assert result is False
+        # Stats must match pre-call snapshot exactly (no field drift)
+        assert asdict(m.stats["BTC/USDT"]) == before
+
+    def test_record_trade_rollback_preserves_other_symbols(self, tmp_path):
+        from dataclasses import asdict
+        m = PairMonitor(path=str(tmp_path / "pair.json"))
+        m.record_trade("BTC/USDT", 0.012, "bull", "LONG")
+        btc_before = asdict(m.stats["BTC/USDT"])
+        # Adding a different symbol with save patched to fail
+        with patch("engine.core.pair_monitor.atomic_write_json", return_value=False):
+            result = m.record_trade("ETH/USDT", 0.008, "bull", "LONG")
+        assert result is False
+        # ETH should not be in stats after rollback
+        assert "ETH/USDT" not in m.stats
+        # BTC must remain untouched
+        assert asdict(m.stats["BTC/USDT"]) == btc_before
+
 
 # ---------------------------------------------------------------------------
 # COI-81 — quarantine_corrupt_file primitive + read-side corrupt-file handling
