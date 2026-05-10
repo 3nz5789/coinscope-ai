@@ -24,6 +24,8 @@ from typing import Dict, Optional
 
 import pandas as pd
 
+from utils.io import atomic_write_json
+
 from .alerting import TelegramAlerter
 from .config import PaperTradingConfig
 from .exchange_client import BinanceFuturesTestnetClient, ExchangeError
@@ -525,21 +527,21 @@ class PaperTradingEngine:
             "kill_switch": self._kill_switch.is_active,
         })
 
-    def _save_state(self):
+    def _save_state(self) -> bool:
         """Save engine state to disk for recovery."""
-        try:
-            state = {
-                "saved_at": time.time(),
-                "started_at": self._started_at,
-                "safety": self._safety.get_status(),
-                "portfolio": self._order_manager.get_portfolio_summary(),
-                "signal_stats": self._signal_engine.get_stats(),
-                "alerter_stats": self._alerter.get_stats(),
-            }
-            Path(self.STATE_FILE).write_text(json.dumps(state, indent=2, default=str))
+        state = {
+            "saved_at": time.time(),
+            "started_at": self._started_at,
+            "safety": self._safety.get_status(),
+            "portfolio": self._order_manager.get_portfolio_summary(),
+            "signal_stats": self._signal_engine.get_stats(),
+            "alerter_stats": self._alerter.get_stats(),
+        }
+        state = json.loads(json.dumps(state, default=str))
+        ok = atomic_write_json(Path(self.STATE_FILE), state)
+        if ok:
             logger.info("State saved to %s", self.STATE_FILE)
-        except Exception as e:
-            logger.error("Failed to save state: %s", e)
+        return ok
 
     def get_status(self) -> Dict:
         """Get comprehensive engine status."""

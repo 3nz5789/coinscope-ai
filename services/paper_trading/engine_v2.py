@@ -34,6 +34,8 @@ from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
+from utils.io import atomic_write_json
+
 from ..market_data.event_bus import Event, EventBus
 from ..market_data.types import (
     AlphaSignal,
@@ -945,26 +947,27 @@ class PaperTradingEngineV2:
             "kill_switch": self._kill_switch.is_active,
         })
 
-    def _save_state(self):
+    def _save_state(self) -> bool:
         """Save engine state to disk for recovery."""
-        try:
-            state = {
-                "version": "v2",
-                "saved_at": time.time(),
-                "started_at": self._started_at,
-                "safety": self._safety.get_status(),
-                "portfolio": self._order_manager.get_portfolio_summary(),
-                "signal_stats": self._signal_engine.get_stats(),
-                "alerter_stats": self._alerter.get_stats(),
-                "alpha_context": self._alpha_ctx.get_all(),
-                "regime_context": self._regime_ctx.get_all(),
-                "spreads": self._spread_tracker.get_all(),
-                "eventbus": self._bus.get_stats() if self._bus else {},
-            }
-            Path(self.STATE_FILE).write_text(json.dumps(state, indent=2, default=str))
+        state = {
+            "version": "v2",
+            "saved_at": time.time(),
+            "started_at": self._started_at,
+            "safety": self._safety.get_status(),
+            "portfolio": self._order_manager.get_portfolio_summary(),
+            "signal_stats": self._signal_engine.get_stats(),
+            "alerter_stats": self._alerter.get_stats(),
+            "alpha_context": self._alpha_ctx.get_all(),
+            "regime_context": self._regime_ctx.get_all(),
+            "spreads": self._spread_tracker.get_all(),
+            "eventbus": self._bus.get_stats() if self._bus else {},
+        }
+        # json-serialise via default=str round-trip so atomic_write_json (json.dump) accepts datetimes etc.
+        state = json.loads(json.dumps(state, default=str))
+        ok = atomic_write_json(Path(self.STATE_FILE), state)
+        if ok:
             logger.info("State saved to %s", self.STATE_FILE)
-        except Exception as e:
-            logger.error("Failed to save state: %s", e)
+        return ok
 
     def get_status(self) -> Dict:
         """Get comprehensive engine v2 status."""
