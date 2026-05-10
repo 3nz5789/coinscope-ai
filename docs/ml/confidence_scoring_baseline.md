@@ -145,8 +145,8 @@ These are **working thresholds** — they are not final production-candidate cri
 - `GET /journal` — realised trades with entry/exit/PnL.
 - `GET /regime/{symbol}` — regime label per symbol at signal time.
 - `GET /risk-gate` — pass/fail state.
-- Notion `Signal Log` DB (`ed9457ff-78f7-4008-bc28-ef3046506039`) — persisted signal history.
-- Notion `Trade Journal` DB (`1430e3fb-d21b-49e7-b260-9dfa4adcb5f0`) — persisted outcomes.
+- Notion `Signal Log` DB (`d4bf243e-8e87-494d-838b-a96658af395b`) — persisted signal history.
+- Notion `Trade Journal` DB (`43a542f4-b58d-4b1a-8979-043e72e9a6dd`) — persisted outcomes.
 
 ### 6.2 Current status (as of 2026-04-17)
 Engine is **offline** — VPS (COI-40) not yet provisioned. Dashboard is serving mock-data fallback. Baseline numbers in Section 7 are therefore placeholders pending the first post-deployment run.

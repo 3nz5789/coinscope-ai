@@ -1,6 +1,6 @@
 # CoinScopeAI Architecture
 
-**Last updated:** 2026-04-29
+**Last updated:** 2026-05-10
 **Owner:** Mohammed (Scoopy maintains)
 **Phase:** 30-Day Testnet Validation (COI-41) — IN PROGRESS
 **Canonical view:** v5 (business-architecture aware: customer layer, trust rail, compliance rail, cost meter, ML lifecycle)
@@ -27,7 +27,7 @@ v5 folds in the business-architecture analysis. The trading engine doesn't chang
 1. **Tier 00 — Customer Layer** (Onboarding · KYC/AML · Subscription · Entitlements · ToS) — required to support four pricing tiers and any customer beyond Mohammed.
 2. **Per-User State module** in Tier 03 — splits today's single-account assumption into per-user portfolios, risk profiles, journals, enabled strategies, exchange key vault.
 3. **Cost Meter** on the Engine API path — tracks per-user API consumption (Claude, CoinGlass, Tradefeeds), throttles to tier ceiling. Protects margins.
-4. **Trust rail** (Public Performance Dashboard + Methodology + Audit Hooks) — public, signed, tamper-evident PnL surface at trust.coinscope.ai. Sells the $99 / $299 tiers.
+4. **Trust rail** (Public Performance Dashboard + Methodology + Audit Hooks) — public, signed, tamper-evident PnL surface at trust.coinscope.ai. Sells the $399 / $1,199 tiers.
 5. **Compliance rail** (ToS + Risk Disclosures · KYC/AML pipeline · Audit Log Retention) — legal foundation. ToS gating sits inside Auth.
 6. **ML Lifecycle band** in Tier 03 (Model Registry · Shadow Inference · A/B · Retrain Loop) — closes the v3 → v4 retrain loop using the live Trade Journal as labeled training data. P3.
 7. **Multi-Region HA / DR** node in Ops rail — RTO < 15min, RPO < 5min targets for fund-tier SLA.
@@ -47,7 +47,7 @@ flowchart TB
     direction LR
     OB[Onboarding<br/>signup · trial · email verify]:::p15
     KY[KYC / AML<br/>Sumsub or Persona · Team tier]:::p2
-    SUB[Subscription · Stripe<br/>$19 / $49 / $99 / $299]:::live
+    SUB[Subscription · Stripe<br/>$0 / $79 / $399 / $1,199]:::live
     ENT[Entitlements<br/>tier → features · OpenFeature]:::p2
     TOS[ToS + Risk Disclosures<br/>signed accept · jurisdictional]:::p15
   end
@@ -216,17 +216,17 @@ ML Lifecycle (Registry · Shadow · A/B · Retrain) · Multi-Region HA / DR · P
 
 ---
 
-## Risk · running vs. ceiling (unchanged)
+## Risk thresholds (canonical)
 
-| Setting | Running (`/config` 2026-04-23) | Hard ceiling |
-|---|---|---|
-| `max_leverage` | **10×** | 20× |
-| `max_open_positions` | **5** | 3 |
-| `max_daily_loss_pct` | **2%** | 5% |
-| `max_total_exposure_pct` | 80% | 80% |
-| `max_drawdown` | 10% | 10% |
+| Setting | Value |
+|---|---|
+| `max_leverage` | **10×** |
+| `max_open_positions` | **5** |
+| `max_daily_loss_pct` | **5%** |
+| `max_total_exposure_pct` | 80% |
+| `max_drawdown` | 10% |
 
-Tighter wins. Re-fetch `/config` before quoting.
+Locked 2026-05-01 via PCC v2 §8 Capital Cap. Re-fetch `/config` before quoting.
 
 ---
 

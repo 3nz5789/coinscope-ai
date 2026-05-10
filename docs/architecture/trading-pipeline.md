@@ -344,8 +344,8 @@ again; score distribution shifts.
 - Every order carries a `client_order_id` prefixed `cs-…` derived from
   a nanoid. If a retry is needed the same id is reused — Binance rejects
   duplicates so we never place twice.
-- `max_leverage=10`, `risk_per_trade_pct=1`, `max_open_positions=3`,
-  `max_total_exposure_pct=80`, `max_daily_loss_pct=2` — these are the
+- `max_leverage=10`, `risk_per_trade_pct=1`, `max_open_positions=5`,
+  `max_total_exposure_pct=80`, `max_daily_loss_pct=5` — these are the
   guardrails.
 - Kill switch (`POST /circuit-breaker/trip`) immediately halts new
   entries and is already wired on the Risk Gate dashboard page.

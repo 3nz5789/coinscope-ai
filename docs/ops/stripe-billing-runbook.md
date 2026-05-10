@@ -76,51 +76,63 @@ STRIPE_PUBLISHABLE_KEY=pk_test_...
 
 Navigate to **Products** → **Add product** (https://dashboard.stripe.com/test/products/create).
 
-Create **4 products**, each with **2 prices** (monthly + annual). Use the exact amounts below — these are the canonical prices. Do not change without Mohammed's approval.
+Create **3 paid products**, each with **2 prices** (monthly + annual), plus **2 seat add-on products** for Desk Full v2. Use the exact amounts below — these are the canonical Track B prices (locked 2026-05-01). Do not change without Mohammed's approval.
 
-#### 3a — Starter ($19/mo · $190/yr)
+> Free tier ($0) is handled in-app — no Stripe product needed.
 
-```
-Product name:  CoinScopeAI Starter
-Description:   5 pairs · 4h scan · Telegram alerts · 30-day journal
-
-Price 1:  Recurring · Monthly · $19.00 USD
-Price 2:  Recurring · Annual  · $190.00 USD
-```
-
-#### 3b — Pro ($49/mo · $490/yr) — Most Popular
+#### 3a — Trader ($79/mo · $790/yr)
 
 ```
-Product name:  CoinScopeAI Pro
-Description:   25 pairs · 1h scan · ML v3 · Kelly sizing · Unlimited journal
+Product name:  CoinScopeAI Trader
+Description:   Solo trader tier · scanner + signals + journal
 
-Price 1:  Recurring · Monthly · $49.00 USD
-Price 2:  Recurring · Annual  · $490.00 USD
+Price 1:  Recurring · Monthly · $79.00 USD
+Price 2:  Recurring · Annual  · $790.00 USD
 ```
 
-#### 3c — Elite ($99/mo · $990/yr)
+#### 3b — Desk Preview ($399/mo · $3,990/yr)
 
 ```
-Product name:  CoinScopeAI Elite
-Description:   Unlimited pairs · 15min scan · Multi-exchange · CVD · API access
+Product name:  CoinScopeAI Desk Preview
+Description:   Soft-cohort desk tier · multi-pair · founder cohort eligibility
 
-Price 1:  Recurring · Monthly · $99.00 USD
-Price 2:  Recurring · Annual  · $990.00 USD
+Price 1:  Recurring · Monthly · $399.00 USD
+Price 2:  Recurring · Annual  · $3,990.00 USD
 ```
 
-#### 3d — Team ($299/mo · $2,990/yr)
+#### 3c — Desk Full v2 ($1,199/mo · $11,990/yr)
 
 ```
-Product name:  CoinScopeAI Team
-Description:   Everything in Elite · 10 seats · SLA · Dedicated onboarding
+Product name:  CoinScopeAI Desk Full v2
+Description:   Full desk · base seat included · per-seat add-ons sold separately
 
-Price 1:  Recurring · Monthly · $299.00 USD
-Price 2:  Recurring · Annual  · $2,990.00 USD
+Price 1:  Recurring · Monthly · $1,199.00 USD
+Price 2:  Recurring · Annual  · $11,990.00 USD
+```
+
+#### 3d — Desk Full v2 — Partner read-only seat ($149/mo · $1,490/yr)
+
+```
+Product name:  CoinScopeAI Desk Full v2 — Partner Seat (read-only)
+Description:   Add-on seat for Desk Full v2 customers · read-only access
+
+Price 1:  Recurring · Monthly · $149.00 USD
+Price 2:  Recurring · Annual  · $1,490.00 USD
+```
+
+#### 3e — Desk Full v2 — Analyst seat ($249/mo · $2,490/yr)
+
+```
+Product name:  CoinScopeAI Desk Full v2 — Analyst Seat
+Description:   Add-on seat for Desk Full v2 customers · full analyst access
+
+Price 1:  Recurring · Monthly · $249.00 USD
+Price 2:  Recurring · Annual  · $2,490.00 USD
 ```
 
 After saving each product, click into each price to copy its `price_xxx` ID.
 
-**Expected result:** 4 products, 8 price IDs visible in the Products list.  
+**Expected result:** 5 products, 10 price IDs visible in the Products list.  
 **If it fails:** Ensure "Recurring" billing (not "One time") is selected for all prices.
 
 ---
@@ -130,23 +142,28 @@ After saving each product, click into each price to copy its `price_xxx` ID.
 Add all 8 price IDs to `.env`:
 
 ```env
-# ── Stripe Price IDs ──────────────────────────────────────────
-STRIPE_PRICE_STARTER_MONTHLY=price_...
-STRIPE_PRICE_STARTER_ANNUAL=price_...
+# ── Stripe Price IDs (Track B, locked 2026-05-01) ─────────────
+STRIPE_PRICE_TRADER_MONTHLY=price_...
+STRIPE_PRICE_TRADER_ANNUAL=price_...
 
-STRIPE_PRICE_PRO_MONTHLY=price_...
-STRIPE_PRICE_PRO_ANNUAL=price_...
+STRIPE_PRICE_DESK_PREVIEW_MONTHLY=price_...
+STRIPE_PRICE_DESK_PREVIEW_ANNUAL=price_...
 
-STRIPE_PRICE_ELITE_MONTHLY=price_...
-STRIPE_PRICE_ELITE_ANNUAL=price_...
+STRIPE_PRICE_DESK_FULL_V2_MONTHLY=price_...
+STRIPE_PRICE_DESK_FULL_V2_ANNUAL=price_...
 
-STRIPE_PRICE_TEAM_MONTHLY=price_...
-STRIPE_PRICE_TEAM_ANNUAL=price_...
+STRIPE_PRICE_DESK_FULL_V2_PARTNER_SEAT_MONTHLY=price_...
+STRIPE_PRICE_DESK_FULL_V2_PARTNER_SEAT_ANNUAL=price_...
+
+STRIPE_PRICE_DESK_FULL_V2_ANALYST_SEAT_MONTHLY=price_...
+STRIPE_PRICE_DESK_FULL_V2_ANALYST_SEAT_ANNUAL=price_...
 ```
 
 **Verify the mapping is correct** — each `price_` must match the correct tier and interval. A mismatch will charge customers the wrong amount silently.
 
-**Expected result:** 8 `price_` values in `.env`, all starting with `price_`.  
+**Expected result:** 10 `price_` values in `.env`, all starting with `price_`.
+
+**Migration note:** prior `STARTER/PRO/ELITE/TEAM` env names from the superseded $19/$49/$99/$299 pricing were removed 2026-05-10. If any code still references those names, update to the new env keys above.  
 **If it fails:** Re-open each product in the Dashboard and copy the price ID from the price row (not the product ID).
 
 ---
@@ -266,25 +283,25 @@ Re-run the health check — `webhook_configured` should now be `true`.
 Test all four tiers. Each should return a `session_url` starting with `https://checkout.stripe.com/`:
 
 ```bash
-# Pro monthly (Most Popular)
+# Trader monthly
 curl -s -X POST http://localhost:8002/billing/checkout/session \
   -H "Content-Type: application/json" \
-  -d '{"tier": "pro", "interval": "monthly", "customer_email": "test@example.com"}' | python3 -m json.tool
+  -d '{"tier": "trader", "interval": "monthly", "customer_email": "test@example.com"}' | python3 -m json.tool
 
-# Starter annual
+# Trader annual
 curl -s -X POST http://localhost:8002/billing/checkout/session \
   -H "Content-Type: application/json" \
-  -d '{"tier": "starter", "interval": "annual"}' | python3 -m json.tool
+  -d '{"tier": "trader", "interval": "annual"}' | python3 -m json.tool
 
-# Elite monthly
+# Desk Preview monthly
 curl -s -X POST http://localhost:8002/billing/checkout/session \
   -H "Content-Type: application/json" \
-  -d '{"tier": "elite", "interval": "monthly"}' | python3 -m json.tool
+  -d '{"tier": "desk_preview", "interval": "monthly"}' | python3 -m json.tool
 
-# Team monthly
+# Desk Full v2 monthly
 curl -s -X POST http://localhost:8002/billing/checkout/session \
   -H "Content-Type: application/json" \
-  -d '{"tier": "team", "interval": "monthly"}' | python3 -m json.tool
+  -d '{"tier": "desk_full_v2", "interval": "monthly"}' | python3 -m json.tool
 ```
 
 **Expected result for each:**
@@ -293,9 +310,9 @@ curl -s -X POST http://localhost:8002/billing/checkout/session \
 {
   "session_id": "cs_test_...",
   "session_url": "https://checkout.stripe.com/pay/cs_test_...",
-  "tier": "pro",
+  "tier": "trader",
   "interval": "monthly",
-  "amount_usd": 49.0,
+  "amount_usd": 79.0,
   "publishable_key": "pk_test_..."
 }
 ```
@@ -304,7 +321,7 @@ curl -s -X POST http://localhost:8002/billing/checkout/session \
 
 - `400 Stripe error: No such price` → Price ID for that tier/interval is wrong or missing in `.env`
 - `503 Stripe not configured` → `STRIPE_SECRET_KEY` not loaded
-- `400 Unknown tier` → Tier name typo — must be exactly `starter`, `pro`, `elite`, or `team`
+- `400 Unknown tier` → Tier name typo — must be exactly `trader`, `desk_preview`, `desk_full_v2`, `desk_full_v2_partner_seat`, or `desk_full_v2_analyst_seat`
 
 ---
 

@@ -238,7 +238,7 @@ curl -s "http://localhost:8001/position-size?symbol=BTCUSDT" | python3 -m json.t
 
 All scan results must be logged to the Scan History database regardless of whether a trade is taken.
 
-Notion Scan History DB ID: `c008175e-cfc0-4553-ab37-c47c3825f2e3`
+Notion Scan History DB ID: `e72c5b69-fbbb-4a54-9dac-e6d4de3eb1a4`
 Notion workspace: https://www.notion.so/33a29aaf938e81efa983e47b83e15775
 
 Log the following for each scan:
@@ -249,7 +249,7 @@ Log the following for each scan:
 - Action taken (Trade logged / Skipped / No signals)
 - Scanner mode (Engine / Standalone)
 
-If a trade entry is taken, also log to the Trade Journal (`1430e3fb-d21b-49e7-b260-9dfa4adcb5f0`):
+If a trade entry is taken, also log to the Trade Journal (`43a542f4-b58d-4b1a-8979-043e72e9a6dd`):
 - Symbol, Side (LONG/SHORT)
 - Entry price, Stop loss, Target
 - Signal score
@@ -303,7 +303,7 @@ After completing the full scan procedure, confirm:
 - [ ] All signals below 5.5 discarded
 - [ ] Chop regime signals treated at reduced size or skipped
 - [ ] Funding rate extremes (>±0.08%) flagged
-- [ ] Position size within hard limits (heat < 80%, leverage ≤ 20×, positions ≤ 3)
+- [ ] Position size within hard limits (heat < 80%, leverage ≤ 10×, positions ≤ 5)
 - [ ] Scan result logged to Notion Scan History
 - [ ] Trade entry (if taken) logged to Notion Trade Journal
 - [ ] Telegram alert received for any signal ≥ 8.0

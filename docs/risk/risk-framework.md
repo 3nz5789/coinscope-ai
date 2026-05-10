@@ -29,7 +29,7 @@ These are not tunables. They are properties.
 
 ## Thresholds — the validation-era numbers
 
-All values are locked between 2026-04-10 and 2026-04-30. Env-var names and the authoritative defaults live in [`../backend/configuration.md`](../backend/configuration.md).
+All values are locked as of 2026-05-01 (PCC v2 §8 Capital Cap). Env-var names and the authoritative defaults live in [`../backend/configuration.md`](../backend/configuration.md).
 
 | What | Value | Variable |
 | --- | --- | --- |

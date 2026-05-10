@@ -224,9 +224,9 @@ TELEGRAM_CHAT_ID=7296767446
 
 # ── Notion Integration ───────────────────────────────────────
 NOTION_API_KEY=YOUR_NOTION_KEY_HERE
-NOTION_SIGNAL_LOG_DB=ed9457ff-78f7-4008-bc28-ef3046506039
-NOTION_TRADE_JOURNAL_DB=1430e3fb-d21b-49e7-b260-9dfa4adcb5f0
-NOTION_SCAN_HISTORY_DB=c008175e-cfc0-4553-ab37-c47c3825f2e3
+NOTION_SIGNAL_LOG_DB=d4bf243e-8e87-494d-838b-a96658af395b
+NOTION_TRADE_JOURNAL_DB=43a542f4-b58d-4b1a-8979-043e72e9a6dd
+NOTION_SCAN_HISTORY_DB=e72c5b69-fbbb-4a54-9dac-e6d4de3eb1a4
 
 # ── Redis ────────────────────────────────────────────────────
 REDIS_URL=redis://redis:6379/0
