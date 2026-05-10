@@ -84,8 +84,8 @@ known-first-party = [
 force-sort-within-sections = true
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["S101", "B", "F401"]
-"scripts/**/*.py" = ["T201", "I001", "F401", "E702", "F541", "W293", "E722"]
+"tests/**/*.py" = ["S101", "B", "F401", "I001", "F841", "E401"]
+"scripts/**/*.py" = ["T201", "I001", "F401", "E702", "F541", "W293", "E722", "E401"]
 "**/conftest.py" = ["F401"]
 
 # ── Black — formatter ─────────────────────────────────────────────────────────
