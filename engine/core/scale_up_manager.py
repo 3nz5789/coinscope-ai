@@ -9,9 +9,9 @@ Manages 5 scaling profiles (S0-S4) with automatic promotion based on:
 BUG-15 FIX: current_index now persisted to disk so promotions survive restarts.
 """
 
-import os
-import json
 from dataclasses import dataclass
+import json
+import os
 
 
 @dataclass

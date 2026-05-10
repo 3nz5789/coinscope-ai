@@ -8,12 +8,10 @@ risk gate triggers, errors, heartbeats, and daily summaries.
 Uses the Telegram Bot API directly (no external library needed).
 """
 
-import json
+from datetime import datetime, timezone
 import logging
 import threading
-import time
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Dict, Optional
 
 import requests
 

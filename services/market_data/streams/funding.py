@@ -23,7 +23,6 @@ from .base import (
     FundingRate,
     normalize_symbol,
     now_ms,
-    to_binance_symbol,
     to_bybit_symbol,
     to_hyperliquid_coin,
     to_okx_symbol,

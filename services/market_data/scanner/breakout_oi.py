@@ -14,12 +14,10 @@ Logic:
 from __future__ import annotations
 
 import logging
-import time
 from typing import List
 
 from ..models import (
     EventType,
-    Exchange,
     MarkPrice,
     OpenInterest,
     ScanSignal,

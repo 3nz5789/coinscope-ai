@@ -18,23 +18,21 @@ Uses:
 Publishes RegimeState events to the EventBus.
 """
 
+from collections import defaultdict, deque
+from dataclasses import dataclass
 import logging
 import math
 import threading
 import time
-from collections import defaultdict, deque
-from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
 from ..event_bus import Event, EventBus
 from ..types import (
-    AlphaSignal,
     FundingRate,
     Liquidation,
     OrderBookSnapshot,
     RegimeState,
     Trade,
-    regime_topic,
 )
 
 logger = logging.getLogger("coinscopeai.market_data.regime")

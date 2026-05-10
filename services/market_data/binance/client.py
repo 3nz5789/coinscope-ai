@@ -80,7 +80,7 @@ class BinanceFuturesClient(BaseExchangeClient):
         url = f"{self.WS_BASE_URL}/stream?streams={'/'.join(streams)}"
         tasks.append(asyncio.create_task(
             self._ws_connect_loop(url, self._handle_combined_message, label="combined"),
-            name=f"binance-ws-combined",
+            name="binance-ws-combined",
         ))
         return tasks
 

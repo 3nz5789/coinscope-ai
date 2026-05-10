@@ -31,7 +31,6 @@ from typing import Any, Dict, List
 
 from .manager import MemoryManager
 
-
 # ------------------------------------------------------------------
 # Formatters
 # ------------------------------------------------------------------
@@ -123,7 +122,7 @@ def cmd_risks(args, mm: MemoryManager):
         print("\nNo risk events found")
         return
 
-    print(f"\nRisk Events Summary")
+    print("\nRisk Events Summary")
     print(f"{'=' * 60}")
     if drawdowns:
         print(f"\n  Drawdown events ({len(drawdowns)}):")
@@ -223,6 +222,7 @@ def cmd_status(args, mm: MemoryManager):
 
 def cmd_export(args, mm: MemoryManager):
     import chromadb
+
     from .config import COLLECTION_NAME
     try:
         client = chromadb.PersistentClient(path=mm.config.palace_path)

@@ -7,11 +7,10 @@ funding snapshots, order book depth, and cross-exchange aggregated metrics.
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 import enum
 import time as _time
-from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
-
 
 # ---------------------------------------------------------------------------
 # Enumerations

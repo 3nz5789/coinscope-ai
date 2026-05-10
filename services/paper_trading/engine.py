@@ -14,20 +14,18 @@ Lifecycle:
   7. Handle kill switch and graceful shutdown
 """
 
+from datetime import datetime, timezone
 import json
 import logging
-import os
-import signal
-import threading
-import time
-from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List, Optional
+import signal
+import time
+from typing import Dict, Optional
 
 import pandas as pd
 
 from .alerting import TelegramAlerter
-from .config import PaperTradingConfig, TradingConfig
+from .config import PaperTradingConfig
 from .exchange_client import BinanceFuturesTestnetClient, ExchangeError
 from .order_manager import ManagedOrder, OrderManager
 from .safety import KillSwitch, SafetyGate

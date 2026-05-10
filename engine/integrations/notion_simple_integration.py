@@ -28,12 +28,13 @@ Usage:
   notion.export_trades(trades_list)
 """
 
-import os
+from datetime import datetime, timezone
 import json
 import logging
-import requests
-from datetime import datetime, timezone
+import os
 from typing import Optional
+
+import requests
 
 logger = logging.getLogger("SimpleNotionIntegration")
 

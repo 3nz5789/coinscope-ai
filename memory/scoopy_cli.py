@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 import argparse
-import sys
-import os
 import json
+import os
+import sys
 
 # Add the current directory to sys.path so we can import the memory package
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from memory.manager import MemoryManager
-from memory.config import MemoryConfig, WINGS, ROOMS
 from memory.base_store import PalaceStore
+from memory.config import MemoryConfig
+from memory.manager import MemoryManager
+
 
 class CustomStore(PalaceStore):
     def __init__(self, config, wing):

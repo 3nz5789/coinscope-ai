@@ -5,13 +5,14 @@ Uses Whale Alert API to detect large exchange flows.
 Blocks LONG when whales are selling (inflows), SHORT when buying (outflows).
 """
 
-import requests
 from datetime import datetime, timedelta
+
+import requests
 
 
 class WhaleSignalFilter:
     """On-chain whale signal detection"""
-    
+
     THRESHOLD_USD = 10_000_000  # $10M+ only
 
     def __init__(self, api_key: str = ""):
@@ -33,7 +34,7 @@ class WhaleSignalFilter:
             return {"bias": "NEUTRAL", "confidence": 0.0, "source": "no_key"}
 
         since = int((datetime.utcnow() - timedelta(minutes=lookback_mins)).timestamp())
-        
+
         try:
             r = requests.get(
                 f"{self.base_url}/transactions",
@@ -51,12 +52,12 @@ class WhaleSignalFilter:
 
         # Calculate bull vs bear volume
         bull_vol, bear_vol = 0, 0
-        
+
         for tx in txns:
             usd = tx.get("amount_usd", 0)
             to_type   = (tx.get("to", {}).get("owner_type") or "").lower()
             from_type = (tx.get("from", {}).get("owner_type") or "").lower()
-            
+
             # Inflow to exchange = bearish (selling)
             if to_type == "exchange" and from_type != "exchange":
                 bear_vol += usd
@@ -71,7 +72,7 @@ class WhaleSignalFilter:
         # Calculate net bias
         net = (bull_vol - bear_vol) / total
         bias = "BULLISH" if net > 0.2 else "BEARISH" if net < -0.2 else "NEUTRAL"
-        
+
         return {
             "bias": bias,
             "confidence": round(abs(net), 3),
@@ -90,30 +91,30 @@ class WhaleSignalFilter:
             (should_block, reason_string)
         """
         bias = self.get_bias(symbol)
-        
+
         # Weak signal — don't block
         if bias["confidence"] < 0.3:
             return False, "Whale signal too weak"
-        
+
         # Block LONG if whales are bearish
         if direction == "LONG" and bias["bias"] == "BEARISH":
             return True, f"Whale block LONG: {bias['confidence']:.0%} bearish flow"
-        
+
         # Block SHORT if whales are bullish
         if direction == "SHORT" and bias["bias"] == "BULLISH":
             return True, f"Whale block SHORT: {bias['confidence']:.0%} bullish flow"
-        
+
         return False, f"Whale aligned: {bias['bias']}"
 
 
 # Example usage
 if __name__ == "__main__":
     whale = WhaleSignalFilter(api_key="")
-    
+
     # Check bias (will return neutral without API key)
     bias = whale.get_bias("bitcoin")
     print(f"Whale bias: {bias}")
-    
+
     # Check if trade should be blocked
     blocked, reason = whale.should_block("LONG", "bitcoin")
     print(f"Blocked: {blocked}, Reason: {reason}")

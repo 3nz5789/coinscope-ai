@@ -9,9 +9,6 @@ Usage:
 """
 
 import argparse
-import json
-import sys
-from pathlib import Path
 
 from .safety import KillSwitch
 
@@ -39,10 +36,10 @@ def main():
     if args.status:
         status = ks.status()
         if status["active"]:
-            print(f"🚨 KILL SWITCH: ACTIVE")
+            print("🚨 KILL SWITCH: ACTIVE")
             print(f"   Reason: {status['reason']}")
         else:
-            print(f"✅ Kill Switch: OFF")
+            print("✅ Kill Switch: OFF")
         return
 
     if args.deactivate:

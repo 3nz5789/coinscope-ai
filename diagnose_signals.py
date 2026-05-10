@@ -3,11 +3,12 @@ Diagnose why the paper trading engine isn't generating signals.
 Tests the full pipeline: data → features → normalize → predict → filter.
 """
 import sys
+
 sys.path.insert(0, ".")
 
+import joblib
 import numpy as np
 import pandas as pd
-import joblib
 
 # 1. Load model
 print("=" * 60)
@@ -20,8 +21,8 @@ print(f"  Has predict_proba: {hasattr(model, 'predict_proba')}")
 # 2. Fetch historical candles (same as engine prefill)
 print("\n" + "=" * 60)
 print("STEP 2: Fetch candles from testnet")
-from services.paper_trading.exchange_client import BinanceFuturesTestnetClient
 from services.paper_trading.config import ExchangeConfig
+from services.paper_trading.exchange_client import BinanceFuturesTestnetClient
 
 client = BinanceFuturesTestnetClient(ExchangeConfig())
 client.ping()
@@ -73,7 +74,8 @@ print(f"  DataFrame shape: {df.shape}")
 print(f"  Columns: {list(df.columns)}")
 
 # Test with LongTFFeatureEngine (correct engine)
-from ai.features.engine_v2 import LongTFFeatureEngine, LongTFFeatureConfig
+from ai.features.engine_v2 import LongTFFeatureEngine
+
 ltf_engine = LongTFFeatureEngine()
 features = ltf_engine.extract(df)
 print(f"  LongTFFeatureEngine features: {len(features.columns)} features, {len(features)} rows")
@@ -97,6 +99,7 @@ print("\n" + "=" * 60)
 print("STEP 5: Test signal engine _compute_features")
 
 from services.paper_trading.signal_engine import MLSignalEngine
+
 sig_engine = MLSignalEngine()
 sig_engine.load_model("models/v2/logreg_BTCUSDT_4h.joblib")
 

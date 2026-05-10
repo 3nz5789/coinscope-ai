@@ -16,14 +16,14 @@ Design:
   - All public data — no API keys required
 """
 
+from abc import ABC, abstractmethod
 import asyncio
+from dataclasses import dataclass, field
 import json
 import logging
 import threading
 import time
-from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import websockets
 

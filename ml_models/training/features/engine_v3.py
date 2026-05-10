@@ -20,15 +20,14 @@ New feature groups (all derived from OHLCV):
 Total features: v2 (112) + Phase 2 alpha proxies (~45) = ~157 features
 """
 
-import logging
 from dataclasses import dataclass, field
+import logging
 from typing import Dict, List, Optional
 
+from ai.features.engine import FeatureEngine
+from ai.features.engine_v2 import LongTFFeatureConfig, LongTFFeatureEngine
 import numpy as np
 import pandas as pd
-
-from ai.features.engine import FeatureEngine
-from ai.features.engine_v2 import LongTFFeatureEngine, LongTFFeatureConfig
 
 logger = logging.getLogger("coinscopeai.ai.features.v3")
 

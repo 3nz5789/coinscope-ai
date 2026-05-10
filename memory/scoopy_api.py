@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
-import sys
 import os
-from typing import Optional, Dict, Any, List
+import sys
+from typing import Any, Dict, Optional
+
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
 
 # Add the current directory to sys.path so we can import the memory package
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from memory.manager import MemoryManager
-from memory.config import MemoryConfig
 from memory.base_store import PalaceStore
+from memory.config import MemoryConfig
+from memory.manager import MemoryManager
 
 app = FastAPI(title="Scoopy Memory API", description="REST API for the project coordinator memory system")
 

@@ -29,9 +29,7 @@ from ..models import (
     OpenInterest,
     OrderBook,
     OrderBookLevel,
-    Side,
     Ticker,
-    Trade,
 )
 
 logger = logging.getLogger("coinscopeai.market_data.okx")

@@ -18,7 +18,6 @@ from typing import List
 
 from ..models import (
     EventType,
-    Exchange,
     FundingRate,
     ScanSignal,
 )

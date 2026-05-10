@@ -12,14 +12,14 @@ Features:
 - Automatic timestamp synchronization
 """
 
-import requests
 import hashlib
 import hmac
-import time
-import json
-from typing import Dict, Optional
-from urllib.parse import urlencode
 import logging
+import time
+from typing import Dict
+from urllib.parse import urlencode
+
+import requests
 
 logging.basicConfig(
     level=logging.INFO,
@@ -30,21 +30,21 @@ logger = logging.getLogger("BinanceTestnetClient")
 
 class BinanceFuturesTestnetClient:
     """Binance Futures Testnet REST API client"""
-    
+
     def __init__(self, api_key: str, api_secret: str):
         self.api_key = api_key
         self.api_secret = api_secret
         self.base_url = "https://demo-fapi.binance.com"
-        
+
         self.session = requests.Session()
         self.session.headers.update({
             'Accept': 'application/json',
             'User-Agent': 'CoinScopeAI/1.0',
         })
-        
+
         self.server_time_offset = 0
         self._sync_server_time()
-    
+
     def _sync_server_time(self):
         """Synchronize with server time to avoid timestamp errors"""
         try:
@@ -56,11 +56,11 @@ class BinanceFuturesTestnetClient:
         except Exception as e:
             logger.warning(f"Failed to sync server time: {e}")
             self.server_time_offset = 0
-    
+
     def _get_timestamp(self) -> int:
         """Get synchronized timestamp"""
         return int(time.time() * 1000) + self.server_time_offset
-    
+
     def _sign_request(self, params: Dict) -> str:
         """Sign request with HMAC SHA256"""
         query_string = urlencode(params)
@@ -70,19 +70,19 @@ class BinanceFuturesTestnetClient:
             hashlib.sha256
         ).hexdigest()
         return signature
-    
+
     def _request(self, method: str, endpoint: str, params: Dict = None, signed: bool = False) -> Dict:
         """Make HTTP request to Binance API"""
         params = params or {}
-        
+
         if signed:
             params['timestamp'] = self._get_timestamp()
             params['recvWindow'] = 10000
             params['signature'] = self._sign_request(params)
             self.session.headers.update({'X-MBX-APIKEY': self.api_key})
-        
+
         url = f"{self.base_url}{endpoint}"
-        
+
         try:
             if method == "GET":
                 response = self.session.get(url, params=params, timeout=10)
@@ -92,25 +92,25 @@ class BinanceFuturesTestnetClient:
                 response = self.session.delete(url, params=params, timeout=10)
             else:
                 raise ValueError(f"Unsupported method: {method}")
-            
+
             response.raise_for_status()
             return response.json()
-        
+
         except requests.exceptions.RequestException as e:
             logger.error(f"Request failed: {e}")
             if hasattr(e, 'response') and e.response is not None:
                 logger.error(f"Response: {e.response.text}")
             raise
-    
+
     def test_connection(self) -> Dict:
         """Test connection to testnet"""
         return self._request("GET", "/fapi/v1/ping")
-    
+
     def get_server_time(self) -> int:
         """Get server time"""
         result = self._request("GET", "/fapi/v1/time")
         return result.get('serverTime', 0)
-    
+
     def get_balance(self) -> Dict:
         """Get account balance"""
         result = self._request("GET", "/fapi/v2/balance", signed=True)
@@ -122,16 +122,16 @@ class BinanceFuturesTestnetClient:
                 if balance > 0:
                     balances[symbol] = balance
         return balances
-    
+
     def get_account(self) -> Dict:
         """Get account information"""
         return self._request("GET", "/fapi/v2/account", signed=True)
-    
+
     def get_positions(self) -> list:
         """Get open positions"""
         account = self.get_account()
         return account.get('positions', [])
-    
+
     def place_order(
         self,
         symbol: str,
@@ -147,47 +147,47 @@ class BinanceFuturesTestnetClient:
             'side': side,
             'type': order_type,
         }
-        
+
         if quantity:
             params['quantity'] = quantity
         if price:
             params['price'] = price
-        
+
         params.update(kwargs)
-        
+
         return self._request("POST", "/fapi/v1/order", params, signed=True)
-    
+
     def cancel_order(self, symbol: str, order_id: int = None, orig_client_order_id: str = None) -> Dict:
         """Cancel an order"""
         params = {'symbol': symbol}
-        
+
         if order_id:
             params['orderId'] = order_id
         if orig_client_order_id:
             params['origClientOrderId'] = orig_client_order_id
-        
+
         return self._request("DELETE", "/fapi/v1/order", params, signed=True)
-    
+
     def get_open_orders(self, symbol: str = None) -> list:
         """Get open orders"""
         params = {}
         if symbol:
             params['symbol'] = symbol
-        
+
         result = self._request("GET", "/fapi/v1/openOrders", params, signed=True)
         return result if isinstance(result, list) else [result]
-    
+
     def get_order(self, symbol: str, order_id: int = None, orig_client_order_id: str = None) -> Dict:
         """Get order status"""
         params = {'symbol': symbol}
-        
+
         if order_id:
             params['orderId'] = order_id
         if orig_client_order_id:
             params['origClientOrderId'] = orig_client_order_id
-        
+
         return self._request("GET", "/fapi/v1/order", params, signed=True)
-    
+
     def get_ticker(self, symbol: str) -> Dict:
         """Get ticker information"""
         return self._request("GET", "/fapi/v1/ticker/24hr", {'symbol': symbol})
@@ -208,42 +208,42 @@ def test_connection():
         )
 
     client = BinanceFuturesTestnetClient(api_key, api_secret)
-    
+
     try:
         print("\n" + "=" * 60)
         print(" BINANCE FUTURES TESTNET - Full System Test")
         print("=" * 60)
-        
+
         # Test: Connection
         print("\n🔌 Testing connection...")
         client.test_connection()
         print("✅ Connection successful")
-        
+
         # Test: Balance
         print("\n💰 Fetching balance...")
         balance = client.get_balance()
-        print(f"✅ Balance retrieved:")
+        print("✅ Balance retrieved:")
         for asset, amount in balance.items():
             print(f"   {asset}: {amount}")
-        
+
         # Test: Account info
         print("\n📊 Fetching account information...")
         account = client.get_account()
-        print(f"✅ Account retrieved")
+        print("✅ Account retrieved")
         print(f"   Can Trade: {account.get('canTrade')}")
         print(f"   Total Wallet Balance: {account.get('totalWalletBalance')}")
-        
+
         # Test: Positions
         print("\n📈 Fetching positions...")
         positions = client.get_positions()
         print(f"✅ Positions retrieved: {len(positions)} positions")
-        
+
         # Test: Ticker
         print("\n💹 Fetching BTC/USDT ticker...")
         ticker = client.get_ticker("BTCUSDT")
         print(f"✅ BTC/USDT Price: ${ticker.get('lastPrice')}")
         print(f"   24h Change: {ticker.get('priceChangePercent')}%")
-        
+
         print("\n" + "=" * 60)
         print(" ✅ ALL TESTS PASSED - TESTNET READY FOR TRADING")
         print("=" * 60)
@@ -251,7 +251,7 @@ def test_connection():
         print("   - Testnet credentials verified")
         print("   - Balance: 0.01 BTC + 5,000 USDT")
         print("   - All systems operational")
-        
+
     except Exception as e:
         print(f"\n❌ Test failed: {e}")
         import traceback

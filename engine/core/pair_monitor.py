@@ -8,11 +8,11 @@ Tracks per-pair statistics to identify:
 - Regime accuracy per pair (HMM was trained on BTC/ETH/SOL)
 """
 
+from dataclasses import asdict, dataclass
+from datetime import datetime
 import json
 import os
-from dataclasses import dataclass, asdict, field
-from datetime import datetime
-from typing import Dict, List
+from typing import Dict
 
 
 @dataclass
@@ -98,12 +98,12 @@ PAIR_CHARACTERISTICS = {
 
 class PairMonitor:
     """Track per-pair performance and characteristics"""
-    
+
     def __init__(self, path: str = "logs/pair_monitor.json"):
         self.path = path
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
         self.stats: Dict[str, PairStats] = self._load()
-    
+
     def _load(self) -> Dict[str, PairStats]:
         """Load existing pair stats"""
         if os.path.exists(self.path):
@@ -114,7 +114,7 @@ class PairMonitor:
             except Exception:
                 return {}
         return {}
-    
+
     def _save(self):
         """Save pair stats to file"""
         with open(self.path, "w") as f:
@@ -123,16 +123,16 @@ class PairMonitor:
                 f,
                 indent=2
             )
-    
+
     def record_trade(self, symbol: str, pnl_pct: float, regime: str, signal_direction: str):
         """Record a trade for per-pair tracking"""
         if symbol not in self.stats:
             self.stats[symbol] = PairStats(symbol=symbol)
-        
+
         stats = self.stats[symbol]
         stats.trades += 1
         stats.total_pnl += pnl_pct
-        
+
         if pnl_pct > 0:
             stats.wins += 1
             stats.avg_win = (stats.avg_win * (stats.wins - 1) + pnl_pct) / stats.wins
@@ -141,10 +141,10 @@ class PairMonitor:
             stats.losses += 1
             stats.avg_loss = (stats.avg_loss * (stats.losses - 1) + pnl_pct) / stats.losses
             stats.max_loss = min(stats.max_loss, pnl_pct)
-        
+
         stats.win_rate = stats.wins / stats.trades if stats.trades > 0 else 0
         stats.last_updated = datetime.utcnow().isoformat()
-        
+
         # Track regime accuracy (did regime match signal direction?)
         # CHOP FIX: exclude chop-regime trades from the accuracy denominator.
         # Regime accuracy is only meaningful for directional regimes (bull/bear).
@@ -157,19 +157,19 @@ class PairMonitor:
                      (regime == "bear" and signal_direction == "SHORT")
             n = stats.regime_directional_trades
             stats.regime_accuracy = (stats.regime_accuracy * (n - 1) + (1 if is_hit else 0)) / n
-        
+
         self._save()
-    
+
     def get_pair_report(self) -> str:
         """Generate per-pair performance report"""
         report = "\n" + "=" * 70
         report += "\n PAIR-LEVEL PERFORMANCE REPORT\n"
         report += "=" * 70 + "\n"
-        
+
         for symbol in sorted(self.stats.keys()):
             stats = self.stats[symbol]
             chars = PAIR_CHARACTERISTICS.get(symbol, {})
-            
+
             report += f"\n{symbol}\n"
             report += f"  Volatility: {chars.get('volatility', 'unknown')} | "
             report += f"Liquidity: {chars.get('liquidity', 'unknown')} | "
@@ -178,7 +178,7 @@ class PairMonitor:
             report += f"Total PnL: {stats.total_pnl:+.2%}\n"
             report += f"  Avg Win: {stats.avg_win:+.2%} | Avg Loss: {stats.avg_loss:+.2%} | "
             report += f"Regime Accuracy: {stats.regime_accuracy:.1%}\n"
-            
+
             # Highlight concerns
             if stats.trades >= 10:
                 if stats.win_rate < 0.30:
@@ -187,10 +187,10 @@ class PairMonitor:
                     report += f"  ⚠️  LOW REGIME ACCURACY: {stats.regime_accuracy:.1%} - regime transfer may need adjustment\n"
                 if chars.get('slippage_risk') in ['medium', 'high'] and stats.avg_loss < -0.03:
                     report += f"  ⚠️  HIGH SLIPPAGE: Avg loss {stats.avg_loss:.2%} - consider modeling slippage\n"
-        
+
         report += "\n" + "=" * 70 + "\n"
         return report
-    
+
     def print_report(self):
         """Print pair report to console"""
         print(self.get_pair_report())
@@ -198,12 +198,12 @@ class PairMonitor:
 
 if __name__ == "__main__":
     monitor = PairMonitor()
-    
+
     # Example: Record some trades
     monitor.record_trade("BTC/USDT", 0.015, "bull", "LONG")
     monitor.record_trade("BTC/USDT", -0.008, "bull", "SHORT")
     monitor.record_trade("ETH/USDT", 0.012, "bull", "LONG")
     monitor.record_trade("SOL/USDT", 0.020, "bull", "LONG")
     monitor.record_trade("TAO/USDT", -0.025, "bear", "LONG")  # Regime mismatch
-    
+
     monitor.print_report()

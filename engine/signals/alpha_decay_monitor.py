@@ -7,11 +7,11 @@ Alerts before live losses mount.
 Reference: https://www.linkedin.com/pulse/alpha-decay-when-launch-new-quant-strategy-genieaitech-njptc
 """
 
-import pandas as pd
-import numpy as np
 from datetime import datetime, timedelta
-from typing import Optional, Dict, List
 import logging
+from typing import Dict, List
+
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ class AlphaDecayMonitor:
     - Consecutive loss streaks
     - Regime transition failures
     """
-    
+
     DECAY_THRESHOLDS = {
         "win_rate_drop": 0.05,      # Alert if 7d WR drops 5% vs 30d
         "sharpe_drop": 0.3,          # Alert if rolling Sharpe drops 0.3
@@ -33,7 +33,7 @@ class AlphaDecayMonitor:
         "consec_loss_warn": 4,       # Warn at 4+ consecutive losses
         "regime_transition_fail": 0.15,  # Alert if regime accuracy drops 15%
     }
-    
+
     def __init__(self, trade_journal, telegram_alerts):
         """
         Args:
@@ -44,7 +44,7 @@ class AlphaDecayMonitor:
         self.alerts = telegram_alerts
         self.baseline_metrics = {}
         self.alert_history = []
-    
+
     async def run_daily_check(self) -> Dict:
         """
         Run full alpha decay check. Called once per day.
@@ -52,7 +52,7 @@ class AlphaDecayMonitor:
         Returns:
             Dict with decay signals and recommendations
         """
-        
+
         try:
             # BUG-8 FIX: use the correct synchronous method get_recent_trades(days=30)
             trades_30d = self.journal.get_recent_trades(days=30)
@@ -60,21 +60,21 @@ class AlphaDecayMonitor:
                         (datetime.utcnow() - datetime.fromisoformat(
                             t["closed_at"] if isinstance(t, dict) else t.closed_at
                         )).days <= 7]
-            
+
             if len(trades_30d) < 20:
                 logger.info("⏳ Not enough trades yet for decay analysis")
                 return {"status": "insufficient_data"}
-            
+
             # Calculate metrics
             baseline_wr = self._win_rate(trades_30d)
             recent_wr = self._win_rate(trades_7d)
             baseline_sharpe = self._sharpe(trades_30d)
             recent_sharpe = self._sharpe(trades_7d)
             pf_7d = self._profit_factor(trades_7d)
-            
+
             decay_signals = []
             severity = "INFO"
-            
+
             # Win rate decay
             if len(trades_7d) >= 10:
                 wr_decay = baseline_wr - recent_wr
@@ -87,7 +87,7 @@ class AlphaDecayMonitor:
                         'message': f"⚠️ Win rate decay: {recent_wr:.1%} (7d) vs {baseline_wr:.1%} (30d baseline)"
                     })
                     severity = "WARN"
-            
+
             # Profit factor
             if pf_7d < self.DECAY_THRESHOLDS["pf_below"]:
                 decay_signals.append({
@@ -97,7 +97,7 @@ class AlphaDecayMonitor:
                     'message': f"⚠️ Low profit factor: {pf_7d:.2f} (7d) — target > 1.2"
                 })
                 severity = "WARN"
-            
+
             # Sharpe decay
             if len(trades_7d) >= 10:
                 sharpe_decay = baseline_sharpe - recent_sharpe
@@ -110,7 +110,7 @@ class AlphaDecayMonitor:
                         'message': f"⚠️ Sharpe decay: {recent_sharpe:.2f} (7d) vs {baseline_sharpe:.2f} (30d)"
                     })
                     severity = "WARN"
-            
+
             # Consecutive losses
             consec_losses = self._consecutive_losses(trades_7d)
             if consec_losses >= self.DECAY_THRESHOLDS["consec_loss_warn"]:
@@ -120,7 +120,7 @@ class AlphaDecayMonitor:
                     'message': f"⚠️ {consec_losses} consecutive losses — check regime"
                 })
                 severity = "CRITICAL" if consec_losses >= 6 else "WARN"
-            
+
             # Compile report
             report = {
                 'timestamp': datetime.utcnow().isoformat(),
@@ -138,20 +138,20 @@ class AlphaDecayMonitor:
                 'decay_signals': decay_signals,
                 'recommendations': self._get_recommendations(decay_signals)
             }
-            
+
             # Send alerts
             if decay_signals:
                 await self._send_decay_alert(report)
             else:
                 await self._send_health_check(report)
-            
+
             self.alert_history.append(report)
             return report
-        
+
         except Exception as e:
             logger.error(f"❌ Alpha decay check failed: {e}")
             return {"status": "error", "error": str(e)}
-    
+
     @staticmethod
     def _pnl(t) -> float:
         """Extract PnL from a trade — works with both dicts and dataclass objects.
@@ -209,11 +209,11 @@ class AlphaDecayMonitor:
                 break
 
         return count
-    
+
     def _get_recommendations(self, decay_signals: List) -> List[str]:
         """Generate actionable recommendations based on decay signals"""
         recommendations = []
-        
+
         for signal in decay_signals:
             if signal['type'] == 'win_rate_decay':
                 recommendations.append(
@@ -222,7 +222,7 @@ class AlphaDecayMonitor:
                 recommendations.append(
                     "🔧 Check regime detector — might be misclassifying"
                 )
-            
+
             elif signal['type'] == 'low_profit_factor':
                 recommendations.append(
                     "🔧 Increase stop-loss distance (currently 2.06%)"
@@ -230,7 +230,7 @@ class AlphaDecayMonitor:
                 recommendations.append(
                     "🔧 Review take-profit levels — may be too tight"
                 )
-            
+
             elif signal['type'] == 'sharpe_decay':
                 recommendations.append(
                     "🔧 Retrain HMM regime detector on latest data"
@@ -238,7 +238,7 @@ class AlphaDecayMonitor:
                 recommendations.append(
                     "🔧 Check for regime drift — market conditions may have changed"
                 )
-            
+
             elif signal['type'] == 'consecutive_losses':
                 recommendations.append(
                     "🔧 Reduce position size temporarily (Kelly fraction 0.25 → 0.15)"
@@ -246,30 +246,30 @@ class AlphaDecayMonitor:
                 recommendations.append(
                     "🔧 Review recent market regime — may be in transition"
                 )
-        
+
         return list(set(recommendations))  # Deduplicate
-    
+
     async def _send_decay_alert(self, report: Dict):
         """Send critical decay alert to Telegram"""
         msg = "🔴 *ALPHA DECAY DETECTED*\n\n"
-        
+
         for signal in report['decay_signals']:
             msg += f"• {signal['message']}\n"
-        
-        msg += f"\n*Metrics:*\n"
+
+        msg += "\n*Metrics:*\n"
         msg += f"• Win Rate (7d): {report['metrics']['win_rate_7d']:.1%}\n"
         msg += f"• Sharpe (7d): {report['metrics']['sharpe_7d']:.2f}\n"
         msg += f"• Profit Factor: {report['metrics']['profit_factor_7d']:.2f}\n"
-        
-        msg += f"\n*Recommendations:*\n"
+
+        msg += "\n*Recommendations:*\n"
         for rec in report['recommendations'][:3]:  # Top 3 recommendations
             msg += f"• {rec}\n"
-        
-        msg += f"\n_Action: Review and consider retraining HMM_"
-        
+
+        msg += "\n_Action: Review and consider retraining HMM_"
+
         # BUG-6 FIX: use existing TelegramAlerts methods (synchronous, no await)
         self.alerts.send_critical(msg)
-    
+
     async def _send_health_check(self, report: Dict):
         """Send health check message to Telegram"""
         msg = f"""
@@ -284,7 +284,7 @@ _All metrics within normal ranges_
 """
         # BUG-6 FIX: use existing TelegramAlerts.send_heartbeat (synchronous, no await)
         self.alerts.send_heartbeat(report['metrics'])
-    
+
     def get_alert_history(self, days: int = 7) -> List[Dict]:
         """Get alert history for the past N days"""
         cutoff = datetime.utcnow() - timedelta(days=days)
@@ -296,19 +296,19 @@ _All metrics within normal ranges_
 
 # Example usage
 async def example():
-    from trade_journal import TradeJournal
     from telegram_alerts import TelegramAlertBot
-    
+    from trade_journal import TradeJournal
+
     journal = TradeJournal()
     await journal.connect()
-    
+
     alerts = TelegramAlertBot()
-    
+
     monitor = AlphaDecayMonitor(journal, alerts)
     report = await monitor.run_daily_check()
-    
+
     print(f"Alpha Decay Report: {report}")
-    
+
     await journal.disconnect()
 
 

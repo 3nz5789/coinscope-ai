@@ -5,10 +5,9 @@ All configuration with conservative defaults.
 Safety limits are HARDCODED and non-configurable.
 """
 
-import os
 from dataclasses import dataclass, field
+import os
 from typing import List
-
 
 # ═══════════════════════════════════════════════════════════════════
 # HARDCODED SAFETY LIMITS — NON-BYPASSABLE, NON-CONFIGURABLE

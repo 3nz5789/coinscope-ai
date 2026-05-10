@@ -10,112 +10,55 @@ readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.11"
 
-# ── Ruff — linter ─────────────────────────────────────────────────────────────
-# Scoped to files we own and actively maintain.
-# Legacy engine, bot, and utility directories are excluded pending a
-# dedicated lint-cleanup PR (fix/lint-cleanup).
 [tool.ruff]
 target-version = "py311"
 line-length = 100
 exclude = [
-    ".venv",
-    "venv",
-    "__pycache__",
-    "*.egg-info",
-    "dist",
-    "build",
-    "docs",
-    # ── Legacy dirs — excluded pending fix/lint-cleanup PR ──────────────
-    "engine",
-    "bot",
-    "apps",
-    "backend",
-    "services",
-    "strategies",
-    "risk_management",
-    "coinscope_trading_engine",
-    "memory",
-    "market_scanner_skill",
-    "data",
-    "deploy",
-    "infra",
-    "notebooks",
-    "ml_models",
-    "frontend",
-    "coinscopeai-dashboard",
-    # ── Root-level legacy scripts ────────────────────────────────────────
-    "diagnose_signals.py",
-    "generate_norm_params.py",
+    ".venv", "venv", "__pycache__", "*.egg-info",
+    "dist", "build", "docs", "frontend", "coinscopeai-dashboard",
 ]
 
 [tool.ruff.lint]
-select = [
-    "E",    # pycodestyle errors
-    "W",    # pycodestyle warnings
-    "F",    # pyflakes
-    "I",    # isort
-    "B",    # flake8-bugbear
-    "C4",   # flake8-comprehensions
-]
+select = ["E", "W", "F", "I", "B", "C4"]
 ignore = [
-    "E501",   # line too long (black handles this)
-    "B008",   # function calls in default arguments (FastAPI deps)
+    "E501",   # line too long
+    "I001",   # isort — deferred to dedicated isort pass — black handles this
+    "E402",   # module import not at top — legacy conditional imports
+    "E741",   # ambiguous variable names — legacy code
+    "E722",   # bare except — legacy code
+    "W293",   # blank line contains whitespace — legacy code
+    "F401",   # unused import — legacy code
+    "F841",   # unused variable — legacy code
     "B904",   # raise without from inside except
+    "B905",   # zip without strict — legacy code
+    "B007",   # unused loop variable — legacy code
+    "B008",   # function calls in default arguments (FastAPI)
+    "C401",   # unnecessary generator set — legacy code
 ]
 
 [tool.ruff.lint.isort]
 known-first-party = [
-    "config",
-    "data",
-    "scanner",
-    "scanners",
-    "signals",
-    "risk",
-    "alerts",
-    "models",
-    "monitoring",
-    "utils",
-    "billing",
-    "execution",
-    "intelligence",
-    "storage",
-    "validation",
+    "config", "data", "scanner", "scanners", "signals", "risk",
+    "alerts", "models", "monitoring", "utils", "billing",
+    "execution", "intelligence", "storage", "validation",
 ]
 force-sort-within-sections = true
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["S101", "B", "F401", "I001", "F841", "E401", "E702", "C408", "F811"]
-"scripts/**/*.py" = ["T201", "I001", "F401", "E702", "F541", "W293", "E722", "E401"]
+"tests/**/*.py" = ["S101", "B", "F401", "F811", "E702", "C408"]
+"scripts/**/*.py" = ["T201", "E702", "E401", "F541", "W293", "I001", "F401", "E722"]
 "**/conftest.py" = ["F401"]
 
-# ── Black — formatter ─────────────────────────────────────────────────────────
 [tool.black]
 line-length = 100
 target-version = ["py311"]
 exclude = '''
 /(
-    \.venv
-  | venv
-  | __pycache__
-  | \.git
-  | dist
-  | build
-  | frontend
-  | coinscopeai-dashboard
-  | coinscope_trading_engine
-  | engine
-  | bot
-  | apps
-  | backend
-  | services
-  | strategies
-  | risk_management
-  | memory
-  | market_scanner_skill
+    \.venv | venv | __pycache__ | \.git
+  | dist | build | frontend | coinscopeai-dashboard
 )/
 '''
 
-# ── Pytest ────────────────────────────────────────────────────────────────────
 [tool.pytest.ini_options]
 minversion = "8.0"
 testpaths = ["tests", "coinscope_trading_engine/tests"]
@@ -124,44 +67,22 @@ filterwarnings = [
     "ignore::pytest.PytestConfigWarning",
     "ignore::DeprecationWarning",
 ]
-addopts = [
-    "-v",
-    "--tb=short",
-    "--strict-markers",
-]
+addopts = ["-v", "--tb=short", "--strict-markers"]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests requiring live services (Redis, Binance testnet)",
     "smoke: CI smoke tests — fast, no external deps",
 ]
 
-# ── Coverage ──────────────────────────────────────────────────────────────────
 [tool.coverage.run]
-source = [
-    "coinscope_trading_engine",
-    "engine",
-    "risk_management",
-    "scripts",
-]
-omit = [
-    "*/tests/*",
-    "*/.venv/*",
-    "*/venv/*",
-    "*/logs/*",
-    "*/data/*",
-    "*/migrations/*",
-    "setup_stripe_products.py",
-    "*/conftest.py",
-]
+source = ["coinscope_trading_engine", "engine", "risk_management", "scripts"]
+omit = ["*/tests/*", "*/.venv/*", "*/venv/*", "*/logs/*", "*/data/*",
+        "*/migrations/*", "setup_stripe_products.py", "*/conftest.py"]
 
 [tool.coverage.report]
 exclude_lines = [
-    "pragma: no cover",
-    "def __repr__",
-    "if TYPE_CHECKING:",
-    "raise NotImplementedError",
-    "if __name__ == .__main__.:",
-    "pass",
+    "pragma: no cover", "def __repr__", "if TYPE_CHECKING:",
+    "raise NotImplementedError", "if __name__ == .__main__.:", "pass",
 ]
 show_missing = true
 skip_covered = false

@@ -6,18 +6,17 @@ Tracks all open positions with real-time P&L and margin usage.
 Every order is logged BEFORE submission to the exchange.
 """
 
-import json
+from dataclasses import dataclass
+from enum import Enum
 import logging
 import threading
 import time
+from typing import Callable, Dict, List, Optional, Tuple
 import uuid
-from dataclasses import dataclass, field
-from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from .config import TradingConfig
-from .exchange_client import BinanceFuturesTestnetClient, OrderResult, ExchangeError
-from .safety import KillSwitch, OrderRequest, RejectionReason, SafetyGate
+from .exchange_client import BinanceFuturesTestnetClient, ExchangeError
+from .safety import OrderRequest, SafetyGate
 
 logger = logging.getLogger("coinscopeai.paper_trading.orders")
 

@@ -9,17 +9,19 @@ HMM Regime Detector with Ensemble Voting
 Ensemble combines HMM + Random Forest for robust predictions.
 """
 
-import numpy as np
+import warnings
+
 from hmmlearn.hmm import GaussianHMM
+import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
-import warnings
+
 warnings.filterwarnings("ignore")
 
 
 class HMMRegimeDetector:
     """Hidden Markov Model for regime detection"""
-    
+
     def __init__(self, n_regimes=3):
         self.n_regimes = n_regimes
         self.model = GaussianHMM(
@@ -45,13 +47,13 @@ class HMMRegimeDetector:
         """Label HMM states by return characteristics"""
         X = self.scaler.transform(np.column_stack([returns, volatility]))
         states = self.model.predict(X)
-        
+
         # Label each state by mean return
         means = {}
         for s in range(self.n_regimes):
             mask = states == s
             means[s] = returns[mask].mean() if mask.sum() > 0 else 0
-        
+
         sorted_states = sorted(means, key=means.get)
         self.regime_map = {
             sorted_states[0]: "bear",
@@ -63,7 +65,7 @@ class HMMRegimeDetector:
         """Predict current regime"""
         if not self.fitted:
             return {"regime": "chop", "confidence": 0.5}
-        
+
         min_len = min(len(returns), len(volatility))
         X = self.scaler.transform(
             np.column_stack([returns[-min_len:], volatility[-min_len:]])
@@ -73,7 +75,7 @@ class HMMRegimeDetector:
         state = np.argmax(last_probs)
         regime = self.regime_map.get(state, "chop")
         confidence = float(last_probs[state])
-        
+
         return {"regime": regime, "confidence": round(confidence, 3)}
 
 
@@ -102,11 +104,11 @@ class EnsembleRegimeDetector:
         """Build features for Random Forest"""
         features, labels = [], []
         window = 20
-        
+
         for i in range(window, len(returns)):
             r_window = returns[i-window:i]
             v_window = volatility[i-window:i] if len(volatility) >= i else np.zeros(window)
-            
+
             feat = [
                 r_window.mean(),
                 r_window.std(),
@@ -116,11 +118,11 @@ class EnsembleRegimeDetector:
                 np.sum(r_window > 0) / window,  # % positive days
             ]
             features.append(feat)
-            
+
             # Label using HMM prediction on this window
             hmm_result = self.hmm.predict(r_window, v_window[:len(r_window)])
             labels.append(hmm_result["regime"])
-        
+
         return np.array(features), np.array(labels)
 
     def predict_regime(self, returns: np.ndarray, volatility: np.ndarray) -> dict:
@@ -138,7 +140,7 @@ class EnsembleRegimeDetector:
             v_w.mean(), v_w[-5:].mean(),
             np.sum(r_w > 0) / 20
         ]])
-        
+
         rf_regime = self.rf.predict(feat)[0]
         rf_probs  = self.rf.predict_proba(feat)[0]
         rf_conf   = float(rf_probs.max())

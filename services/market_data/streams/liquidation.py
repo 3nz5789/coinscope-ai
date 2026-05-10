@@ -22,7 +22,6 @@ from .base import (
     EventType,
     Exchange,
     Liquidation,
-    Trade,
     normalize_symbol,
     now_ms,
     to_binance_symbol,

@@ -8,11 +8,11 @@ Simulates live trading on Binance Testnet with:
 - Trade logging
 """
 
-import os
+from dataclasses import asdict, dataclass
+from datetime import date, datetime
 import json
 import logging
-from datetime import datetime, date
-from dataclasses import dataclass, asdict, field
+import os
 
 
 @dataclass
@@ -68,14 +68,14 @@ class TestnetExecutor:
         """Check circuit breaker conditions"""
         self._reset_daily()
         dd = (self.current_equity - self.peak_equity) / self.peak_equity
-        
+
         if self.daily_pnl < -0.03:
             return False, f"Daily loss limit: {self.daily_pnl:.2%}"
         if self.consecutive_losses >= 5:
             return False, f"Consecutive losses: {self.consecutive_losses}"
         if dd < -0.10:
             return False, f"Max drawdown: {dd:.2%}"
-        
+
         return True, "OK"
 
     def place_order(
@@ -197,7 +197,7 @@ class TestnetExecutor:
 # Example usage
 if __name__ == "__main__":
     executor = TestnetExecutor()
-    
+
     # Place order — new signature: quantity and price are pre-computed by caller
     order_id = executor.place_order(
         symbol="BTC/USDT",
@@ -215,6 +215,6 @@ if __name__ == "__main__":
     if rec:
         pnl = executor.close_position(rec, 69000)
         print(f"P&L: {pnl:+.2%}")
-    
+
     # Summary
     print(f"Summary: {executor.get_summary()}")

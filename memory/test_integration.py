@@ -4,7 +4,6 @@ End-to-end integration test for the CoinScopeAI Memory System.
 Verifies all stores, search, knowledge graph, taxonomy, and CLI.
 """
 
-import json
 import os
 import shutil
 import sys

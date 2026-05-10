@@ -13,6 +13,9 @@ Features:
   - Statistics tracking (events recorded, bytes written, file counts)
 """
 
+from collections import defaultdict
+from dataclasses import asdict, dataclass
+from datetime import datetime, timezone
 import gzip
 import json
 import logging
@@ -20,20 +23,9 @@ import os
 import signal
 import threading
 import time
-from collections import defaultdict
-from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from ..event_bus import Event, EventBus
-from ..types import (
-    FundingRate,
-    Kline,
-    Liquidation,
-    OrderBookSnapshot,
-    Trade,
-)
 
 logger = logging.getLogger("coinscopeai.market_data.recorder")
 

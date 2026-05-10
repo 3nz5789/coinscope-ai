@@ -17,10 +17,11 @@ event loop. Now the API is fully synchronous and consistent.
 Reference: https://www.talos.com/insights/understanding-market-impact-in-crypto-trading-the-talos-model-for-estimating-execution-costs
 """
 
-import ccxt
+from datetime import datetime
 import logging
-from datetime import datetime, timedelta
-from typing import Dict, Tuple, Optional
+from typing import Dict, Optional, Tuple
+
+import ccxt
 import numpy as np
 
 logger = logging.getLogger(__name__)

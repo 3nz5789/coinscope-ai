@@ -13,16 +13,14 @@ Metrics monitored:
 from __future__ import annotations
 
 import logging
-import time
 from typing import List
 
 from ..models import (
     EventType,
-    Exchange,
     OrderBook,
     ScanSignal,
-    Trade,
     Side,
+    Trade,
 )
 from .base_scanner import BaseScanner, ScannerConfig
 

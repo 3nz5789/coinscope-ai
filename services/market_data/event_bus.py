@@ -14,15 +14,15 @@ Design:
   - Metrics: track event counts, latency, dropped events
 """
 
+from collections import defaultdict
+from dataclasses import dataclass, field
+from enum import Enum
 import fnmatch
 import logging
 import queue
 import threading
 import time
-from collections import defaultdict
-from dataclasses import dataclass, field
-from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Set
+from typing import Any, Callable, Dict, List
 
 logger = logging.getLogger("coinscopeai.market_data.event_bus")
 

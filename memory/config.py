@@ -19,8 +19,8 @@ Wing taxonomy for CoinScopeAI:
   - wing_<name>    — per-agent specialist diary (e.g. wing_risk_agent)
 """
 
-import os
 from dataclasses import dataclass, field
+import os
 from pathlib import Path
 from typing import Dict
 
