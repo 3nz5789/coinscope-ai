@@ -23,7 +23,7 @@ class TelegramAlerts:
         if not self.enabled:
             print(f"[TELEGRAM] {text}")
             return
-        
+
         try:
             requests.post(
                 f"https://api.telegram.org/bot{self.token}/sendMessage",

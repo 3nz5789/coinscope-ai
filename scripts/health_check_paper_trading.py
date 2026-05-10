@@ -124,7 +124,7 @@ try:
             f"{len(v2_4h_models)} v2 4h models found")
 
         # Try loading the signal engine with a v2 model
-        import joblib
+        import joblib  # noqa: E402 I001
         btc_model_path = models_dir / "v2" / "logreg_BTCUSDT_4h.joblib"
         chk("BTCUSDT 4h LogReg model exists", btc_model_path.exists(), str(btc_model_path))
 

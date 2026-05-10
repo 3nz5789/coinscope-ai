@@ -154,7 +154,7 @@ def check_engine() -> CheckResult:
         return r.fail("UNREACHABLE").add(f"Engine at {ENGINE_URL} is not responding")
 
     if code != 200:
-        return r.fail(f"HTTP {code}").add(f"Unexpected status code from /scan")
+        return r.fail(f"HTTP {code}").add("Unexpected status code from /scan")
 
     r.data["latency_ms"] = latency_ms
     r.add(f"URL: {ENGINE_URL}")
@@ -225,7 +225,7 @@ def check_signals_24h() -> CheckResult:
 
     signals = data if isinstance(data, list) else data.get("signals", data.get("data", []))
     if not isinstance(signals, list):
-        return r.warn("UNKNOWN FORMAT").add(f"Unexpected /scan response type")
+        return r.warn("UNKNOWN FORMAT").add("Unexpected /scan response type")
 
     # Count signals in last 24h
     now = time.time()
