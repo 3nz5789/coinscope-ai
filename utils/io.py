@@ -1,12 +1,18 @@
 """
-utils/io.py — Atomic JSON write primitive
-==========================================
+utils/io.py — Atomic JSON write + corrupt-file quarantine primitives
+======================================================================
 
-Single shared helper for all safe-save paths in the engine.
-Used by: DailySessionState.save(), TradeMonitor.save(), TradeMonitor.self_cancel()
+Single shared module for safe-persistence helpers in the engine.
 
-COI-5: disk I/O error handling (SLO: No Silent Data Loss)
-Locked: 2026-05-10
+Used by:
+* ``atomic_write_json`` — DailySessionState.save(), TradeMonitor.save(),
+  TradeMonitor.self_cancel(), PaperTradingEngine{,V2}._save_state(),
+  ScaleUpManager._save_state(), PairMonitor._save()
+* ``quarantine_corrupt_file`` — PairMonitor._load(),
+  ScaleUpManager._load_state()
+
+COI-5: disk I/O error handling (SLO: No Silent Data Loss) — write side
+COI-81: corrupt-file quarantine (SLO: No Silent Data Loss) — read side
 """
 
 from __future__ import annotations
@@ -15,6 +21,7 @@ import json
 import logging
 import os
 import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -64,3 +71,33 @@ def atomic_write_json(path: Path, data: dict[str, Any]) -> bool:
             except OSError:
                 pass
         return False
+
+
+def quarantine_corrupt_file(path: Path) -> Path | None:
+    """Rename a corrupt state file to ``<stem>.corrupt.<UTC-ISO8601>.<suffix>``.
+
+    Used by state-loaders when the on-disk content fails to parse or
+    deserialize. Returns the backup Path on success, ``None`` if the rename
+    itself fails (in which case the caller should log at ERROR and continue
+    with defaults; the next atomic_write_json will overwrite the bad file
+    in place).
+
+    Args:
+        path: The corrupt file's current path.
+
+    Returns:
+        The new ``Path`` of the renamed backup, or ``None`` on rename failure.
+    """
+    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
+    # Stem of "pair_monitor.json" is "pair_monitor"; we want
+    # "pair_monitor.corrupt.<ts>.json" -- preserve the original suffix.
+    backup = path.with_name(f"{path.stem}.corrupt.{ts}{path.suffix}")
+    try:
+        path.rename(backup)
+        return backup
+    except OSError as exc:
+        _log.error(
+            "quarantine_corrupt_file: rename of %s -> %s failed: %s",
+            path, backup, exc,
+        )
+        return None

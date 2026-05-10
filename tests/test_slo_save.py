@@ -245,3 +245,161 @@ class TestPairMonitorSave:
         result = m._save()
         assert isinstance(result, bool)
         assert result is True
+
+
+# ---------------------------------------------------------------------------
+# COI-81 — quarantine_corrupt_file primitive + read-side corrupt-file handling
+# ---------------------------------------------------------------------------
+
+import logging  # noqa: E402
+
+from utils.io import quarantine_corrupt_file  # noqa: E402
+
+
+class TestQuarantineCorruptFile:
+
+    def test_renames_with_timestamp_suffix(self, tmp_path):
+        p = tmp_path / "state.json"
+        p.write_text("not json")
+        backup = quarantine_corrupt_file(p)
+        assert backup is not None
+        assert not p.exists()
+        assert backup.exists()
+        assert backup.read_text() == "not json"
+        assert backup.name.startswith("state.corrupt.")
+        assert backup.name.endswith(".json")
+
+    def test_preserves_original_suffix(self, tmp_path):
+        p = tmp_path / "data.bin"
+        p.write_text("garbage")
+        backup = quarantine_corrupt_file(p)
+        assert backup is not None
+        assert backup.suffix == ".bin"
+
+    def test_returns_none_on_rename_oserror(self, tmp_path):
+        p = tmp_path / "state.json"
+        p.write_text("not json")
+        with patch("pathlib.Path.rename", side_effect=OSError("disk full")):
+            backup = quarantine_corrupt_file(p)
+        assert backup is None
+
+
+@pytest.mark.skipif(not PAIR_MONITOR_AVAILABLE, reason="PairMonitor not importable from this path")
+class TestPairMonitorLoadCorruption:
+
+    def test_corrupt_json_quarantined_and_starts_fresh(self, tmp_path, caplog):
+        path = tmp_path / "pair.json"
+        path.write_text("{ not valid json")
+        caplog.set_level(logging.WARNING, logger="engine.core.pair_monitor")
+
+        m = PairMonitor(path=str(path))
+        assert m.stats == {}
+        # original removed, backup with same content present
+        assert not path.exists()
+        backups = list(tmp_path.glob("pair.corrupt.*.json"))
+        assert len(backups) == 1
+        assert backups[0].read_text() == "{ not valid json"
+        # warning logged with file path
+        assert any(
+            "PairMonitor" in r.message and "corrupt" in r.message and str(path) in r.message
+            for r in caplog.records
+        ), caplog.records
+
+    def test_schema_drift_quarantined(self, tmp_path, caplog):
+        # Valid JSON but doesn't match PairStats schema -> TypeError on unpacking
+        path = tmp_path / "pair.json"
+        path.write_text(json.dumps({"BTC/USDT": {"unknown_field": 1}}))
+        caplog.set_level(logging.WARNING, logger="engine.core.pair_monitor")
+
+        m = PairMonitor(path=str(path))
+        assert m.stats == {}
+        assert not path.exists()
+        assert len(list(tmp_path.glob("pair.corrupt.*.json"))) == 1
+
+    def test_missing_file_returns_empty_no_backup_no_log(self, tmp_path, caplog):
+        path = tmp_path / "pair.json"
+        caplog.set_level(logging.WARNING, logger="engine.core.pair_monitor")
+
+        m = PairMonitor(path=str(path))
+        assert m.stats == {}
+        assert list(tmp_path.glob("pair.corrupt.*.json")) == []
+        assert not any("corrupt" in r.message for r in caplog.records)
+
+    def test_valid_file_loads_unchanged(self, tmp_path):
+        path = tmp_path / "pair.json"
+        # Use a real PairMonitor to write a valid file first
+        m1 = PairMonitor(path=str(path))
+        m1.record_trade("BTC/USDT", 0.012, "bull", "LONG")
+        # Now reload from disk
+        m2 = PairMonitor(path=str(path))
+        assert "BTC/USDT" in m2.stats
+        assert m2.stats["BTC/USDT"].trades == 1
+        # No corruption backup created on the happy path
+        assert list(tmp_path.glob("pair.corrupt.*.json")) == []
+
+
+try:
+    from engine.core.scale_up_manager import ScaleUpManager, PROFILES  # type: ignore[import]
+    SCALE_UP_AVAILABLE = True
+except ImportError:
+    SCALE_UP_AVAILABLE = False
+
+
+@pytest.mark.skipif(not SCALE_UP_AVAILABLE, reason="ScaleUpManager not importable from this path")
+class TestScaleUpManagerLoadCorruption:
+
+    def _state_file(self, monkeypatch, tmp_path) -> Path:
+        """Point ScaleUpManager.STATE_FILE at tmp_path for the duration of one test."""
+        target = tmp_path / "scale_up_state.json"
+        monkeypatch.setattr(ScaleUpManager, "STATE_FILE", str(target))
+        return target
+
+    def test_corrupt_json_quarantined_and_reseeds_at_s0(self, monkeypatch, tmp_path, caplog):
+        target = self._state_file(monkeypatch, tmp_path)
+        target.write_text("definitely not json")
+        caplog.set_level(logging.WARNING, logger="engine.core.scale_up_manager")
+
+        m = ScaleUpManager()
+        assert m.current_index == 0
+        assert not target.exists()
+        backups = list(tmp_path.glob("scale_up_state.corrupt.*.json"))
+        assert len(backups) == 1
+        assert backups[0].read_text() == "definitely not json"
+        assert any(
+            "ScaleUpManager" in r.message and "corrupt" in r.message
+            for r in caplog.records
+        ), caplog.records
+
+    def test_schema_drift_quarantined(self, monkeypatch, tmp_path, caplog):
+        target = self._state_file(monkeypatch, tmp_path)
+        # current_index is a non-int -> ValueError on int() cast
+        target.write_text(json.dumps({"current_index": "nope"}))
+        caplog.set_level(logging.WARNING, logger="engine.core.scale_up_manager")
+
+        m = ScaleUpManager()
+        assert m.current_index == 0
+        assert not target.exists()
+        assert len(list(tmp_path.glob("scale_up_state.corrupt.*.json"))) == 1
+
+    def test_missing_file_returns_zero_no_backup_no_log(self, monkeypatch, tmp_path, caplog):
+        self._state_file(monkeypatch, tmp_path)
+        caplog.set_level(logging.WARNING, logger="engine.core.scale_up_manager")
+
+        m = ScaleUpManager()
+        assert m.current_index == 0
+        assert list(tmp_path.glob("scale_up_state.corrupt.*.json")) == []
+        assert not any("corrupt" in r.message for r in caplog.records)
+
+    def test_valid_file_loads_unchanged(self, monkeypatch, tmp_path):
+        target = self._state_file(monkeypatch, tmp_path)
+        target.write_text(json.dumps({"current_index": 2}))
+        m = ScaleUpManager()
+        assert m.current_index == 2
+        assert list(tmp_path.glob("scale_up_state.corrupt.*.json")) == []
+
+    def test_oserror_on_open_propagates(self, monkeypatch, tmp_path):
+        target = self._state_file(monkeypatch, tmp_path)
+        target.write_text(json.dumps({"current_index": 1}))
+        with patch("builtins.open", side_effect=PermissionError("denied")):
+            with pytest.raises(PermissionError):
+                ScaleUpManager()

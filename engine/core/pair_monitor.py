@@ -11,11 +11,14 @@ Tracks per-pair statistics to identify:
 from dataclasses import asdict, dataclass
 from datetime import datetime
 import json
+import logging
 import os
 from pathlib import Path
 from typing import Dict
 
-from utils.io import atomic_write_json
+from utils.io import atomic_write_json, quarantine_corrupt_file
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -108,15 +111,33 @@ class PairMonitor:
         self.stats: Dict[str, PairStats] = self._load()
 
     def _load(self) -> Dict[str, PairStats]:
-        """Load existing pair stats"""
-        if os.path.exists(self.path):
-            try:
-                with open(self.path) as f:
-                    data = json.load(f)
-                return {symbol: PairStats(**s) for symbol, s in data.items()}
-            except Exception:
-                return {}
-        return {}
+        """Load existing pair stats.
+
+        On a corrupt / schema-drifted state file the file is renamed to
+        ``*.corrupt.<UTC-ISO8601>.json`` for forensics and an empty dict is
+        returned. ``OSError`` from opening the file is NOT swallowed — it
+        propagates so the operator sees real permission/disk errors.
+        """
+        if not os.path.exists(self.path):
+            return {}
+        with open(self.path) as f:
+            raw = f.read()
+        try:
+            data = json.loads(raw)
+            return {symbol: PairStats(**s) for symbol, s in data.items()}
+        except (json.JSONDecodeError, TypeError, KeyError, ValueError) as exc:
+            backup = quarantine_corrupt_file(Path(self.path))
+            if backup is not None:
+                logger.warning(
+                    "PairMonitor: corrupt state file at %s (%s); moved to %s, starting fresh",
+                    self.path, type(exc).__name__, backup,
+                )
+            else:
+                logger.error(
+                    "PairMonitor: corrupt state file at %s (%s) AND quarantine rename failed; starting fresh in place",
+                    self.path, type(exc).__name__,
+                )
+            return {}
 
     def _save(self) -> bool:
         """Save pair stats to file"""

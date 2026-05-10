@@ -11,10 +11,13 @@ BUG-15 FIX: current_index now persisted to disk so promotions survive restarts.
 
 from dataclasses import dataclass
 import json
+import logging
 import os
 from pathlib import Path
 
-from utils.io import atomic_write_json
+from utils.io import atomic_write_json, quarantine_corrupt_file
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -45,17 +48,35 @@ class ScaleUpManager:
         self.current_index = self._load_state()  # BUG-15 FIX: load from disk
 
     def _load_state(self) -> int:
-        """Load persisted scale index from disk."""
-        if os.path.exists(self.STATE_FILE):
-            try:
-                with open(self.STATE_FILE) as f:
-                    data = json.load(f)
-                idx = int(data.get("current_index", 0))
-                # Guard against out-of-range values from a corrupt file
-                return max(0, min(idx, len(PROFILES) - 1))
-            except Exception:
-                pass
-        return 0
+        """Load persisted scale index from disk.
+
+        On a corrupt / schema-drifted state file the file is renamed to
+        ``*.corrupt.<UTC-ISO8601>.json`` for forensics and 0 is returned
+        (re-seeds at S0). ``OSError`` from opening the file is NOT swallowed
+        -- it propagates so the operator sees real permission/disk errors.
+        """
+        if not os.path.exists(self.STATE_FILE):
+            return 0
+        with open(self.STATE_FILE) as f:
+            raw = f.read()
+        try:
+            data = json.loads(raw)
+            idx = int(data.get("current_index", 0))
+            # Guard against out-of-range values from a corrupt file
+            return max(0, min(idx, len(PROFILES) - 1))
+        except (json.JSONDecodeError, TypeError, KeyError, ValueError) as exc:
+            backup = quarantine_corrupt_file(Path(self.STATE_FILE))
+            if backup is not None:
+                logger.warning(
+                    "ScaleUpManager: corrupt state file at %s (%s); moved to %s, re-seeding at S0",
+                    self.STATE_FILE, type(exc).__name__, backup,
+                )
+            else:
+                logger.error(
+                    "ScaleUpManager: corrupt state file at %s (%s) AND quarantine rename failed; re-seeding at S0 in place",
+                    self.STATE_FILE, type(exc).__name__,
+                )
+            return 0
 
     def _save_state(self) -> bool:
         """Persist current scale index to disk."""
