@@ -40,6 +40,8 @@ exclude = [
     "infra",
     "notebooks",
     "ml_models",
+    "memory",
+    "market_scanner_skill",
 ]
 
 [tool.ruff.lint]
