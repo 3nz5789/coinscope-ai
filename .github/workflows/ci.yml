@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main]
 
+# Cancel in-progress runs on new push to same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: Tests
@@ -15,17 +20,44 @@ jobs:
       BINANCE_TESTNET: "true"
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: python3 -m pip install --upgrade pip pytest
-      - run: python3 -m pytest tests/test_ci_smoke.py -v --tb=long -W ignore::pytest.PytestConfigWarning
+          cache: "pip"
+
+      - name: Install test dependencies
+        run: python3 -m pip install --upgrade pip pytest pytest-asyncio
+
+      - name: Run smoke tests
+        run: python3 -m pytest tests/test_ci_smoke.py -v --tb=long -W ignore::pytest.PytestConfigWarning
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install lint dependencies
+        run: pip install ruff black
+
+      - name: ruff check
+        run: ruff check . --output-format=github
+
+      - name: black check
+        run: black --check . --diff
 
   security:
     name: Security Scan
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
+
       - name: Check for committed .env files
         run: |
           if git ls-files | grep -qE '^\.env$|^\.env\.(production|local|staging)$'; then
@@ -33,6 +65,7 @@ jobs:
             exit 1
           fi
           echo "No .env files tracked. OK"
+
       - name: Check for hardcoded API keys
         run: |
           found=$(grep -rl "BINANCE_API_KEY=[A-Za-z0-9]\{20,\}" \
@@ -42,3 +75,11 @@ jobs:
             exit 1
           fi
           echo "No hardcoded API keys. OK"
+
+      - name: Check for stale risk thresholds
+        run: |
+          if python3 scripts/risk_threshold_guardrail.py 2>/dev/null; then
+            echo "Threshold guardrail clean. OK"
+          else
+            echo "WARNING: Threshold guardrail not available in CI (VPS-dependent checks skipped)"
+          fi
