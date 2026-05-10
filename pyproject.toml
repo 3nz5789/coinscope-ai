@@ -21,7 +21,8 @@ exclude = [
 [tool.ruff.lint]
 select = ["E", "W", "F", "I", "B", "C4"]
 ignore = [
-    "E501",   # line too long — black handles this
+    "E501",   # line too long
+    "I001",   # isort — deferred to dedicated isort pass — black handles this
     "E402",   # module import not at top — legacy conditional imports
     "E741",   # ambiguous variable names — legacy code
     "E722",   # bare except — legacy code
