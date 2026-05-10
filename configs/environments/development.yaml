@@ -15,10 +15,10 @@ engine:
   initial_capital: 10000
 
 risk_gate:
-  max_daily_loss_pct: 0.03
+  max_daily_loss_pct: 0.05
   max_consecutive_losses: 5
   max_drawdown_pct: 0.10
-  max_open_positions: 3
+  max_open_positions: 5
 
 database:
   host: localhost

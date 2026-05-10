@@ -39,8 +39,8 @@ class RiskGate:
     def __init__(
         self,
         initial_capital: float = 10000,
-        max_daily_loss_pct: float = 0.10,  # 10%
-        max_drawdown_pct: float = 0.20,     # 20%
+        max_daily_loss_pct: float = 0.05,  # 5%
+        max_drawdown_pct: float = 0.10,  # 10%
         max_consecutive_losses: int = 5,
         kelly_fraction: float = 0.25,       # Conservative 25% Kelly
         min_signal_score: float = 0.65      # 65/100
