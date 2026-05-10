@@ -26,6 +26,20 @@ exclude = [
     "coinscope_trading_engine/data",
     "frontend",
     "coinscopeai-dashboard",
+    "engine",
+    "bot",
+    "apps",
+    "backend",
+    "services",
+    "strategies",
+    "risk_management",
+    "generate_norm_params.py",
+    "diagnose_signals.py",
+    "data",
+    "deploy",
+    "infra",
+    "notebooks",
+    "ml_models",
 ]
 
 [tool.ruff.lint]
