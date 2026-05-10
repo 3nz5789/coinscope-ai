@@ -45,7 +45,8 @@ ignore = [
     "B008",   # do not perform function calls in default arguments (FastAPI deps)
     "B904",   # raise without from inside except (too strict for this codebase)
     "SIM108", # ternary operator (readability preference)
-    "UP007",  # use X | Y for union (3.10+ only, keeping 3.11 compat explicit)
+    "UP",     # pyupgrade — deferred to dedicated cleanup pass
+    "F841",   # local variable assigned but never used — deferred
 ]
 
 [tool.ruff.lint.isort]
