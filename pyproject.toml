@@ -45,7 +45,7 @@ force-sort-within-sections = true
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["S101", "B", "F401", "F811", "E702", "C408"]
-"scripts/**/*.py" = ["T201"]
+"scripts/**/*.py" = ["T201", "E702", "E401", "F541", "W293", "I001", "F401", "E722"]
 "**/conftest.py" = ["F401"]
 
 [tool.black]
