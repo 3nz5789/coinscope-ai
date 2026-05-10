@@ -86,7 +86,7 @@ force-sort-within-sections = true
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["S101", "B", "F401"]  # allow assert + broad imports in tests
-"scripts/**/*.py" = ["T201"]             # allow print() in operator scripts
+"scripts/**/*.py" = ["T201", "I001", "F401", "E702", "F541"]             # allow print() in operator scripts
 "**/conftest.py" = ["F401"]
 "diagnose_signals.py" = ["E402", "I001", "F401"]
 "bot/*.py" = ["I001", "W293"]
