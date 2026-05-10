@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import collections
 import json
+import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -452,3 +453,38 @@ class TestScaleUpManagerLoadCorruption:
         with patch("builtins.open", side_effect=PermissionError("denied")):
             with pytest.raises(PermissionError):
                 ScaleUpManager()
+
+
+@pytest.mark.skipif(not SCALE_UP_AVAILABLE, reason="ScaleUpManager not importable from this path")
+class TestScaleUpStateFilePath:
+    """COI-77: STATE_FILE must be absolute and not CWD-dependent."""
+
+    def test_default_state_file_is_absolute(self):
+        assert Path(ScaleUpManager.STATE_FILE).is_absolute(), (
+            f"STATE_FILE must be absolute, got {ScaleUpManager.STATE_FILE!r}"
+        )
+
+    def test_default_state_file_under_user_home(self):
+        # Default location lives under ~/.coinscopeai/ for persistence across reboot.
+        # If CSAI_SCALE_UP_STATE_PATH is set in the test environment, skip this check
+        # (the override took precedence at module-load time).
+        if "CSAI_SCALE_UP_STATE_PATH" in os.environ:
+            pytest.skip("CSAI_SCALE_UP_STATE_PATH is set; default-path assertion N/A")
+        expected = str(Path.home() / ".coinscopeai" / "scale_up_state.json")
+        assert ScaleUpManager.STATE_FILE == expected
+
+    def test_env_var_override_via_reload(self, monkeypatch, tmp_path):
+        """Setting CSAI_SCALE_UP_STATE_PATH before module load redirects the state file."""
+        import importlib
+        import engine.core.scale_up_manager as sum_mod
+
+        target = str(tmp_path / "override.json")
+        monkeypatch.setenv("CSAI_SCALE_UP_STATE_PATH", target)
+        # Reload to re-evaluate the class-level env lookup
+        reloaded = importlib.reload(sum_mod)
+        try:
+            assert reloaded.ScaleUpManager.STATE_FILE == target
+        finally:
+            # Restore the original module state for downstream tests
+            monkeypatch.delenv("CSAI_SCALE_UP_STATE_PATH")
+            importlib.reload(sum_mod)

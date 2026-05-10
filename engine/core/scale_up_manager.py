@@ -42,7 +42,15 @@ PROFILES = [
 class ScaleUpManager:
     """Automated scaling manager"""
 
-    STATE_FILE = "scale_up_state.json"
+    # COI-77: state file path must be predictable across launch contexts.
+    # Defaults to ~/.coinscopeai/scale_up_state.json (survives reboot; matches
+    # the CSAI_* env-var convention from memory/config.py). Override via
+    # CSAI_SCALE_UP_STATE_PATH for non-default deployments (Docker volume,
+    # /var/lib mount, etc).
+    STATE_FILE = os.environ.get(
+        "CSAI_SCALE_UP_STATE_PATH",
+        str(Path.home() / ".coinscopeai" / "scale_up_state.json"),
+    )
 
     def __init__(self):
         self.current_index = self._load_state()  # BUG-15 FIX: load from disk
