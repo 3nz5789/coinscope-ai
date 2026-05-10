@@ -12,6 +12,9 @@ BUG-15 FIX: current_index now persisted to disk so promotions survive restarts.
 from dataclasses import dataclass
 import json
 import os
+from pathlib import Path
+
+from utils.io import atomic_write_json
 
 
 @dataclass
@@ -54,10 +57,9 @@ class ScaleUpManager:
                 pass
         return 0
 
-    def _save_state(self):
+    def _save_state(self) -> bool:
         """Persist current scale index to disk."""
-        with open(self.STATE_FILE, "w") as f:
-            json.dump({"current_index": self.current_index}, f)
+        return atomic_write_json(Path(self.STATE_FILE), {"current_index": self.current_index})
 
     @property
     def current_profile(self):
