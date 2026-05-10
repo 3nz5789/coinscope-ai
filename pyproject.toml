@@ -72,6 +72,8 @@ force-sort-within-sections = true
 "tests/**/*.py" = ["S101", "B", "F401"]  # allow assert + broad imports in tests
 "scripts/**/*.py" = ["T201"]             # allow print() in operator scripts
 "**/conftest.py" = ["F401"]
+"diagnose_signals.py" = ["E402", "I001", "F401"]
+"bot/*.py" = ["I001", "W293"]
 
 # ── Black — formatter ─────────────────────────────────────────────────────────
 [tool.black]
