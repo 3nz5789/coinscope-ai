@@ -200,3 +200,48 @@ class TestTradeLogPersistence:
         result = state.save()
         assert isinstance(result, bool)
         assert result is True
+
+
+# ---------------------------------------------------------------------------
+# COI-79 — PairMonitor._save atomicity (port of COI-75 from docs tree to real engine)
+# ---------------------------------------------------------------------------
+
+try:
+    from engine.core.pair_monitor import PairMonitor  # type: ignore[import]
+    PAIR_MONITOR_AVAILABLE = True
+except ImportError:
+    PAIR_MONITOR_AVAILABLE = False
+
+
+@pytest.mark.skipif(not PAIR_MONITOR_AVAILABLE, reason="PairMonitor not importable from this path")
+class TestPairMonitorSave:
+
+    def test_save_returns_true_and_writes_file(self, tmp_path):
+        m = PairMonitor(path=str(tmp_path / "pair.json"))
+        m.record_trade("BTC/USDT", 0.012, "bull", "LONG")
+        # record_trade already called _save once; verify file exists and parses
+        assert (tmp_path / "pair.json").exists()
+        data = json.loads((tmp_path / "pair.json").read_text())
+        assert "BTC/USDT" in data
+        assert data["BTC/USDT"]["trades"] == 1
+
+    def test_save_returns_false_on_oserror(self, tmp_path):
+        m = PairMonitor(path=str(tmp_path / "pair.json"))
+        with patch("engine.core.pair_monitor.atomic_write_json", return_value=False):
+            assert m._save() is False
+
+    def test_no_partial_file_on_replace_oserror(self, tmp_path):
+        dest = tmp_path / "pair.json"
+        m = PairMonitor(path=str(dest))
+        m.stats.clear()  # start clean
+        with patch("pathlib.Path.replace", side_effect=OSError("disk full")):
+            m._save()
+        # destination must not exist and no .tmp files left behind
+        assert not dest.exists()
+        assert list(tmp_path.glob("*.tmp")) == []
+
+    def test_save_returns_bool(self, tmp_path):
+        m = PairMonitor(path=str(tmp_path / "pair.json"))
+        result = m._save()
+        assert isinstance(result, bool)
+        assert result is True

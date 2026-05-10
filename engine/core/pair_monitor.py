@@ -12,7 +12,10 @@ from dataclasses import asdict, dataclass
 from datetime import datetime
 import json
 import os
+from pathlib import Path
 from typing import Dict
+
+from utils.io import atomic_write_json
 
 
 @dataclass
@@ -115,14 +118,12 @@ class PairMonitor:
                 return {}
         return {}
 
-    def _save(self):
+    def _save(self) -> bool:
         """Save pair stats to file"""
-        with open(self.path, "w") as f:
-            json.dump(
-                {symbol: asdict(stats) for symbol, stats in self.stats.items()},
-                f,
-                indent=2
-            )
+        return atomic_write_json(
+            Path(self.path),
+            {symbol: asdict(stats) for symbol, stats in self.stats.items()},
+        )
 
     def record_trade(self, symbol: str, pnl_pct: float, regime: str, signal_direction: str):
         """Record a trade for per-pair tracking"""
