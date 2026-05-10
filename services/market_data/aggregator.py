@@ -12,18 +12,16 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import time
-from typing import Any, Callable, Coroutine, Dict, List, Optional
+from typing import Any, Callable, Coroutine, Dict, List
 
 from .base import BaseExchangeClient, EventBus, EventCallback
 from .models import (
-    ConnectionMetrics,
     EventType,
     Exchange,
     MarketEvent,
     ScanSignal,
 )
-from .scanner.base_scanner import BaseScanner, ScannerConfig
+from .scanner.base_scanner import BaseScanner
 
 logger = logging.getLogger("coinscopeai.aggregator")
 

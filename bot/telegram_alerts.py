@@ -5,9 +5,10 @@ Sends trading signals, closed trades, and alerts via Telegram bot.
 Falls back to console printing if credentials not configured.
 """
 
-import os
-import requests
 from datetime import datetime
+import os
+
+import requests
 
 
 class TelegramAlerts:

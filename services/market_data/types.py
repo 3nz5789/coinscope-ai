@@ -7,8 +7,8 @@ Exchange-agnostic — each stream adapter normalizes to these types.
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Optional, Tuple
 import time
+from typing import Dict, List
 
 
 class Exchange(Enum):

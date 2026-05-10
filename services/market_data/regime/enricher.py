@@ -16,10 +16,10 @@ unavailable, its contribution is simply omitted from the scoring.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 import logging
 import time
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Dict, List, Optional, Sequence
 
 from services.market_data.models import (
     AggregatedBasis,

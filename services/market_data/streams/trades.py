@@ -9,11 +9,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any, List, Optional
+from typing import Any, List
 
 from .base import (
     BaseStream,
-    EventBus,
     EventType,
     Exchange,
     Trade,

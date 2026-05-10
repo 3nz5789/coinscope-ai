@@ -7,12 +7,11 @@ Implements fractional Kelly formula with:
 - Hard cap at 2% per trade
 """
 
-import numpy as np
 
 
 class KellyRiskController:
     """Kelly criterion position sizing controller"""
-    
+
     def __init__(self, fraction: float = 0.25, hard_cap_pct: float = 0.02):
         self.fraction    = fraction       # fractional Kelly (conservative)
         self.hard_cap    = hard_cap_pct   # never exceed 2% per trade
@@ -50,7 +49,7 @@ class KellyRiskController:
         Returns:
             Position size in USD
         """
-        
+
         if avg_loss == 0 or win_rate <= 0:
             return 0.0
 
@@ -71,7 +70,7 @@ class KellyRiskController:
 
         # Calculate raw percentage
         raw_pct = kelly_full * self.fraction * regime_mult * dd_mult
-        
+
         # Apply hard cap
         final_pct = min(raw_pct, self.hard_cap)
 
@@ -81,10 +80,10 @@ class KellyRiskController:
         """Calculate drawdown-based position multiplier"""
         if self.peak_equity is None:
             self.peak_equity = equity
-        
+
         self.peak_equity = max(self.peak_equity, equity)
         dd = (equity - self.peak_equity) / self.peak_equity
-        
+
         if dd > -0.05:
             return 1.0
         elif dd > -0.10:
@@ -103,16 +102,16 @@ class KellyRiskController:
         balance: float
     ) -> dict:
         """Get detailed sizing summary"""
-        
+
         size = self.calculate_position_size(
             win_rate, avg_win, avg_loss, regime, balance
         )
-        
+
         b = avg_win / avg_loss if avg_loss > 0 else 0
         p = win_rate
         q = 1 - p
         kelly_full = (b * p - q) / b if b > 0 else 0
-        
+
         return {
             "kelly_full_pct": round(kelly_full * 100, 2),
             "kelly_fraction_pct": round(kelly_full * self.fraction * 100, 2),
@@ -125,7 +124,7 @@ class KellyRiskController:
 # Example usage
 if __name__ == "__main__":
     kelly = KellyRiskController(fraction=0.25)
-    
+
     # Example: 44% win rate, 2.1% avg win, 1.0% avg loss
     size = kelly.calculate_position_size(
         win_rate=0.44,
@@ -134,9 +133,9 @@ if __name__ == "__main__":
         regime="bull",
         account_balance=10000
     )
-    
+
     print(f"Position size: ${size:.2f}")
-    
+
     # Get summary
     summary = kelly.size_summary(0.44, 0.021, 0.010, "bull", 10000)
     print(f"Summary: {summary}")

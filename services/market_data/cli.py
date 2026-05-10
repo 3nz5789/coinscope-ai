@@ -22,22 +22,21 @@ import argparse
 import asyncio
 import json
 import logging
-import signal
-import sys
-import time
-from typing import List
 
 # Ensure the project root is importable
 import os
+import signal
+import sys
+from typing import List
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from services.market_data.aggregator import Aggregator
-from services.market_data.base import EventBus
-from services.market_data.models import Exchange, EventType, MarketEvent, ScanSignal
 from services.market_data.binance.client import BinanceFuturesClient
 from services.market_data.bybit.client import BybitClient
-from services.market_data.okx.client import OKXClient
 from services.market_data.hyperliquid.client import HyperliquidClient
+from services.market_data.models import Exchange, ScanSignal
+from services.market_data.okx.client import OKXClient
 from services.market_data.scanner import (
     BreakoutOIScanner,
     FundingExtremeScanner,

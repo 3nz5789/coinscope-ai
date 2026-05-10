@@ -23,7 +23,6 @@ from ..models import (
     EventType,
     Exchange,
     FundingRate,
-    MarkPrice,
     OpenInterest,
     OrderBook,
     OrderBookLevel,

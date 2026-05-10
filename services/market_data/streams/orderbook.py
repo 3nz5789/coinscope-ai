@@ -19,7 +19,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from collections import defaultdict
 from typing import Any, Dict, List, Optional, Tuple
 
 from sortedcontainers import SortedDict
@@ -178,7 +177,7 @@ class OrderBookStream(BaseStream):
             """Fetch REST snapshot and apply buffered updates."""
             try:
                 snap = await self._rest_get(
-                    f"https://fapi.binance.com/fapi/v1/depth",
+                    "https://fapi.binance.com/fapi/v1/depth",
                     Exchange.BINANCE,
                     params={"symbol": normalize_symbol(symbol), "limit": "100"},
                 )

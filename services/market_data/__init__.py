@@ -1,24 +1,24 @@
 """CoinScopeAI Market Data — multi-exchange WebSocket price stream infrastructure."""
 
-from .models import (
-    Exchange,
-    Side,
-    L2OrderBook,
-    OrderBookLevel,
-    Trade,
-    FundingRate,
-    OpenInterest,
-    ConnectionState,
-    MarkPrice,
-    Ticker,
-    ConnectionMetrics,
-    EventType,
-    MarketEvent,
-    ScanSignal,
-    OrderBook,
-)
-from .base import BaseExchangeClient, EventBus, RateLimiter
 from .aggregator import Aggregator
+from .base import BaseExchangeClient, EventBus, RateLimiter
+from .models import (
+    ConnectionMetrics,
+    ConnectionState,
+    EventType,
+    Exchange,
+    FundingRate,
+    L2OrderBook,
+    MarketEvent,
+    MarkPrice,
+    OpenInterest,
+    OrderBook,
+    OrderBookLevel,
+    ScanSignal,
+    Side,
+    Ticker,
+    Trade,
+)
 
 __all__ = [
     "Exchange", "Side",

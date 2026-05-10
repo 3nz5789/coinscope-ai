@@ -8,10 +8,10 @@ Usage:
 """
 
 import argparse
-import json
-import sys
 from datetime import datetime, timezone
+import json
 from pathlib import Path
+import sys
 
 
 def main():

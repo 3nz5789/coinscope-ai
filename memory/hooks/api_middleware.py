@@ -17,12 +17,12 @@ Usage::
     memory_mw = MemoryMiddleware(app)
 """
 
+from datetime import datetime, timezone
 import hashlib
 import json
 import logging
-import time
 import threading
-from datetime import datetime, timezone
+import time
 from typing import Any, Dict, Optional
 
 from ..config import MemoryConfig

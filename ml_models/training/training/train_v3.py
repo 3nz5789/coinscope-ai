@@ -10,12 +10,12 @@ Usage:
 """
 
 import argparse
+from datetime import datetime
 import json
 import logging
-import sys
-from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+import sys
+from typing import Dict, List
 
 import numpy as np
 import pandas as pd
@@ -23,11 +23,13 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from ai.evaluation.metrics import Evaluator, compute_forward_returns
-from ai.features.engine_v3 import V3FeatureConfig, V3FeatureEngine
 from ai.features.dataset import TargetConfig
+from ai.features.engine_v3 import V3FeatureConfig, V3FeatureEngine
 from ai.models.classifiers import (
-    LGBMConfig, LGBMSignalClassifier,
-    LogRegConfig, LogRegSignalClassifier,
+    LGBMConfig,
+    LGBMSignalClassifier,
+    LogRegConfig,
+    LogRegSignalClassifier,
     SignalClassifier,
 )
 from ai.training.walk_forward import WalkForwardTrainer, WFTrainConfig
@@ -297,7 +299,7 @@ def train_and_evaluate(
     )
 
     # ── Evaluate ─────────────────────────────────────────────
-    print(f"\n  Evaluating on test set...")
+    print("\n  Evaluating on test set...")
     evaluator = Evaluator()
 
     close = df["close"].values.astype(float)
@@ -336,12 +338,12 @@ def train_and_evaluate(
         is_metrics=is_metrics_dict,
     )
 
-    print(f"\n  ── ML Metrics (Test Set) ──")
+    print("\n  ── ML Metrics (Test Set) ──")
     print(f"    Accuracy:       {report.ml_metrics.accuracy:.4f}")
     print(f"    F1 (macro):     {report.ml_metrics.f1_macro:.4f}")
     print(f"    AUC-ROC:        {report.ml_metrics.auc_roc_ovr:.4f}")
 
-    print(f"\n  ── Trading Metrics ──")
+    print("\n  ── Trading Metrics ──")
     print(f"    Signal Hit Rate:     {report.trading_metrics.signal_hit_rate:.4f}")
     print(f"    Long Hit Rate:       {report.trading_metrics.long_hit_rate:.4f}")
     print(f"    Short Hit Rate:      {report.trading_metrics.short_hit_rate:.4f}")
@@ -353,14 +355,14 @@ def train_and_evaluate(
           f"{report.trading_metrics.neutral_signals}N")
 
     if report.overfit_metrics:
-        print(f"\n  ── Overfitting Detection ──")
+        print("\n  ── Overfitting Detection ──")
         print(f"    IS Accuracy:  {report.overfit_metrics.is_accuracy:.4f}")
         print(f"    OOS Accuracy: {report.overfit_metrics.oos_accuracy:.4f}")
         print(f"    Degradation:  {report.overfit_metrics.accuracy_degradation:+.4f}")
         print(f"    Overfit Score: {report.overfit_metrics.overfit_score:.4f}")
 
     if report.top_features:
-        print(f"\n  ── Top 15 Features ──")
+        print("\n  ── Top 15 Features ──")
         for name, imp in report.top_features[:15]:
             marker = " [NEW]" if any(name.startswith(p) for p in [
                 "funding_", "liq_", "oi_", "basis_", "ob_"
@@ -434,7 +436,7 @@ def train_and_evaluate(
 
     # ── Walk-Forward ─────────────────────────────────────────
     if run_walk_forward:
-        print(f"\n  ── Walk-Forward ML Training (v3) ──")
+        print("\n  ── Walk-Forward ML Training (v3) ──")
         wf_config = WFTrainConfig(
             n_splits=5,
             train_pct=0.70,
@@ -488,7 +490,7 @@ def train_and_evaluate(
             wf_result.aggregate_feature_importance.items(),
             key=lambda x: x[1], reverse=True,
         )[:15]
-        print(f"\n    ── Top 15 WF Features ──")
+        print("\n    ── Top 15 WF Features ──")
         for name, imp in wf_top:
             marker = " [NEW]" if any(name.startswith(p) for p in [
                 "funding_", "liq_", "oi_", "basis_", "ob_"
@@ -551,7 +553,7 @@ def main():
     # Print comparison summary
     if all_results:
         print(f"\n{'=' * 130}")
-        print(f" v3 SUMMARY — Phase 2 Alpha Features (4h timeframe)")
+        print(" v3 SUMMARY — Phase 2 Alpha Features (4h timeframe)")
         print(f"{'=' * 130}")
         print(f"{'Config':<35s} {'Feats':>5s} {'Acc':>6s} {'F1':>6s} {'AUC':>6s} "
               f"{'HitR':>6s} {'PF':>6s} {'WF_Acc':>7s} {'WF_F1':>6s} {'WF_Hit':>7s}")

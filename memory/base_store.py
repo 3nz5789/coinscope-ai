@@ -32,23 +32,21 @@ Design:
 """
 
 import atexit
+from collections import deque
+from datetime import datetime, timezone
 import hashlib
 import logging
 import queue
 import threading
 import time
-from collections import deque
-from datetime import datetime, timezone, timedelta
-from typing import Any, Deque, Dict, List, Optional, Set, Tuple
+from typing import Any, Deque, Dict, List, Optional, Set
 
 import chromadb
 
 from .config import (
-    MemoryConfig,
     COLLECTION_NAME,
     HALL_STRATEGY,
-    DEFAULT_RETENTION_DAYS,
-    RETENTION_EXEMPT_ROOMS,
+    MemoryConfig,
 )
 
 logger = logging.getLogger("coinscopeai.memory")

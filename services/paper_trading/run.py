@@ -11,7 +11,7 @@ import argparse
 import logging
 import sys
 
-from .config import PaperTradingConfig, TradingConfig, ExchangeConfig, TelegramConfig
+from .config import ExchangeConfig, PaperTradingConfig, TelegramConfig, TradingConfig
 from .engine import PaperTradingEngine
 
 

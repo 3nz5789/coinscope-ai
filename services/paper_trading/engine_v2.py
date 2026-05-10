@@ -22,15 +22,14 @@ Architecture:
     - orderbook.*.*        → Real-time spread/imbalance for execution
 """
 
+from collections import defaultdict, deque
+from datetime import datetime, timezone
 import json
 import logging
-import os
+from pathlib import Path
 import signal
 import threading
 import time
-from collections import defaultdict, deque
-from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
@@ -38,14 +37,12 @@ import pandas as pd
 from ..market_data.event_bus import Event, EventBus
 from ..market_data.types import (
     AlphaSignal,
+    OrderBookSnapshot,
     RegimeState,
     Trade,
-    OrderBookSnapshot,
-    alpha_topic,
-    regime_topic,
 )
 from .alerting import TelegramAlerter
-from .config import PaperTradingConfig, TradingConfig
+from .config import PaperTradingConfig
 from .exchange_client import BinanceFuturesTestnetClient, ExchangeError
 from .order_manager import ManagedOrder, OrderManager
 from .safety import KillSwitch, SafetyGate
@@ -458,9 +455,9 @@ class PaperTradingEngineV2:
     def _start_streams(self, exchanges: List[str]):
         """Start multi-exchange stream manager and alpha/regime processors."""
         try:
-            from ..market_data.streams.exchange_streams import StreamConfig, StreamManager
             from ..market_data.alpha.generators import AlphaEngine
             from ..market_data.regime.detector import RegimeDetector
+            from ..market_data.streams.exchange_streams import StreamConfig, StreamManager
 
             stream_config = StreamConfig(symbols=self._config.trading.symbols)
             self._stream_manager = StreamManager(self._bus, stream_config)

@@ -11,21 +11,20 @@ Features:
 - Request/response logging for audit trail
 """
 
+from dataclasses import dataclass
 import hashlib
 import hmac
 import json
 import logging
 import time
-from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 from urllib.parse import urlencode
 
 import requests
 
 from .config import (
-    BINANCE_FUTURES_TESTNET_REST,
-    ExchangeConfig,
     _BLOCKED_MAINNET_URLS,
+    ExchangeConfig,
 )
 
 logger = logging.getLogger("coinscopeai.paper_trading.exchange")

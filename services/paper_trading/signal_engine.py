@@ -16,11 +16,11 @@ v3 updates:
   - Loads model metadata (feature_names, norm_params) from _meta.json
 """
 
-import logging
-import time
 from collections import deque
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional, Tuple
+import logging
+import time
+from typing import Any, Callable, Dict, List, Optional
 
 import numpy as np
 import pandas as pd

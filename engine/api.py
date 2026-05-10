@@ -12,17 +12,13 @@ Exposes REST endpoints for:
 - Walk-forward validation
 """
 
-import sys
-import os
 import time
-
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 
-from engine.integrations.trade_journal import TradeJournal
 from engine.core.scale_up_manager import ScaleUpManager
+from engine.integrations.trade_journal import TradeJournal
 
 app = FastAPI(title="CoinScopeAI Engine API", version="1.0.0")
 
@@ -99,7 +95,6 @@ async def get_regime(symbol: str):
     try:
         import ccxt
         import pandas as pd
-        import numpy as np
 
         from risk_management.hmm_regime_detector import EnsembleRegimeDetector
 
@@ -147,7 +142,6 @@ async def check_promotion(trades: int, sharpe: float):
 async def run_validation(symbol: str = "BTC/USDT", limit: int = 1000):
     """Run walk-forward validation and return results."""
     try:
-        import pandas as pd
 
         from validation.walk_forward_validation import (
             WalkForwardValidator,

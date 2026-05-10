@@ -38,13 +38,12 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+from datetime import date, datetime, timezone
 import logging
-import os
+from pathlib import Path
 import signal
 import sys
-from datetime import date, datetime, timezone
-from pathlib import Path
-from typing import List, Optional
+from typing import List
 
 # ---------------------------------------------------------------------------
 # Logging setup
@@ -91,11 +90,11 @@ def _parse_exchanges(s: str) -> List[str]:
 
 async def _cmd_record(args: argparse.Namespace) -> None:
     from .base import EventBus, Exchange
-    from .recorder import StreamRecorder
-    from .trades import TradeStream
-    from .orderbook import OrderBookStream
     from .funding import FundingStream
     from .liquidation import LiquidationStream
+    from .orderbook import OrderBookStream
+    from .recorder import StreamRecorder
+    from .trades import TradeStream
 
     symbols = _parse_symbols(args.symbols)
     stream_names = [s.strip().lower() for s in args.streams.split(",")]

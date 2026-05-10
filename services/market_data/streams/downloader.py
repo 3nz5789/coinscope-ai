@@ -30,28 +30,23 @@ making it directly replayable by the ReplayEngine.
 from __future__ import annotations
 
 import asyncio
+from datetime import date, datetime, timedelta, timezone
 import gzip
 import io
-import json
 import logging
-import os
+from pathlib import Path
 import struct
+from typing import Any, Dict, List, Optional, Tuple
 import zipfile
 import zlib
-from datetime import date, datetime, timedelta, timezone
-from pathlib import Path
-from typing import Any, AsyncIterator, Dict, List, Optional, Tuple
 
 import aiohttp
 import orjson
 
 from .base import (
-    Exchange,
     EventType,
+    Exchange,
     FundingRate,
-    Liquidation,
-    OrderBookLevel,
-    OrderBookUpdate,
     Trade,
     normalize_symbol,
     now_ms,

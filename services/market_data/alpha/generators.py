@@ -11,11 +11,10 @@ Generates alpha signals from cross-exchange market data:
 Each generator subscribes to EventBus topics and publishes AlphaSignal events.
 """
 
+from collections import defaultdict, deque
 import logging
 import threading
 import time
-from collections import defaultdict, deque
-from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
 from ..event_bus import Event, EventBus
@@ -24,8 +23,6 @@ from ..types import (
     FundingRate,
     Liquidation,
     OrderBookSnapshot,
-    Trade,
-    alpha_topic,
 )
 
 logger = logging.getLogger("coinscopeai.market_data.alpha")

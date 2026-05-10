@@ -7,9 +7,8 @@ Usage:
     python -m services.paper_trading.status
 """
 
-import json
-import sys
 from datetime import datetime, timezone
+import json
 from pathlib import Path
 
 
@@ -25,7 +24,7 @@ def main():
     if kill_file.exists():
         try:
             kill_data = json.loads(kill_file.read_text())
-            print(f"\n🚨 KILL SWITCH: ACTIVE")
+            print("\n🚨 KILL SWITCH: ACTIVE")
             print(f"   Reason: {kill_data.get('reason', 'unknown')}")
             print(f"   Activated: {datetime.fromtimestamp(kill_data.get('activated_at', 0), tz=timezone.utc)}")
         except Exception:
@@ -53,7 +52,7 @@ def main():
 
     # Safety
     safety = state.get("safety", {})
-    print(f"\n💰 Account")
+    print("\n💰 Account")
     print(f"   Equity:     {safety.get('equity', 0):>12.2f} USDT")
     print(f"   Peak:       {safety.get('peak_equity', 0):>12.2f} USDT")
     print(f"   Daily P&L:  {safety.get('daily_pnl', 0):>+12.2f} USDT")
@@ -62,7 +61,7 @@ def main():
 
     # Portfolio
     portfolio = state.get("portfolio", {})
-    print(f"\n📈 Portfolio")
+    print("\n📈 Portfolio")
     print(f"   Open Positions:    {portfolio.get('open_positions', 0)}")
     print(f"   Unrealized P&L:    {portfolio.get('total_unrealized_pnl', 0):+.2f} USDT")
     print(f"   Realized P&L:      {portfolio.get('total_realized_pnl', 0):+.2f} USDT")
@@ -72,27 +71,27 @@ def main():
 
     positions = portfolio.get("positions", {})
     if positions:
-        print(f"\n   Open Positions:")
+        print("\n   Open Positions:")
         for sym, pos in positions.items():
             print(f"     {sym}: {pos.get('side', '?')} @ {pos.get('entry_price', 0):.2f} "
                   f"P&L: {pos.get('unrealized_pnl', 0):+.2f}")
 
     # Signals
     signals = state.get("signal_stats", {})
-    print(f"\n🤖 ML Signals")
+    print("\n🤖 ML Signals")
     print(f"   Model Loaded:      {signals.get('model_loaded', False)}")
     print(f"   Candles Processed: {signals.get('candles_processed', 0)}")
     print(f"   Signals Generated: {signals.get('signals_generated', 0)}")
 
     # Safety details
-    print(f"\n🛡️  Safety")
+    print("\n🛡️  Safety")
     print(f"   Orders Submitted:  {safety.get('total_orders_submitted', 0)}")
     print(f"   Orders Rejected:   {safety.get('total_orders_rejected', 0)}")
     print(f"   Consec. Losses:    {safety.get('consecutive_losses', 0)}")
 
     rejections = safety.get("recent_rejections", [])
     if rejections:
-        print(f"   Recent Rejections:")
+        print("   Recent Rejections:")
         for r in rejections[-3:]:
             print(f"     {r.get('symbol', '?')}: {r.get('reason', '?')}")
 

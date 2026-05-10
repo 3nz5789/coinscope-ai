@@ -10,12 +10,12 @@ Tests all 5 production-readiness improvements:
   5. Retention & pruning policy
 """
 
+from datetime import datetime, timedelta, timezone
 import os
-import sys
-import time
 import shutil
+import sys
 import tempfile
-from datetime import datetime, timezone, timedelta
+import time
 
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -132,8 +132,8 @@ def test_3_hall_enforcement():
     try:
         _clear_singletons()
         config = _fresh_config(tmpdir)
-        from memory.manager import MemoryManager
         from memory.config import HALL_STRATEGY
+        from memory.manager import MemoryManager
         mm = MemoryManager(config)
 
         # Try to write a signal with the wrong hall
@@ -215,6 +215,7 @@ def test_5_retention_pruning():
 
         # Write some events with old timestamps directly into ChromaDB
         import chromadb
+
         from memory.config import COLLECTION_NAME
 
         client = chromadb.PersistentClient(path=config.palace_path)
@@ -325,6 +326,7 @@ def test_7_shutdown_flush():
 
         # Verify all events were flushed
         import chromadb
+
         from memory.config import COLLECTION_NAME
         client = chromadb.PersistentClient(path=config.palace_path)
         col = client.get_or_create_collection(name=COLLECTION_NAME, metadata={"hnsw:space": "cosine"})

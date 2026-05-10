@@ -13,10 +13,10 @@ from __future__ import annotations
 
 import abc
 import asyncio
+from collections import defaultdict
 import logging
 import time
-from collections import defaultdict
-from typing import Any, Callable, Coroutine, Dict, List, Optional, Set
+from typing import Any, Callable, Coroutine, Dict, List, Optional
 
 from .models import (
     ConnectionMetrics,
@@ -178,8 +178,9 @@ class BaseExchangeClient(abc.ABC):
         - exponential backoff
         - heartbeat monitoring
         """
-        import websockets
         import json
+
+        import websockets
 
         backoff = self.INITIAL_BACKOFF
         while self._running:

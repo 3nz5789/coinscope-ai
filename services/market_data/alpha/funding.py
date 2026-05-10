@@ -10,7 +10,7 @@ Produces alpha signals from funding rate data:
 from __future__ import annotations
 
 import time
-from typing import Dict, List, Optional, Sequence
+from typing import List, Optional, Sequence
 
 from services.market_data.alpha.base import BaseAlphaGenerator
 from services.market_data.models import (

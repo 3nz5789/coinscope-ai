@@ -10,15 +10,13 @@ Provides:
 
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 import asyncio
+from dataclasses import asdict, dataclass, field
 import enum
 import gzip
-import json
 import logging
-import signal
 import time
-from abc import ABC, abstractmethod
-from dataclasses import asdict, dataclass, field
 from typing import (
     Any,
     Awaitable,
@@ -26,8 +24,6 @@ from typing import (
     Dict,
     List,
     Optional,
-    Set,
-    Tuple,
 )
 
 import aiohttp

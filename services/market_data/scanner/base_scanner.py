@@ -10,11 +10,11 @@ All scan engines inherit from this base. Provides:
 from __future__ import annotations
 
 import abc
-import logging
-import time
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
-from typing import Any, Deque, Dict, List, Optional
+import logging
+import time
+from typing import Deque, Dict, List, Optional
 
 from ..base import EventBus
 from ..models import EventType, Exchange, MarketEvent, ScanSignal

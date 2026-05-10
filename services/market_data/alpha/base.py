@@ -9,8 +9,8 @@ without retaining internal mutable state between calls.
 
 from __future__ import annotations
 
-import math
 from abc import ABC, abstractmethod
+import math
 from typing import List, Optional, Sequence
 
 from services.market_data.models import AlphaGeneratorConfig, AlphaSignal, SignalDirection

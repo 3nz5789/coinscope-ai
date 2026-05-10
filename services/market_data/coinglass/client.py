@@ -26,16 +26,9 @@ from typing import Any, Dict, List, Optional
 import aiohttp
 
 from services.market_data.models import (
-    AggregatedBasis,
     AggregatedOI,
-    BasisData,
-    Exchange,
-    FundingRate,
     FundingSnapshot,
-    Liquidation,
     LiquidationSnapshot,
-    OpenInterest,
-    Side,
 )
 
 logger = logging.getLogger(__name__)

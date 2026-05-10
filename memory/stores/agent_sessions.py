@@ -21,10 +21,10 @@ Agent roles:
   - dashboard_agent   — frontend and visualization
 """
 
-import hashlib
-import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+import hashlib
+from typing import Any, Dict, List
+import uuid
 
 from ..base_store import PalaceStore
 

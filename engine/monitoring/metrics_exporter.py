@@ -9,11 +9,11 @@ import time
 
 try:
     from prometheus_client import (
-        start_http_server,
-        Gauge,
-        Counter,
-        Histogram,
         REGISTRY,
+        Counter,
+        Gauge,
+        Histogram,
+        start_http_server,
     )
     PROMETHEUS_AVAILABLE = True
 except ImportError:
@@ -26,7 +26,7 @@ class MetricsExporter:
     def __init__(self, port: int = 8000):
         self.port = port
         self._started = False
-        
+
         if PROMETHEUS_AVAILABLE:
             self.signal_total = Counter(
                 "coinscopeai_signals_total",

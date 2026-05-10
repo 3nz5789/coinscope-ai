@@ -46,27 +46,25 @@ Usage::
     mm.shutdown()
 """
 
+from datetime import datetime, timedelta, timezone
 import logging
-import os
-from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, List, Optional
 
 import chromadb
 
 from .config import (
-    MemoryConfig,
     COLLECTION_NAME,
-    DEFAULT_RETENTION_DAYS,
     RETENTION_EXEMPT_ROOMS,
+    MemoryConfig,
 )
-from .stores.trade_decisions import TradeDecisionStore
-from .stores.ml_models import MLModelStore
-from .stores.risk_events import RiskEventStore
-from .stores.system_events import SystemEventStore
-from .stores.scanner import ScannerStore
 from .stores.agent_sessions import AgentSessionStore
+from .stores.ml_models import MLModelStore
 from .stores.project_knowledge import ProjectKnowledgeStore
+from .stores.risk_events import RiskEventStore
+from .stores.scanner import ScannerStore
+from .stores.system_events import SystemEventStore
 from .stores.task_outcomes import TaskOutcomeStore
+from .stores.trade_decisions import TradeDecisionStore
 
 logger = logging.getLogger("coinscopeai.memory")
 

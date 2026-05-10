@@ -3,23 +3,23 @@ Trade Auto-Logger Module
 Automatically logs executed trades to Notion Trading Journal
 """
 
-import asyncio
-import logging
 from datetime import datetime
-from typing import Dict, Any, Optional
+import logging
+from typing import Any, Dict
+
 from integrations.notion_integration import get_notion_integration
 
 logger = logging.getLogger(__name__)
 
 class TradeLogger:
     """Handles automatic trade logging to Notion"""
-    
+
     def __init__(self):
         """Initialize trade logger"""
         self.notion = get_notion_integration()
         self.pending_trades = {}
         logger.info("✅ Trade Logger initialized")
-    
+
     async def log_trade_execution(self, trade_data: Dict[str, Any]) -> bool:
         """
         Log a trade execution to Notion
@@ -44,21 +44,21 @@ class TradeLogger:
                 'exit_time': trade_data.get('exit_time', datetime.now()),
                 'notes': trade_data.get('notes', '')
             }
-            
+
             # Log to Notion
             success = await self.notion.log_trade_to_journal(formatted_trade)
-            
+
             if success:
                 logger.info(f"✅ Trade logged: {formatted_trade['pair']} {formatted_trade['pnl_pct']:+.2f}%")
             else:
                 logger.warning(f"⚠️ Failed to log trade to Notion: {formatted_trade['pair']}")
-            
+
             return success
-        
+
         except Exception as e:
             logger.error(f"❌ Error logging trade: {e}")
             return False
-    
+
     async def log_batch_trades(self, trades: list) -> int:
         """
         Log multiple trades in batch
@@ -70,14 +70,14 @@ class TradeLogger:
             int: Number of trades successfully logged
         """
         logged_count = 0
-        
+
         for trade in trades:
             if await self.log_trade_execution(trade):
                 logged_count += 1
-        
+
         logger.info(f"✅ Batch logged: {logged_count}/{len(trades)} trades")
         return logged_count
-    
+
     async def track_open_trade(self, trade_id: str, trade_data: Dict[str, Any]):
         """
         Track an open trade (not yet closed)
@@ -91,7 +91,7 @@ class TradeLogger:
             'opened_at': datetime.now()
         }
         logger.info(f"📊 Tracking open trade: {trade_id}")
-    
+
     async def close_tracked_trade(self, trade_id: str, exit_data: Dict[str, Any]) -> bool:
         """
         Close and log a tracked trade
@@ -106,22 +106,22 @@ class TradeLogger:
         if trade_id not in self.pending_trades:
             logger.warning(f"⚠️ Trade not tracked: {trade_id}")
             return False
-        
+
         trade_info = self.pending_trades[trade_id]
-        
+
         # Merge entry and exit data
         complete_trade = {
             **trade_info['data'],
             **exit_data,
             'entry_time': trade_info['opened_at']
         }
-        
+
         # Log to Notion
         success = await self.log_trade_execution(complete_trade)
-        
+
         if success:
             del self.pending_trades[trade_id]
-        
+
         return success
 
 
