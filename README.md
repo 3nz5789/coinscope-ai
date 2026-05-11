@@ -4,7 +4,7 @@
 
 **AI-powered crypto futures trading intelligence — capital preservation first.**
 
-[![CI](https://github.com/3nz5789/CoinScopeAI/actions/workflows/ci.yml/badge.svg)](https://github.com/3nz5789/CoinScopeAI/actions/workflows/ci.yml)
+[![CI](https://github.com/3nz5789/coinscope-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/3nz5789/coinscope-ai/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Phase](https://img.shields.io/badge/phase-testnet%20validation-orange)](https://linear.app/coinscopeai)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://python.org)
@@ -187,7 +187,7 @@ CoinScopeAI/
 ### Setup
 
 ```bash
-git clone https://github.com/3nz5789/CoinScopeAI.git
+git clone https://github.com/3nz5789/coinscope-ai.git CoinScopeAI
 cd CoinScopeAI
 
 python3.11 -m venv .venv

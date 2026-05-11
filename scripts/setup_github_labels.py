@@ -14,7 +14,7 @@ import urllib.request
 import urllib.error
 import urllib.parse
 
-REPO = "3nz5789/CoinScopeAI"
+REPO = "3nz5789/coinscope-ai"
 API_BASE = "https://api.github.com/repos/{}/labels".format(REPO)
 TOKEN = os.environ.get("GH_TOKEN", "")
 
