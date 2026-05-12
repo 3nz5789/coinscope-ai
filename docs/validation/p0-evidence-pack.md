@@ -17,6 +17,7 @@
 
 ## Table of Contents
 
+0. [Honesty pass — v0.1.0-p0.1](#0-honesty-pass--v010-p01-added-2026-05-13)
 1. [What P0 is and is not](#1-what-p0-is-and-is-not)
 2. [Validation scope](#2-validation-scope)
 3. [Pre-flight bug fix record (16/16 resolved)](#3-pre-flight-bug-fix-record)
@@ -29,6 +30,84 @@
 10. [What was not validated in P0](#10-what-was-not-validated-in-p0)
 11. [P1 readiness criteria](#11-p1-readiness-criteria)
 12. [Document trail](#12-document-trail)
+
+---
+
+## 0. Honesty pass — v0.1.0-p0.1 (added 2026-05-13)
+
+> **Read this first.** The original publication of this document (PR #32, 2026-05-13) made claims about artifacts that exist on side branches but had not yet merged to `main`. This section maps each claim in sections 1–12 below to its actual status on `main` as of this commit, so a reader can distinguish *what P0 has proven* from *what P0 intends to prove once the in-flight branches merge*.
+>
+> Where the body of this document conflicts with the tables in this section, **§0 overrides**. The body is preserved as design intent and a roadmap for the missing work, not as a record of proof.
+
+### 0.1 Verifiable on `main`
+
+These claims are backed by files currently committed to `main`:
+
+| Claim | Backing artifact on `main` |
+|---|---|
+| 15-test CI smoke suite | `tests/test_ci_smoke.py` |
+| 30-test directory-boundary suite | `tests/test_directory_boundaries.py` |
+| Paper-trading 4-layer fail-closed safety gate | `services/paper_trading/safety.py` (~400 lines, layers: kill switch → hardcoded limits → configurable limits → state checks) |
+| Kill-switch implementation (activate / deactivate / persistent flag / CLI) | `services/paper_trading/safety.py::KillSwitch` + `services/paper_trading/kill.py` |
+| Kill-switch + safety-gate test coverage | `tests/unit/paper_trading/test_safety.py` (~360 lines, 7 test classes covering kill switch, reduce-only bypass, hardcoded limits, configurable limits, state checks, counters, config enforcement) |
+| Paper-trading additional coverage | `tests/unit/paper_trading/test_engine_integration.py`, `test_order_manager.py`, `test_alerting.py`, `test_exchange_client.py`, `test_signal_engine.py` |
+| Market-data unit coverage (14 test files) | `tests/unit/market_data/*` |
+| 16-bug pre-flight fix record | `docs/BUG_FIXES_COMPREHENSIVE.md` (note: path is `docs/`, **not** `coinscope_trading_engine/`) |
+| API contract reference (40+ endpoints) | `docs/api/engine-api-contract.md` |
+| SLOs + alert rules + dashboard spec | `docs/monitoring/slo-alerts-dashboard.md` |
+| Prometheus configuration | `prometheus-alert-rules.yml`, `prometheus.yml` (repo root) |
+| Validation safe-vs-experimental ADR | `docs/decisions/adr-0005-validation-safe-vs-experimental-boundaries.md` |
+| CI workflow (test + security jobs) | `.github/workflows/ci.yml` |
+| Canonical risk thresholds (PCC v2 §8) | `services/paper_trading/config.py` hardcoded constants + env example |
+
+### 0.2 Claimed but **not** on `main` — design intent, not yet proof
+
+These claims appear in the body below but the cited artifact does not exist on `main`:
+
+| Claimed artifact (where in this doc) | Actual location | Status |
+|---|---|---|
+| `tests/test_invariants.py` — 65 invariant tests (§4) | Branch `test/invariant-failure-modes` | **Not merged.** The kill-switch and breaker invariants it claims to prove are *partially* proven on `main` via `tests/unit/paper_trading/test_safety.py` instead, at the paper-trading safety layer rather than at the dedicated invariant-suite level. |
+| `docs/runbooks/operator-workflow.md` (§7, §12) | No commit anywhere in repo touches this path | **Not written.** The "9-step lifecycle" in §7 is currently informal. |
+| `docs/risk/risk-framework.md` (§12) | Branch `restructure/2026-04-18-tier1-docs` (stale, 2026-04-18) | **Not merged.** Risk-framework content currently lives in the project's Google Drive workspace and as inline constants in `services/paper_trading/config.py` + `services/paper_trading/safety.py`. |
+| `docs/risk/risk-gate.md`, `docs/risk/position-sizing.md`, `docs/risk/failsafes-and-kill-switches.md` (§12) | Same stale `restructure/2026-04-18-tier1-docs` branch | **Not merged.** |
+| `coinscope_trading_engine/BUG_FIXES_COMPREHENSIVE.md` (§3, §12) | Path does not exist on `main` | **Wrong path.** The file is at `docs/BUG_FIXES_COMPREHENSIVE.md`. The 16/16 claim itself holds; only the cited path is wrong. |
+| `coinscope_trading_engine/validation/walk_forward_validation.py` (§5) | Path does not exist on `main` (nor on any branch I could locate) | **Not committed.** The 9-fold WFV results table in §5 cannot be reproduced from code in this repo. Treat the §5 numbers as **preliminary external analysis** until the runner is committed. |
+| Any path under `coinscope_trading_engine/` (§3, §12) | Path does not exist on `main` | Multiple §12 entries reference this directory; it does not exist anywhere in the current tree. |
+
+### 0.3 Tag state
+
+`v0.1.0-p0` was cut at commit `a4025ec5` on 2026-05-12 20:52 (+03:00). Three PRs merged to `main` **after** the tag cut:
+
+| PR | Merged at | Brought in |
+|---|---|---|
+| #27 Docs/api contract | 2026-05-12 22:15 | `docs/api/engine-api-contract.md`, `docs/monitoring/slo-alerts-dashboard.md` |
+| #31 Feat/signal decision cards | 2026-05-13 00:30 | (note: this PR *removed* a draft `tests/test_invariants.py`; the file landed only on `test/invariant-failure-modes`) |
+| #32 Docs/p0 evidence pack | 2026-05-13 00:41 | this document |
+
+So the `v0.1.0-p0` tag pre-dates every documentation artifact this evidence pack relies on. Reading the tag in isolation will significantly underrepresent the actual P0 evidence on `main` — and conversely, reading this doc against the tag will surface "missing" files that are present on current `main`.
+
+A new tag `v0.1.0-p0.1` will be cut at the merge commit of the honesty-pass PR that introduces this section, capturing the doc as it now reads against the artifacts it now actually backs.
+
+### 0.4 Updated P1 hard gates (overrides §11)
+
+The original §11 hard-gate checklist had multiple aspirational `[x]` marks. Accurate state on `main`:
+
+- [x] All 16 pre-flight bugs resolved — `docs/BUG_FIXES_COMPREHENSIVE.md`
+- [ ] **65 invariant tests green on `main`** — exists only on `test/invariant-failure-modes`; merge pending
+- [x] 30 boundary tests green on `main` — `tests/test_directory_boundaries.py`
+- [x] `v0.1.0-p0` tag published — but the tag is **pre-evidence**; `v0.1.0-p0.1` (this PR) is the first honest baseline
+- [ ] **Operator workflow runbook documented** — file does not exist on any branch
+- [ ] **Risk framework doc current on `main`** — content lives in Drive workspace + inline in code; needs port to `docs/risk/`
+- [x] API contract documented — `docs/api/engine-api-contract.md`
+- [x] SLOs and alert rules defined — `docs/monitoring/slo-alerts-dashboard.md`
+- [ ] COI-68: VPS `.env` patch + `docker restart` (operator action, unchanged)
+- [ ] COI-69: Post-restart verification (blocked by COI-68, unchanged)
+
+P0 graduation now requires the four `[ ]` items above to flip — not just the COI-68/69 operator actions.
+
+### 0.5 What P0 has actually proven on `main` (the honest one-paragraph summary)
+
+The CoinScopeAI engine ships a **paper-trading safety gate** (`services/paper_trading/safety.py`) implementing four fail-closed layers (kill switch → hardcoded limits → configurable limits → state checks), backed by ~360 lines of unit tests in `tests/unit/paper_trading/test_safety.py` covering every rejection class. Sixteen pre-flight bugs were resolved per `docs/BUG_FIXES_COMPREHENSIVE.md`. Forty-five+ tests run across the suite (15 smoke + 30 boundary + paper-trading + market-data); CI is green on `main`. The API contract and SLO/alert specifications are documented. **What has not yet landed on `main`:** a dedicated invariant test suite, an operator-workflow runbook, and the `docs/risk/` framework files — all are in flight on side branches or in the Drive workspace. P0 will graduate to P1 when these merge AND when the operational COI-68/69 actions complete, **not before**.
 
 ---
 
@@ -422,16 +501,18 @@ These are not bugs. They are honest constraints that anyone reading this documen
 
 ## 11. P1 Readiness Criteria
 
+> **Status overridden by §0.4.** The original list below claimed multiple hard gates were satisfied that were not, in fact, satisfied on `main`. The list is preserved here for traceability; the operative version is [§0.4 Updated P1 hard gates](#04-updated-p1-hard-gates-overrides-11).
+
 P0 is complete when all of the following are true. P1 begins when COI-68 is resolved.
 
 ### Hard gates (must be true)
 
 - [x] All 16 pre-flight bugs resolved
-- [x] 65 invariant tests green on `main`
+- [ ] ~~65 invariant tests green on `main`~~ — see §0.4; only on `test/invariant-failure-modes` branch
 - [x] 30 boundary tests green on `main`
-- [x] `v0.1.0-p0` tag published with pre-release notes
-- [x] Operator workflow documented and followed for ≥ 3 sessions
-- [x] Risk framework doc current and reviewed
+- [x] `v0.1.0-p0` tag published with pre-release notes — but see §0.3; the tag is pre-evidence
+- [ ] ~~Operator workflow documented and followed for ≥ 3 sessions~~ — see §0.4; runbook does not exist
+- [ ] ~~Risk framework doc current and reviewed~~ — see §0.4; `docs/risk/` files not on `main`
 - [x] API contract documented (40+ endpoints)
 - [x] SLOs and alert rules defined (8 SLOs, 12 alerts)
 - [ ] **COI-68: VPS `.env` patch + `docker restart` (operator action)**
@@ -453,40 +534,44 @@ P1 = real capital, small size (≤ $100 per trade initially), mainnet Binance US
 
 ## 12. Document Trail
 
-All documents referenced in this evidence pack are committed to the repo and/or Notion.
+> **Many paths in the original trail were wrong or aspirational.** This section is rewritten to label each row as **On `main`** / **On side branch** / **Not yet written** / **In Drive workspace**. Cross-check against §0.1 and §0.2.
 
-| Document | Location |
-|---|---|
-| Risk framework | `docs/risk/risk-framework.md` |
-| Risk gate mechanics | `docs/risk/risk-gate.md` |
-| Position sizing | `docs/risk/position-sizing.md` |
-| Failsafes and kill switches | `docs/risk/failsafes-and-kill-switches.md` |
-| Operator workflow | `docs/runbooks/operator-workflow.md` |
-| SLOs + alert rules | `docs/monitoring/slo-alerts-dashboard.md` |
-| API contract | `docs/api/engine-api-contract.md` |
-| Bug fix record | `coinscope_trading_engine/BUG_FIXES_COMPREHENSIVE.md` |
-| Invariant test suite | `tests/test_invariants.py` |
-| Directory boundary tests | `tests/test_directory_boundaries.py` |
-| Walk-forward validator | `coinscope_trading_engine/validation/walk_forward_validation.py` |
-| ADR-0005 (boundary isolation) | `docs/decisions/adr-0005-validation-safe-vs-experimental-boundaries.md` |
-| CI workflow | `.github/workflows/ci.yml` |
-| v0.1.0-p0 release notes | `https://github.com/3nz5789/CoinScopeAI/releases/tag/v0.1.0-p0` |
-| This document | `docs/validation/p0-evidence-pack.md` |
+| Document | Location | Status |
+|---|---|---|
+| Risk framework | (target: `docs/risk/risk-framework.md`) | **In Drive workspace** + inline in code. Stale draft on branch `restructure/2026-04-18-tier1-docs`. Not on `main`. |
+| Risk gate mechanics | (target: `docs/risk/risk-gate.md`) | **In Drive workspace** + code at `risk_management/risk_gate.py`. Stale doc draft on same April branch. |
+| Position sizing | (target: `docs/risk/position-sizing.md`) | **In Drive workspace** + code at `risk_management/kelly_position_sizer.py`. Stale doc draft on same April branch. |
+| Failsafes and kill switches | (target: `docs/risk/failsafes-and-kill-switches.md`) | **In Drive workspace** + code at `services/paper_trading/safety.py` (`KillSwitch` class) and `services/paper_trading/kill.py` (CLI). Stale doc draft on same April branch. |
+| Operator workflow | (target: `docs/runbooks/operator-workflow.md`) | **Not written.** No commit in repo references this path. |
+| SLOs + alert rules | `docs/monitoring/slo-alerts-dashboard.md` | **On `main`** (PR #27). |
+| API contract | `docs/api/engine-api-contract.md` | **On `main`** (PR #27). |
+| Bug fix record | `docs/BUG_FIXES_COMPREHENSIVE.md` | **On `main`.** Original §3/§12 path `coinscope_trading_engine/BUG_FIXES_COMPREHENSIVE.md` is wrong — that directory does not exist. |
+| Invariant test suite | (target: `tests/test_invariants.py`) | **On branch `test/invariant-failure-modes`, not merged.** PR #31 explicitly removed a draft of this file from `main` before merging. The kill-switch and breaker invariants are *partially* proven on `main` via `tests/unit/paper_trading/test_safety.py` instead. |
+| Directory boundary tests | `tests/test_directory_boundaries.py` | **On `main`** (PR #32). |
+| Paper-trading safety gate (real proof on `main`) | `services/paper_trading/safety.py` + `tests/unit/paper_trading/test_safety.py` | **On `main`.** This is the actual code-side proof of the kill switch and risk-rejection contract on `main` today. |
+| Walk-forward validator | (claimed: `coinscope_trading_engine/validation/walk_forward_validation.py`) | **Not committed.** Path does not exist on `main` or on any branch located so far. The 9-fold WFV results table in §5 is **preliminary external analysis**, not reproducible from this repo. |
+| ADR-0005 (boundary isolation) | `docs/decisions/adr-0005-validation-safe-vs-experimental-boundaries.md` | **On `main`** (PR #32). |
+| CI workflow | `.github/workflows/ci.yml` | **On `main`** (commit `4494d57`). |
+| v0.1.0-p0 release notes | `https://github.com/3nz5789/CoinScopeAI/releases/tag/v0.1.0-p0` | Tag exists but is **pre-evidence**; see §0.3. |
+| v0.1.0-p0.1 honest baseline | (this PR) | The tag will be cut at the merge commit of this PR. |
+| This document | `docs/validation/p0-evidence-pack.md` | **On `main`** (PR #32). Annotated by §0 in this PR. |
 
 ### Linear issue trail
+
+> **§0.4 supersedes the `✅ Done` marks below where the deliverable was not actually on `main`.** Items kept here for traceability.
 
 | Issue | Title | Status |
 |---|---|---|
 | COI-86 | Remove committed node_modules | ✅ Done |
 | COI-87 | Metadata consistency pass | ✅ Done |
-| COI-88 | Publish v0.1.0-p0 release | ✅ Done |
-| COI-89 | Canonical operator workflow | ✅ Done |
-| COI-90 | Invariant test suite (65 tests) | ✅ Done |
-| COI-91 | SLOs + alert rules + dashboard spec | ✅ Done |
-| COI-92 | Engine API contract reference | ✅ Done |
-| COI-93 | Directory boundary enforcement | ✅ Done |
+| COI-88 | Publish v0.1.0-p0 release | ✅ Done — but tag is pre-evidence (§0.3) |
+| COI-89 | Canonical operator workflow | ⚠️ **Doc not on `main`** — runbook file does not exist; see §0.2 |
+| COI-90 | Invariant test suite (65 tests) | ⚠️ **Tests not on `main`** — exist on `test/invariant-failure-modes`; see §0.2 |
+| COI-91 | SLOs + alert rules + dashboard spec | ✅ Done — on `main` |
+| COI-92 | Engine API contract reference | ✅ Done — on `main` |
+| COI-93 | Directory boundary enforcement | ✅ Done — on `main` |
 | COI-94 | Signal decision card redesign | ✅ Done |
-| COI-95 | P0 evidence pack (this document) | ✅ Done |
+| COI-95 | P0 evidence pack (this document) | ⚠️ **Published prematurely** — corrected by this honesty-pass PR |
 | COI-68 | VPS env patch + restart | 🔴 Pending operator |
 | COI-69 | Post-restart verification | 🔴 Blocked by COI-68 |
 
