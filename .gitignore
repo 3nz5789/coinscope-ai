@@ -138,3 +138,4 @@ archive/_backups/
 
 # ── CLAUDE.md is tracked — operator instructions for AI agents ─
 # Intentionally NOT ignored. Contains canonical thresholds.
+frontend/node_modules/
