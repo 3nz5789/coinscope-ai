@@ -16,6 +16,8 @@ line-length = 100
 exclude = [
     ".venv", "venv", "__pycache__", "*.egg-info",
     "dist", "build", "docs", "frontend", "coinscopeai-dashboard",
+    "prometheus.yml",
+    "prometheus-alert-rules.yml",
 ]
 
 [tool.ruff.lint]
