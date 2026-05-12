@@ -1,0 +1,192 @@
+# CoinScopeAI — Prometheus Alert Rules
+# P0 Validation Phase — May 2026
+#
+# Reference: docs/monitoring/slo-alerts-dashboard.md
+# Load via prometheus.yml: rule_files: ["prometheus-alert-rules.yml"]
+#
+# Severity conventions:
+#   critical — trading is halted or a hard limit is breached; operator must act now
+#   warning  — degraded state; operator should review within the session
+
+groups:
+
+  - name: coinscopeai.liveness
+    rules:
+
+      # SLO-01 — Engine down
+      - alert: EngineDown
+        expr: up{job="coinscopeai_engine"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Engine is unreachable"
+          description: >
+            CoinScopeAI engine has not responded to Prometheus scrapes for 1 minute.
+            Action: SSH to VPS → docker compose up -d --force-recreate.
+            Runbook: docs/runbooks/daily-ops.md
+
+      # SLO-02 — Scan loop stalled
+      - alert: ScanStalled
+        expr: rate(coinscopeai_scans_total[5m]) == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "No scan cycles completed in the last 5 minutes"
+          description: >
+            coinscopeai_scans_total has not incremented in 5 minutes.
+            The scan loop may be stuck or the Celery worker is dead.
+            Action: check worker logs; if stuck, restart the engine.
+
+  - name: coinscopeai.latency
+    rules:
+
+      # SLO-03 — Scan p95 latency > 30s
+      - alert: ScanSlow
+        expr: >
+          histogram_quantile(0.95,
+            rate(coinscopeai_scan_duration_seconds_bucket[1h])
+          ) > 30
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "p95 scan duration exceeds 30s SLO"
+          description: >
+            Scan p95 latency has exceeded 30s for 15 consecutive minutes.
+            Check Binance Testnet connectivity and rate-limit token levels
+            (coinscopeai_rate_limit_tokens).
+
+      # Binance REST p95 latency > 2s
+      - alert: BinanceRestSlow
+        expr: >
+          histogram_quantile(0.95,
+            rate(coinscopeai_api_latency_seconds_bucket[10m])
+          ) > 2
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Binance REST p95 latency > 2s"
+          description: >
+            REST calls to Binance Testnet are slow (p95 > 2s for 10 minutes).
+            Check Binance Testnet status page. If persistent, engine may be
+            operating on stale data.
+
+  - name: coinscopeai.risk
+    rules:
+
+      # SLO-05 — Circuit breaker open
+      - alert: CircuitBreakerOpen
+        expr: coinscopeai_circuit_breaker_open == 1
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Circuit breaker OPEN — all new entries halted"
+          description: >
+            coinscopeai_circuit_breaker_open == 1. Trading is halted.
+            BEFORE resetting: read GET /journal to verify a real threshold
+            breach caused the trip. If no breach is found, treat as a bug
+            and open an incident.
+            Action: POST /circuit-breaker/reset with a written reason.
+            Runbook: docs/runbooks/daily-ops.md#critical-max-drawdown-breaker-tripped
+
+      # SLO-07 — Position heat cap breached
+      - alert: ExposureHigh
+        expr: coinscopeai_total_exposure_pct > 80
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Position heat cap breached — exposure > 80%"
+          description: >
+            coinscopeai_total_exposure_pct > 80. This violates PCC v2 §8
+            POSITION_HEAT_CAP_PCT=80. Do not open new positions.
+            Investigate position sizer immediately.
+
+      # SLO-08 — Daily loss warning zone (3.5% of $10k = $350)
+      - alert: DailyLossWarning
+        expr: coinscopeai_daily_pnl_usdt < -350
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Daily loss > 3.5% — approaching 5% hard limit"
+          description: >
+            Daily PnL is below -$350 (70% of the $500 hard limit).
+            Consider reducing position sizes. The risk gate will auto-trip
+            at -$500. No manual action required yet.
+
+      # SLO-08 — Daily loss hard limit (5% of $10k = $500)
+      - alert: DailyLossLimit
+        expr: coinscopeai_daily_pnl_usdt < -500
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Daily loss limit hit — 5% of baseline equity"
+          description: >
+            Daily PnL has reached -$500 (5% of $10k baseline).
+            The risk gate circuit breaker should have auto-tripped.
+            Verify: coinscopeai_circuit_breaker_open should be 1.
+
+      # MAX_OPEN_POSITIONS=5 violation (PCC v2 §8)
+      - alert: TooManyPositions
+        expr: coinscopeai_open_positions > 5
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Open positions exceed MAX_OPEN_POSITIONS=5"
+          description: >
+            coinscopeai_open_positions > 5. This violates PCC v2 §8
+            MAX_OPEN_POSITIONS=5. Investigate the position tracker
+            and risk gate immediately. This is a logic bug.
+
+  - name: coinscopeai.exchange
+    rules:
+
+      # SLO-06 — Binance REST 5xx error rate > 1%
+      - alert: BinanceRestErrors
+        expr: >
+          rate(coinscopeai_api_requests_total{status="5xx"}[5m])
+          /
+          rate(coinscopeai_api_requests_total[5m])
+          > 0.01
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Binance REST 5xx error rate > 1%"
+          description: >
+            More than 1% of Binance REST calls returning 5xx errors over 5 minutes.
+            Engine may be operating on degraded or stale data.
+            If persistent: engage kill switch until connectivity normalises.
+
+      # WebSocket reconnect burst (> 3 reconnects per 10 minutes)
+      - alert: WebSocketReconnectBurst
+        expr: rate(coinscopeai_ws_reconnects_total[10m]) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "WebSocket reconnecting frequently (> 3x per 10 minutes)"
+          description: >
+            WS is reconnecting at an elevated rate for 5 minutes.
+            If stream gaps follow (> 60s on any symbol), engage the kill switch.
+            See: docs/runbooks/incident-binance-ws-disconnect-2026-04-18.md
+
+      # Telegram rate-limit tokens critically low
+      - alert: RateLimitLow
+        expr: coinscopeai_rate_limit_tokens{channel="telegram"} < 5
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Telegram alert rate-limit tokens critically low (< 5)"
+          description: >
+            Fewer than 5 Telegram rate-limit tokens remaining.
+            Alert delivery may be throttled. If this is persistent, reduce
+            alert frequency or raise the token bucket size.
