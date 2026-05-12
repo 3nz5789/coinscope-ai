@@ -40,7 +40,7 @@ jobs:
       - name: Install lint dependencies
         run: pip install ruff
       - name: ruff check
-        run: ruff check . --output-format=github
+        run: ruff check . --output-format=github --exclude prometheus-alert-rules.yml --exclude prometheus.yml
 
   security:
     name: Security Scan
