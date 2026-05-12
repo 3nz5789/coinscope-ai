@@ -1,0 +1,32 @@
+global:
+  scrape_interval:     15s
+  evaluation_interval: 15s
+  external_labels:
+    app: coinscopeai
+
+rule_files:
+  - "prometheus-alert-rules.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+        # No Alertmanager in P0 — alerts via engine Telegram integration only.
+        # Alertmanager is a P2 item.
+
+scrape_configs:
+
+  - job_name: coinscopeai_engine
+    static_configs:
+      - targets: ["engine:9090"]
+    metrics_path: /metrics
+    scrape_interval: 15s
+
+  - job_name: redis
+    static_configs:
+      - targets: ["redis:6379"]
+
+  - job_name: celery
+    static_configs:
+      - targets: ["flower:5555"]
+    metrics_path: /metrics
