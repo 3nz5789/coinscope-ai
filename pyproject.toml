@@ -18,6 +18,7 @@ exclude = [
     "dist", "build", "docs", "frontend", "coinscopeai-dashboard",
     "prometheus.yml",
     "prometheus-alert-rules.yml",
+    "tests/test_invariants.py",
 ]
 
 [tool.ruff.lint]
