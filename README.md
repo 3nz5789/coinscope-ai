@@ -114,7 +114,7 @@ CoinScopeAI/
 │   ├── monitoring/             Health checks, Prometheus metrics
 │   └── dashboard/              Dashboard BFF endpoints
 │
-├── apps/                       Application layer
+├── apps/                       Application layer (planned — dashboard migrates here at P2)
 ├── backend/                    Backend services (auth, billing, onboarding)
 ├── services/                   Data ingestion pipelines (OHLCV, OI, funding)
 ├── strategies/                 Strategy definitions and offline backtests
@@ -125,7 +125,7 @@ CoinScopeAI/
 │   ├── circuit_breakers.py     Daily loss, max drawdown, consecutive-loss breakers
 │   └── kill_switch.py          Manual halt — persists across restarts
 │
-├── frontend/                   React 18 dashboard (Vite + Tailwind + OKLCH tokens)
+├── coinscopeai-dashboard/         React 18 dashboard (Vite + Tailwind + OKLCH tokens)
 │
 ├── configs/
 │   ├── environments/
