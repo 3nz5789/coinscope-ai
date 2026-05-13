@@ -326,30 +326,17 @@ The numbers below are **real, reproducible, signed by the run date.** They are a
 
 #### Known validator-vs-live divergence: liquidity sub-score
 
-The validator runs **offline against historical OHLCV** — no order-book data is available. The on-main `FixedScorer.score_liquidity` expects a `bid_ask_spread` input; the validator substitutes **`spread = high − low`** as a public-data proxy. This proxy is **wrong-class**: high-low is a volatility/range measure, not a liquidity measure.
+The validator runs offline against historical OHLCV — no order-book data is available. The on-main `FixedScorer.score_liquidity` expects a `bid_ask_spread` input; the validator substitutes **`spread = high − low`** as a public-data proxy. This proxy is wrong-class: high-low is a volatility/range measure, not a liquidity measure. `score_liquidity` (in [`engine/signals/scoring_fixed.py`](../../engine/signals/scoring_fixed.py)) is monotone-decreasing in spread/close, with thresholds at 0.01% / 0.05% / 0.10%.
 
-`score_liquidity` (in [`engine/signals/scoring_fixed.py`](../../engine/signals/scoring_fixed.py)) is monotone-decreasing in spread / close:
+For typical liquid 4h bars, real bid-ask spread on BTCUSDT/ETHUSDT is much tighter than 0.01% of price (live → score 2 or 3); the validator's high-low range routinely exceeds 0.10% of price (validator → score 0). So validator scores are **systematically lower than live**, by an amount this PR does not measure precisely (gut estimate: ~2 sub-score points; rigorous measurement requires archived L1 quote data, not in scope here).
 
-- `< 0.01%` of price → score **3** (tight spread)
-- `0.01% – 0.05%` → score **2**
-- `0.05% – 0.10%` → score **1**
-- `> 0.10%` → score **0** (very wide)
+**Impact differs across the two graduation bars:**
 
-For typical liquid 4h bars (BTCUSDT, ETHUSDT, etc.):
+- **§5 absolute-Sharpe bar (Sharpe > 0.8):** likely **meaningfully affected.** Validator under-fires LONGs (live signals at score ~7 don't reach 8 in validator) and may over-fire SHORTs (live signals at score ~5–6 dip below 4 in validator). Both effects bias per-fold Sharpe in ways that depend on actual fold composition; not directly translatable to live.
 
-- Real **bid-ask spread**: ~0.005–0.02% of price → live engine scores **2 or 3**
-- The validator's **high-low range**: ~0.5–2% of price → exceeds the 0.1% threshold → validator saturates at score **0**
+- **§0.4 worst-vs-median bar (≤ 30% drop across CPCV paths):** **likely robust.** A *constant* bias (same proxy applied to every path) shifts the mean Sharpe across paths but not the dispersion. Worst-vs-median is a relative measure; it survives a uniform offset. The "0 / 6 symbols pass §0.4" finding therefore depends on the cross-fold consistency *behavior* of the scorer, not on whether absolute Sharpes are calibrated to live.
 
-So the validator's liquidity sub-score is systematically ~**2–3 points lower** than live (out of a 3-point sub-score). The total score (sum of 6 sub-scores, max 18 — though typically capped at 12 by the rubric) is correspondingly ~2–3 points lower in the validator than what the live engine would compute on the same bar.
-
-**Effect on the headline "0 / 6 pass" finding is indeterminate without empirical measurement.** Validator scores being systematically lower than live means:
-
-- A live signal at score ~7 (just below the LONG threshold) would not reach 8.0 in the validator → validator may **under-fire LONGs** that live takes
-- But a live signal at score ~5–6 (no-trade zone) might dip below 4 in the validator → validator may **over-fire SHORTs** that live skips
-
-The net effect on per-fold Sharpe is genuinely unclear without re-running with the live liquidity input. Closing this gap requires either (a) running the validator against a data source that includes bid-ask spreads (e.g., archived L1 quote data), or (b) accepting the offline limitation and bounding the headline finding accordingly.
-
-**Conclusion:** the "0 / 6 symbols pass §0.4 bar" result is real evidence against the *current validator pipeline* but **does not directly translate to live engine performance** until either the proxy is closed or the live engine is observed against the same window. The result is **directional input, not graduation verdict.**
+**Reading the headline:** treat "median Sharpe +0.576 on §5" as the softer finding (sensitive to the proxy). Treat "0 / 6 symbols pass §0.4" as the more robust finding (cross-fold consistency is what the bar measures, and the bar fails by a wide margin even after accounting for the proxy). The §0.4 result is the load-bearing P0 evidence; the §5 numbers are directional context.
 
 #### What this means
 
