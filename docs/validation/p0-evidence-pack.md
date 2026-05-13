@@ -326,11 +326,30 @@ The numbers below are **real, reproducible, signed by the run date.** They are a
 
 #### Known validator-vs-live divergence: liquidity sub-score
 
-The validator runs **offline against historical OHLCV** — no order-book data is available. The on-main `FixedScorer.score_liquidity` expects a `bid_ask_spread` input; the validator substitutes **`spread = high − low`** as a public-data proxy. This proxy is **wrong-class**: high-low is a volatility/range measure, not a liquidity measure. High-low is *always* wider than bid-ask, so the validator's liquidity sub-score is systematically biased ~**1–2 points high** (out of a 3-point sub-score) relative to what the live engine computes.
+The validator runs **offline against historical OHLCV** — no order-book data is available. The on-main `FixedScorer.score_liquidity` expects a `bid_ask_spread` input; the validator substitutes **`spread = high − low`** as a public-data proxy. This proxy is **wrong-class**: high-low is a volatility/range measure, not a liquidity measure.
 
-Direction of impact on the headline finding: validator scores **higher than live** → **more signals cross the 8.0 / 4.0 thresholds** → **more trades fire** → **more noise**. The result is that the **"0 / 6 symbols pass" finding is likely pessimistic by this artifact** — the live engine's tighter liquidity scores would generate fewer trades and likely cleaner directional accuracy on the trades it does take.
+`score_liquidity` (in [`engine/signals/scoring_fixed.py`](../../engine/signals/scoring_fixed.py)) is monotone-decreasing in spread / close:
 
-This is a real validator-vs-live divergence, not a bug. Closing it requires either (a) running the validator against a data source that includes bid-ask spreads, or (b) modifying the live scorer to also use a high-low proxy (which would defeat the purpose of the liquidity sub-score). Until then, treat the CPCV "0 / 6 pass" as the **lower-bound estimate** of live performance, not its central tendency.
+- `< 0.01%` of price → score **3** (tight spread)
+- `0.01% – 0.05%` → score **2**
+- `0.05% – 0.10%` → score **1**
+- `> 0.10%` → score **0** (very wide)
+
+For typical liquid 4h bars (BTCUSDT, ETHUSDT, etc.):
+
+- Real **bid-ask spread**: ~0.005–0.02% of price → live engine scores **2 or 3**
+- The validator's **high-low range**: ~0.5–2% of price → exceeds the 0.1% threshold → validator saturates at score **0**
+
+So the validator's liquidity sub-score is systematically ~**2–3 points lower** than live (out of a 3-point sub-score). The total score (sum of 6 sub-scores, max 18 — though typically capped at 12 by the rubric) is correspondingly ~2–3 points lower in the validator than what the live engine would compute on the same bar.
+
+**Effect on the headline "0 / 6 pass" finding is indeterminate without empirical measurement.** Validator scores being systematically lower than live means:
+
+- A live signal at score ~7 (just below the LONG threshold) would not reach 8.0 in the validator → validator may **under-fire LONGs** that live takes
+- But a live signal at score ~5–6 (no-trade zone) might dip below 4 in the validator → validator may **over-fire SHORTs** that live skips
+
+The net effect on per-fold Sharpe is genuinely unclear without re-running with the live liquidity input. Closing this gap requires either (a) running the validator against a data source that includes bid-ask spreads (e.g., archived L1 quote data), or (b) accepting the offline limitation and bounding the headline finding accordingly.
+
+**Conclusion:** the "0 / 6 symbols pass §0.4 bar" result is real evidence against the *current validator pipeline* but **does not directly translate to live engine performance** until either the proxy is closed or the live engine is observed against the same window. The result is **directional input, not graduation verdict.**
 
 #### What this means
 
