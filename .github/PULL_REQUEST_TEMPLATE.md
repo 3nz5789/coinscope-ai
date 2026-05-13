@@ -40,6 +40,7 @@
 - [ ] `python3 scripts/drift_detector.py` — clean
 - [ ] `python3 scripts/risk_threshold_guardrail.py` — clean
 - [ ] `python3 scripts/evidence_gate.py` — clean (or `evidence-gate-exempt` label justified below)
+- [ ] `python3 scripts/invariant_matrix_check.py` — clean
 - [ ] New tests added for new behaviour
 - [ ] Smoke tested against Binance testnet (required for exchange adapter or execution changes)
 
@@ -51,11 +52,14 @@
 
 Tick at least one. If none apply, request the `evidence-gate-exempt` label and explain below.
 
+- [ ] Updated the [invariant-to-test matrix](../blob/main/docs/validation/invariant-matrix.md) — **preferred** when this PR changes a protector cited by an invariant (kill switch, safety gate, breaker, regime, threshold, hot-path import boundary)
 - [ ] Updated the validation proof hub ([`docs/validation/p0-evidence-pack.md`](../blob/main/docs/validation/p0-evidence-pack.md))
 - [ ] Updated the Validation Phase Freeze section in [`README.md`](../blob/main/README.md#validation-phase-freeze)
 - [ ] Updated `CHANGELOG.md` or `docs/runbooks/release-checklist.md`
 - [ ] Added a new evidence record under `docs/validation/`
 - [ ] Exempt — justification: <!-- e.g. "pure rename, no behaviour change" -->
+
+> The `invariant-matrix` CI job verifies that every file path cited by the matrix exists. If you rename or delete a protector, update the matrix in the **same PR** — otherwise the matrix check (not the evidence gate) will fail the build.
 
 
 ---
