@@ -104,7 +104,8 @@ def run(
     can inject synthetic data without making network calls.
     """
     if ohlcv_provider is None:
-        ohlcv_provider = lambda s: _common.fetch_ohlcv(s, timeframe, limit)
+        def ohlcv_provider(s):
+            return _common.fetch_ohlcv(s, timeframe, limit)
 
     all_metrics: List[_common.FoldMetrics] = []
     bars_per_symbol = 0

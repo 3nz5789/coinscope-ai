@@ -180,7 +180,8 @@ def run(
 ) -> CPCVResult:
     """Run the full CPCV across `symbols`."""
     if ohlcv_provider is None:
-        ohlcv_provider = lambda s: _common.fetch_ohlcv(s, timeframe, limit)
+        def ohlcv_provider(s):
+            return _common.fetch_ohlcv(s, timeframe, limit)
 
     all_paths: List[CPCVPathResult] = []
     per_symbol: dict = {}
