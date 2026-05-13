@@ -62,6 +62,10 @@ These claims are backed by files currently committed to `main`:
 | CI workflow (test + security jobs) | `.github/workflows/ci.yml` |
 | Canonical risk thresholds (PCC v2 §8) | `services/paper_trading/config.py` hardcoded constants + env example |
 | **Operator session-lifecycle runbook** (9-step session workflow) | `docs/runbooks/operator-workflow.md` |
+| **Risk framework** (philosophy, invariants, thresholds, 6-layer defense) | `docs/risk/risk-framework.md` |
+| **Risk gate** (13-step contract, decision shape, journaling) | `docs/risk/risk-gate.md` |
+| **Position sizing** (Kelly pipeline, regime multipliers, worked examples) | `docs/risk/position-sizing.md` |
+| **Failsafes and kill switches** (three breakers + manual kill switch, reset rules, operator/developer hard rules) | `docs/risk/failsafes-and-kill-switches.md` |
 
 ### 0.2 Claimed but **not** on `main` — design intent, not yet proof
 
@@ -71,8 +75,8 @@ These claims appear in the body below but the cited artifact does not exist on `
 |---|---|---|
 | `tests/test_invariants.py` — 65 invariant tests (§4) | Branch `test/invariant-failure-modes` | **Not merged.** The kill-switch and breaker invariants it claims to prove are *partially* proven on `main` via `tests/unit/paper_trading/test_safety.py` instead, at the paper-trading safety layer rather than at the dedicated invariant-suite level. |
 | ~~`docs/runbooks/operator-workflow.md`~~ (§7, §12) | **NOW ON `main`** — see §0.1; landed via [issue #43](https://github.com/3nz5789/CoinScopeAI/issues/43). The session-level "9-step lifecycle" is covered. The wider operator role (onboarding, weekly review, incident response) remains in the Drive workspace operator-lifecycle.md. | ✓ Resolved (session lifecycle) |
-| `docs/risk/risk-framework.md` (§12) | Branch `restructure/2026-04-18-tier1-docs` (stale, 2026-04-18) | **Not merged.** Risk-framework content currently lives in the project's Google Drive workspace and as inline constants in `services/paper_trading/config.py` + `services/paper_trading/safety.py`. |
-| `docs/risk/risk-gate.md`, `docs/risk/position-sizing.md`, `docs/risk/failsafes-and-kill-switches.md` (§12) | Same stale `restructure/2026-04-18-tier1-docs` branch | **Not merged.** |
+| ~~`docs/risk/risk-framework.md`~~ (§12) | **NOW ON `main`** — see §0.1; landed via [issue #45](https://github.com/3nz5789/CoinScopeAI/issues/45). Reconciled against on-main code paths and PCC v2 §8 thresholds. | ✓ Resolved |
+| ~~`docs/risk/risk-gate.md`, `docs/risk/position-sizing.md`, `docs/risk/failsafes-and-kill-switches.md`~~ (§12) | **NOW ON `main`** — see §0.1; landed via [issue #45](https://github.com/3nz5789/CoinScopeAI/issues/45). The failsafes doc had the "deactivate requires written reason" clause dropped per PR #42 decision; reset endpoint paths corrected from `POST /kill-switch` to `POST /circuit-breaker/trip` / `reset` per the actual on-main API contract. | ✓ Resolved |
 | `coinscope_trading_engine/BUG_FIXES_COMPREHENSIVE.md` (§3, §12) | Path does not exist on `main` | **Wrong path.** The file is at `docs/BUG_FIXES_COMPREHENSIVE.md`. The 16/16 claim itself holds; only the cited path is wrong. |
 | `coinscope_trading_engine/validation/walk_forward_validation.py` (§5) | Path does not exist on `main` (nor on any branch I could locate) | **Not committed.** The 9-fold WFV results table in §5 cannot be reproduced from code in this repo. Treat the §5 numbers as **preliminary external analysis** until the runner is committed. |
 | Any path under `coinscope_trading_engine/` (§3, §12) | Path does not exist on `main` | Multiple §12 entries reference this directory; it does not exist anywhere in the current tree. |
@@ -100,7 +104,7 @@ The original §11 hard-gate checklist had multiple aspirational `[x]` marks. Acc
 - [x] 30 boundary tests green on `main` — `tests/test_directory_boundaries.py`
 - [x] `v0.1.0-p0` tag published — but the tag is **pre-evidence**; `v0.1.0-p0.1` (this PR) is the first honest baseline
 - [x] **Operator workflow runbook documented** — session-lifecycle landed at `docs/runbooks/operator-workflow.md` via [issue #43](https://github.com/3nz5789/CoinScopeAI/issues/43); wider operator role still in Drive
-- [ ] **Risk framework doc current on `main`** — content lives in Drive workspace + inline in code; needs port to `docs/risk/`
+- [x] **Risk framework doc current on `main`** — `docs/risk/{risk-framework,risk-gate,position-sizing,failsafes-and-kill-switches}.md` landed via [issue #45](https://github.com/3nz5789/CoinScopeAI/issues/45). Reconciled against on-main code paths and PCC v2 §8 thresholds.
 - [x] API contract documented — `docs/api/engine-api-contract.md`
 - [x] SLOs and alert rules defined — `docs/monitoring/slo-alerts-dashboard.md`
 - [ ] COI-68: VPS `.env` patch + `docker restart` (operator action, unchanged)
@@ -545,10 +549,10 @@ P1 = real capital, small size (≤ $100 per trade initially), mainnet Binance US
 
 | Document | Location | Status |
 |---|---|---|
-| Risk framework | (target: `docs/risk/risk-framework.md`) | **In Drive workspace** + inline in code. Stale draft on branch `restructure/2026-04-18-tier1-docs`. Not on `main`. |
-| Risk gate mechanics | (target: `docs/risk/risk-gate.md`) | **In Drive workspace** + code at `risk_management/risk_gate.py`. Stale doc draft on same April branch. |
-| Position sizing | (target: `docs/risk/position-sizing.md`) | **In Drive workspace** + code at `risk_management/kelly_position_sizer.py`. Stale doc draft on same April branch. |
-| Failsafes and kill switches | (target: `docs/risk/failsafes-and-kill-switches.md`) | **In Drive workspace** + code at `services/paper_trading/safety.py` (`KillSwitch` class) and `services/paper_trading/kill.py` (CLI). Stale doc draft on same April branch. |
+| Risk framework | `docs/risk/risk-framework.md` | **On `main`** ([issue #45](https://github.com/3nz5789/CoinScopeAI/issues/45)). |
+| Risk gate mechanics | `docs/risk/risk-gate.md` | **On `main`** ([issue #45](https://github.com/3nz5789/CoinScopeAI/issues/45)). Code at [`risk_management/risk_gate.py`](../../risk_management/risk_gate.py). |
+| Position sizing | `docs/risk/position-sizing.md` | **On `main`** ([issue #45](https://github.com/3nz5789/CoinScopeAI/issues/45)). Code at [`risk_management/kelly_position_sizer.py`](../../risk_management/kelly_position_sizer.py). |
+| Failsafes and kill switches | `docs/risk/failsafes-and-kill-switches.md` | **On `main`** ([issue #45](https://github.com/3nz5789/CoinScopeAI/issues/45)). Code at [`services/paper_trading/safety.py`](../../services/paper_trading/safety.py) (`KillSwitch` class) and [`services/paper_trading/kill.py`](../../services/paper_trading/kill.py) (CLI). |
 | Operator workflow (session lifecycle, 9 steps) | `docs/runbooks/operator-workflow.md` | **On `main`** ([issue #43](https://github.com/3nz5789/CoinScopeAI/issues/43)). The wider operator role (onboarding, weekly review, incident) remains in Drive `04 — Development/docs/runbooks/operator-lifecycle.md` until ported. |
 | SLOs + alert rules | `docs/monitoring/slo-alerts-dashboard.md` | **On `main`** (PR #27). |
 | API contract | `docs/api/engine-api-contract.md` | **On `main`** (PR #27). |
