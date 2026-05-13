@@ -13,6 +13,12 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- `docs/validation/p0-public-summary.md` — one-page outsider-facing P0
+  validation summary covering what is live, what is testnet only, what
+  is blocked, what has passed, and what has not. Linked from the README
+  header alongside Dashboard / API Docs / Disclosures. Hand-curated;
+  refreshed at each tagged release. The internal evidence pack and
+  invariant matrix remain the source of truth.
 - `apps/dashboard/src/components/SignalConsoleCard.tsx` — one-panel operator
   console view for the primary signal. Surfaces confluence, regime, Kelly
   size, gate pass/fail, breaker state, and a deterministic action-guidance

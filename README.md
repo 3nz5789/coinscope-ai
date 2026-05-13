@@ -10,7 +10,7 @@
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/engine-FastAPI-009688)](https://fastapi.tiangolo.com)
 
-[Dashboard](https://app.coinscope.ai) · [API Docs](https://api.coinscope.ai/docs) · [Linear](https://linear.app/coinscopeai) · [Notion](https://www.notion.so/33a29aaf938e81efa983e47b83e15775) · [Disclosures](https://app.coinscope.ai/legal)
+[Dashboard](https://app.coinscope.ai) · [API Docs](https://api.coinscope.ai/docs) · [P0 Status](docs/validation/p0-public-summary.md) · [Linear](https://linear.app/coinscopeai) · [Notion](https://www.notion.so/33a29aaf938e81efa983e47b83e15775) · [Disclosures](https://app.coinscope.ai/legal)
 
 </div>
 
