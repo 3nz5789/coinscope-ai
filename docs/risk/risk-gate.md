@@ -133,7 +133,7 @@ Every behavior change in the gate ships with tests that cover:
 - Short-circuit ordering (earlier rejections pre-empt later ones).
 - Journal entry shape.
 
-**Current on-main coverage.** The submission-time safety gate is covered by [`tests/unit/paper_trading/test_safety.py`](../../tests/unit/paper_trading/test_safety.py) (~360 lines, 7 test classes). The dedicated 65-test invariant suite for the scan-time risk gate lives on branch `test/invariant-failure-modes`; its merge is tracked at [issue #44](https://github.com/3nz5789/CoinScopeAI/issues/44). Until that lands, the safety-gate coverage is the primary code-side proof of the gate contract — see [`../validation/p0-evidence-pack.md`](../validation/p0-evidence-pack.md) §0.1.
+**Current on-main coverage.** The submission-time safety gate is covered by [`tests/unit/paper_trading/test_safety.py`](../../tests/unit/paper_trading/test_safety.py) (~360 lines, 7 test classes). What is and isn't yet covered by a dedicated invariant suite for the scan-time risk gate — and what is pending — is catalogued in [`../validation/p0-evidence-pack.md`](../validation/p0-evidence-pack.md) §0.
 
 ## Common review pitfalls
 

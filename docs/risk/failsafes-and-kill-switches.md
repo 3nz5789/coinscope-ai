@@ -28,7 +28,7 @@ Circuit breakers trip automatically when a measurable risk boundary is crossed. 
 
 **Trip condition:** peak-to-trough drawdown from the all-time equity high reaches `MAX_DRAWDOWN_PCT` (default 10%).
 
-**Reset:** **does not auto-reset.** A max-drawdown trip is an incident, not a normal event. It requires operator acknowledgment via `POST /circuit-breaker/reset`, and the operator should record the reason for the reset in the operator log before calling it.
+**Reset:** **does not auto-reset.** A max-drawdown trip is an incident, not a normal event. It requires operator acknowledgment via `POST /circuit-breaker/reset` (the endpoint takes no parameters — see [`../api/engine-api-contract.md`](../api/engine-api-contract.md) §Risk for the request shape). The reset reason is operator-log practice: write it in your session log before calling the endpoint so the journal and the log together reconstruct the decision later.
 
 **What the operator should do:** open an incident. Review the 30-day journal. Decide whether to resume, scale down, or pause pending strategy review. Reset only after a deliberate decision, not by reflex.
 
@@ -97,7 +97,7 @@ The CLI prompts for a `KILL`-string confirmation before writing the persistent f
 ```bash
 python -m services.paper_trading.kill --deactivate
 ```
-The CLI prompts for `CONFIRM` before removing the persistent flag. The CLI guard exists because the underlying `KillSwitch.deactivate()` method takes no arguments and has no method-level guard — a programmatic caller bypasses the CLI's prompt. Hardening this surface is tracked at [issue #47](https://github.com/3nz5789/CoinScopeAI/issues/47).
+The CLI prompts for `CONFIRM` before removing the persistent flag. The CLI guard exists because the underlying `KillSwitch.deactivate()` method takes no arguments and has no method-level guard — a programmatic caller bypasses the CLI's prompt. This is a known fail-permissive surface; hardening is pending.
 
 ### When to engage
 

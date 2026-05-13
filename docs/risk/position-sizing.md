@@ -111,7 +111,7 @@ A defensible fractional factor is bounded by the operator's tolerance for missed
 
 - The hard cap dominates at typical edges, so a larger fractional factor adds nothing for those candidates.
 - For low-edge candidates (where the fractional factor matters most), smaller sizes compound more predictably.
-- Post-validation WFV will revisit this choice with real data. The validator itself is pending — [issue #46](https://github.com/3nz5789/CoinScopeAI/issues/46) tracks the commit + run.
+- Post-P0 walk-forward analysis will revisit this choice with real data. The validator's current state on `main` is catalogued in [`../validation/p0-evidence-pack.md`](../validation/p0-evidence-pack.md) §0.
 
 ## Why these regime multipliers?
 
@@ -129,7 +129,7 @@ You almost certainly don't need to. But if you do:
 
 ## Testing
 
-Unit tests for the sizer should live alongside the implementation under `tests/`. The current safety-gate test suite ([`tests/unit/paper_trading/test_safety.py`](../../tests/unit/paper_trading/test_safety.py)) covers the position-size cap enforcement at submission time; dedicated tests for the Kelly sizer's monotone-non-increasing invariant and step-by-step output are tracked alongside [issue #44](https://github.com/3nz5789/CoinScopeAI/issues/44) (the broader invariant-suite merge).
+Unit tests for the sizer should live alongside the implementation under `tests/`. The current safety-gate test suite ([`tests/unit/paper_trading/test_safety.py`](../../tests/unit/paper_trading/test_safety.py)) covers the position-size cap enforcement at submission time. The state of dedicated sizer tests on `main` — and what's pending — is catalogued in [`../validation/p0-evidence-pack.md`](../validation/p0-evidence-pack.md) §0.
 
 A fixture-over-regimes test is cheap and catches most classes of error — that pattern is the right starting point when the dedicated sizer tests land.
 
