@@ -49,13 +49,19 @@ def main():
 
         print("⚠️  You are about to DEACTIVATE the kill switch.")
         print("   This will allow the trading engine to resume trading.")
-        confirm = input("   Type 'CONFIRM' to proceed: ")
+
+        reason = input("   Reason for deactivation (required, will be logged): ").strip()
+        if not reason:
+            print("Aborted: reason required.")
+            return
+
+        confirm = input(f"   Type 'CONFIRM' to deactivate with reason '{reason}': ")
         if confirm.strip() != "CONFIRM":
             print("Aborted.")
             return
 
-        ks.deactivate()
-        print("✅ Kill switch deactivated.")
+        ks.deactivate(reason)
+        print(f"✅ Kill switch deactivated. Reason: {reason}")
         return
 
     # Activate

@@ -97,7 +97,9 @@ The CLI prompts for a `KILL`-string confirmation before writing the persistent f
 ```bash
 python -m services.paper_trading.kill --deactivate
 ```
-The CLI prompts for `CONFIRM` before removing the persistent flag. The CLI guard exists because the underlying `KillSwitch.deactivate()` method takes no arguments and has no method-level guard — a programmatic caller bypasses the CLI's prompt. This is a known fail-permissive surface; hardening is pending.
+The CLI prompts for both a reason and a `CONFIRM` string before removing the persistent flag. The reason is passed to `KillSwitch.deactivate(reason: str)` — the parameter is required (positional, non-empty). A programmatic caller that omits the reason raises `TypeError`; an empty or whitespace-only reason raises `ValueError`. The reason is logged at WARN level for audit reconstruction.
+
+The required-argument shape exists deliberately. A future refactor that introduces a programmatic `ks.deactivate()` call fails at runtime instead of silently disabling the safety layer — the deactivate-path contract is now enforced by the signature and the test harness, not just by the CLI prompt.
 
 ### When to engage
 

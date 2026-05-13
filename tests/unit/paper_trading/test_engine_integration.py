@@ -90,8 +90,8 @@ class TestKillSwitchIntegration:
         ks2 = KillSwitch()
         assert ks2.is_active
 
-        # Only explicit deactivation works
-        ks2.deactivate()
+        # Only explicit deactivation works — and only with a reason
+        ks2.deactivate("test cleanup")
         ks3 = KillSwitch()
         assert not ks3.is_active
 
