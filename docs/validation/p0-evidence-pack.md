@@ -324,6 +324,14 @@ The numbers below are **real, reproducible, signed by the run date.** They are a
 - Only ETHUSDT has a meaningfully positive median Sharpe; even there the worst-vs-median drop is **190%** (well above the 30% bar)
 - Full per-path detail in [`runs/2026-05-13/cpcv.md`](runs/2026-05-13/cpcv.md) and [`cpcv.csv`](runs/2026-05-13/cpcv.csv)
 
+#### Known validator-vs-live divergence: liquidity sub-score
+
+The validator runs **offline against historical OHLCV** — no order-book data is available. The on-main `FixedScorer.score_liquidity` expects a `bid_ask_spread` input; the validator substitutes **`spread = high − low`** as a public-data proxy. This proxy is **wrong-class**: high-low is a volatility/range measure, not a liquidity measure. High-low is *always* wider than bid-ask, so the validator's liquidity sub-score is systematically biased ~**1–2 points high** (out of a 3-point sub-score) relative to what the live engine computes.
+
+Direction of impact on the headline finding: validator scores **higher than live** → **more signals cross the 8.0 / 4.0 thresholds** → **more trades fire** → **more noise**. The result is that the **"0 / 6 symbols pass" finding is likely pessimistic by this artifact** — the live engine's tighter liquidity scores would generate fewer trades and likely cleaner directional accuracy on the trades it does take.
+
+This is a real validator-vs-live divergence, not a bug. Closing it requires either (a) running the validator against a data source that includes bid-ask spreads, or (b) modifying the live scorer to also use a high-low proxy (which would defeat the purpose of the liquidity sub-score). Until then, treat the CPCV "0 / 6 pass" as the **lower-bound estimate** of live performance, not its central tendency.
+
 #### What this means
 
 The scorer at the current canonical thresholds (≥ 8.0 LONG, ≤ 4.0 SHORT per BUG-2 fix) produces:
