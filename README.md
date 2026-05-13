@@ -35,6 +35,28 @@ CoinScopeAI is an AI-driven trading intelligence system for Binance USDT-M perpe
 
 ---
 
+## Readiness
+
+<!-- readiness:begin -->
+
+**Updated:** 2026-05-13 · **Source of truth:** [`docs/validation/p0-evidence-pack.md`](docs/validation/p0-evidence-pack.md) §0 (honesty pass overrides body)
+
+| Field | Value |
+|---|---|
+| Phase | **P0 — testnet validation** (Binance USDT-M Testnet only) |
+| Freeze | **🔒 Active** — see [Validation Phase Freeze](#validation-phase-freeze). P0 runs through ~2026-05-31 |
+| Latest tag | [`v0.1.0-p0.3`](https://github.com/3nz5789/CoinScopeAI/releases/tag/v0.1.0-p0.3) — 2026-05-13, "Risk Framework Docs" |
+| Evidence baseline | [`p0-evidence-pack.md`](docs/validation/p0-evidence-pack.md) — start at §0.5 for the one-paragraph honest summary |
+| Invariant coverage | 12 🟢 · 4 🟡 · 0 🔴 → [`invariant-matrix.md`](docs/validation/invariant-matrix.md) |
+| Open PR-driven blockers | [#28](https://github.com/3nz5789/CoinScopeAI/pull/28) 65 invariant tests on `main` · [#50](https://github.com/3nz5789/CoinScopeAI/pull/50) kill-switch deactivate guard · [#51](https://github.com/3nz5789/CoinScopeAI/pull/51) WFV+CPCV harness |
+| Open operator blockers | COI-68 VPS `.env` patch · COI-69 post-restart verification |
+
+> **P0 graduates to P1 when** every PR-driven row above merges, both operator COI items complete, and the four 🟡 rows in the invariant matrix flip 🟢. Do not interpret this block in isolation — read against [`p0-evidence-pack.md`](docs/validation/p0-evidence-pack.md) §0.4 and the invariant matrix.
+
+<!-- readiness:end -->
+
+---
+
 ## Architecture
 
 ```
