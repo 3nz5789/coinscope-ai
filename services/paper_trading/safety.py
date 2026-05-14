@@ -133,12 +133,42 @@ class KillSwitch:
             reason,
         )
 
-    def deactivate(self):
+    def deactivate(self, reason: str):
         """
         Deactivate the kill switch.
-        This should ONLY be called by the CLI after human review.
+
+        Args:
+            reason: REQUIRED. A non-empty string describing why the
+                kill switch is being deactivated. Logged at WARN level
+                for audit. The CLI captures this from an operator
+                prompt; programmatic callers must pass it explicitly.
+
+        Raises:
+            ValueError: if reason is not a non-empty string. This is a
+                safety-critical surface — see
+                docs/risk/failsafes-and-kill-switches.md for the
+                contract. The required-argument shape exists so a
+                refactor that introduces a programmatic
+                `ks.deactivate()` call fails at runtime instead of
+                silently disabling the safety layer.
+
+        Note:
+            This method previously took no arguments. The change is
+            deliberate. The CLI at services.paper_trading.kill prompts
+            the operator for a reason; any programmatic caller must
+            provide one too.
         """
+        if not isinstance(reason, str) or not reason.strip():
+            raise ValueError(
+                "KillSwitch.deactivate(reason) requires a non-empty string. "
+                "This is a safety-critical surface — see "
+                "docs/risk/failsafes-and-kill-switches.md for the contract."
+            )
+
+        reason = reason.strip()
+
         with self._lock:
+            was_active = self._active
             self._active = False
             self._reason = ""
             self._activated_at = 0.0
@@ -148,7 +178,10 @@ class KillSwitch:
         except Exception:
             pass
 
-        logger.warning("Kill switch deactivated by operator")
+        logger.warning(
+            "Kill switch deactivated by operator. reason=%r was_active=%s",
+            reason, was_active,
+        )
 
     def status(self) -> Dict:
         with self._lock:

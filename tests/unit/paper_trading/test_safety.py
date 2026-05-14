@@ -98,9 +98,43 @@ class TestKillSwitch:
 
     def test_deactivate(self, kill_switch):
         kill_switch.activate("test")
-        kill_switch.deactivate()
+        kill_switch.deactivate("test cleanup")
         assert not kill_switch.is_active
         assert not Path(KillSwitch.KILL_FILE).exists()
+
+    def test_deactivate_requires_reason_argument(self, kill_switch):
+        """
+        Calling deactivate() with no arguments raises TypeError —
+        Python's standard signature enforcement is the first line of
+        defense against accidental programmatic bypass.
+        """
+        kill_switch.activate("test")
+        with pytest.raises(TypeError):
+            kill_switch.deactivate()
+        # Kill switch must remain active after the failed call
+        assert kill_switch.is_active
+
+    def test_deactivate_rejects_empty_reason(self, kill_switch):
+        """Empty string is not a reason — reject it explicitly."""
+        kill_switch.activate("test")
+        with pytest.raises(ValueError, match="non-empty"):
+            kill_switch.deactivate("")
+        assert kill_switch.is_active
+
+    def test_deactivate_rejects_whitespace_reason(self, kill_switch):
+        """Whitespace-only reason is rejected — a 'reason' of '   ' is not one."""
+        kill_switch.activate("test")
+        with pytest.raises(ValueError, match="non-empty"):
+            kill_switch.deactivate("   ")
+        assert kill_switch.is_active
+
+    def test_deactivate_logs_reason_at_warn(self, kill_switch, caplog):
+        """The reason lands in the WARN log for audit reconstruction."""
+        import logging
+        kill_switch.activate("test")
+        with caplog.at_level(logging.WARNING, logger="coinscopeai.paper_trading.safety"):
+            kill_switch.deactivate("post-incident review concluded; resuming")
+        assert "post-incident review concluded; resuming" in caplog.text
 
     def test_persistent_flag_on_init(self):
         """Kill switch should detect existing flag file on init."""
