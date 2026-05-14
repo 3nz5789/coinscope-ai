@@ -70,6 +70,23 @@ If a claim about CoinScopeAI is not anchored to one of these three, it is not ac
 
 ---
 
+## Invariant cheatsheet
+
+The six claims this README makes about the system, paired with the code that enforces each one and the tests that catch a regression. The full 16-row matrix — thresholds, regime gating, journaling, hot-path import boundary, drift detection, and the matrix's own integrity check — lives at [`docs/validation/invariant-matrix.md`](docs/validation/invariant-matrix.md).
+
+| Claim | Code | Tests | Matrix |
+|---|---|---|---|
+| P0 runs on Binance Testnet only | `coinscope.env.example` · `configs/environments/staging.yaml` | `tests/test_ci_smoke.py::test_testnet_mode` | 🟢 I7 |
+| No trade bypasses the risk gate | `services/paper_trading/safety.py` · `services/paper_trading/order_manager.py` | `tests/unit/paper_trading/test_safety.py` — every rejection class (BUG-10 is the canonical regression) | 🟢 I1 |
+| No size exceeds the 2% per-trade hard cap | `risk_management/kelly_position_sizer.py` · `services/paper_trading/safety.py` | `tests/unit/paper_trading/test_safety.py` + `scripts/risk_threshold_guardrail.py` | 🟢 I2 |
+| A tripped breaker blocks new entries | `services/paper_trading/safety.py` | Daily-loss · max-drawdown · consecutive-loss tests in `test_safety.py` | 🟢 I3 |
+| Kill switch prevents new entries when engaged | `services/paper_trading/safety.py` · `services/paper_trading/kill.py` | `TestKillSwitch` + `TestSafetyGateKillSwitch` in `test_safety.py` | 🟡 I4 · [#47](https://github.com/3nz5789/CoinScopeAI/issues/47) closed via [#50](https://github.com/3nz5789/CoinScopeAI/pull/50) (flip pending matrix update) |
+| Engine halts on uncertain state — never guesses | `services/paper_trading/safety.py` (`validate_order` fail-closed) | `tests/unit/paper_trading/test_safety.py` (reject-default branch) | 🟢 I6 |
+
+Status colour and matrix ID let you jump straight to the full row in [`invariant-matrix.md`](docs/validation/invariant-matrix.md). 🟡 rows carry a tracking issue — the link is in the Matrix column.
+
+---
+
 ## Architecture
 
 ```
@@ -305,23 +322,6 @@ Locked **2026-05-01** via PCC v2 §8. Enforced by `scripts/risk_threshold_guardr
 > If the risk gate, executor, or adapter is in an uncertain state, the engine **halts — it never guesses**.
 
 Every circuit breaker, kill switch, and rejection path enforces this invariant. See [`docs/risk/risk-framework.md`](docs/risk/risk-framework.md) for all 6 invariants.
-
----
-
-## Invariant cheatsheet
-
-The six claims this README makes about the system, paired with the code that enforces each one and the tests that catch a regression. The full 16-row matrix — thresholds, regime gating, journaling, hot-path import boundary, drift detection, and the matrix's own integrity check — lives at [`docs/validation/invariant-matrix.md`](docs/validation/invariant-matrix.md).
-
-| Claim | Code | Tests | Matrix |
-|---|---|---|---|
-| P0 runs on Binance Testnet only | `coinscope.env.example` · `configs/environments/staging.yaml` | `tests/test_ci_smoke.py::test_testnet_mode` | 🟢 I7 |
-| No trade bypasses the risk gate | `services/paper_trading/safety.py` · `services/paper_trading/order_manager.py` | `tests/unit/paper_trading/test_safety.py` — every rejection class (BUG-10 is the canonical regression) | 🟢 I1 |
-| No size exceeds the 2% per-trade hard cap | `risk_management/kelly_position_sizer.py` · `services/paper_trading/safety.py` | `tests/unit/paper_trading/test_safety.py` + `scripts/risk_threshold_guardrail.py` | 🟢 I2 |
-| A tripped breaker blocks new entries | `services/paper_trading/safety.py` | Daily-loss · max-drawdown · consecutive-loss tests in `test_safety.py` | 🟢 I3 |
-| Kill switch prevents new entries when engaged | `services/paper_trading/safety.py` · `services/paper_trading/kill.py` | `TestKillSwitch` + `TestSafetyGateKillSwitch` in `test_safety.py` | 🟡 I4 · [#47](https://github.com/3nz5789/CoinScopeAI/issues/47) |
-| Engine halts on uncertain state — never guesses | `services/paper_trading/safety.py` (`validate_order` fail-closed) | `tests/unit/paper_trading/test_safety.py` (reject-default branch) | 🟢 I6 |
-
-Status colour and matrix ID let you jump straight to the full row in [`invariant-matrix.md`](docs/validation/invariant-matrix.md). 🟡 rows carry a tracking issue — the link is in the Matrix column.
 
 ---
 
