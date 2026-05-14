@@ -8,6 +8,9 @@ import { formatTimestamp, timeAgoShort, formatPrice } from "@/lib/format";
 import HudCard from "@/components/HudCard";
 import PriceChangeBadge from "@/components/PriceChangeBadge";
 import SignalConsoleCard, {
+  SignalConsoleCardEmpty,
+  SignalConsoleCardError,
+  SignalConsoleCardSkeleton,
   type BreakerInfo,
   type BreakerState,
   type GateDecision,
@@ -126,7 +129,13 @@ export function deriveGateDecision(
 }
 
 export default function LiveScanner() {
-  const { data: signals, loading, lastUpdated } = useApiData(api.getSignals, { refreshInterval: 3000 });
+  const {
+    data: signals,
+    loading,
+    error: signalsError,
+    refetch: refetchSignals,
+    lastUpdated,
+  } = useApiData(api.getSignals, { refreshInterval: 3000 });
   const { data: tickers } = useApiData(api.getTicker24h, { refreshInterval: 30000 });
   const { data: risk } = useApiData(api.getRiskGate, { refreshInterval: 5000 });
 
@@ -174,14 +183,25 @@ export default function LiveScanner() {
         )}
       </div>
 
-      {/* Primary signal — full six-attribute console panel */}
-      {primarySignal && (
+      {/* Primary signal — full six-attribute console panel. The slot always
+          renders something so the operator can distinguish "engine quiet"
+          from "engine broken" from "first paint". */}
+      {!signals && loading ? (
+        <SignalConsoleCardSkeleton />
+      ) : !signals && signalsError ? (
+        <SignalConsoleCardError
+          message={signalsError}
+          onRetry={refetchSignals}
+        />
+      ) : primarySignal ? (
         <SignalConsoleCard
           signal={primarySignal}
           gate={gate}
           breaker={breaker}
           kelly={kelly}
         />
+      ) : (
+        <SignalConsoleCardEmpty />
       )}
 
       {/* Summary cards */}
