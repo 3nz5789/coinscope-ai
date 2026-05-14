@@ -47,10 +47,10 @@ These claims are backed by files currently committed to `main`:
 |---|---|
 | 15-test CI smoke suite | `tests/test_ci_smoke.py` |
 | 30-test directory-boundary suite | `tests/test_directory_boundaries.py` |
-| Paper-trading 4-layer safety gate (fail-closed on activate, see qualifier below) | `services/paper_trading/safety.py` (~400 lines, layers: kill switch → hardcoded limits → configurable limits → state checks) |
-| Kill-switch implementation (activate / deactivate / persistent flag / CLI) | `services/paper_trading/safety.py::KillSwitch` + `services/paper_trading/kill.py` |
+| Paper-trading 4-layer safety gate (fail-closed on both activate and deactivate, see qualifier below) | `services/paper_trading/safety.py` (~400 lines, layers: kill switch → hardcoded limits → configurable limits → state checks) |
+| Kill-switch implementation (activate / deactivate-with-required-reason / persistent flag / CLI) | `services/paper_trading/safety.py::KillSwitch` + `services/paper_trading/kill.py` |
 
-> **Fail-closed qualifier.** The *activate* path is fail-closed — any breach of a hardcoded limit (daily loss, drawdown) triggers `KillSwitch.activate()` automatically. The *deactivate* path in code (`KillSwitch.deactivate()`) takes no arguments and has no guard at the method level — anything in the process that calls it succeeds silently. The CLI (`services/paper_trading/kill.py`) gates deactivation behind a `CONFIRM`-string prompt, but a programmatic caller bypasses that. This is a real fail-permissive surface; track at COI-* as a hardening item.
+> **Fail-closed qualifier.** The *activate* path is fail-closed — any breach of a hardcoded limit (daily loss, drawdown) triggers `KillSwitch.activate()` automatically. The *deactivate* path is now also gated at the method level: `KillSwitch.deactivate(reason: str)` requires a non-empty positional argument (`TypeError` if omitted, `ValueError` if empty/whitespace). A programmatic caller that tries to silently disable the safety layer fails at runtime. The reason is logged at WARN level for audit. Hardened via [issue #47](https://github.com/3nz5789/CoinScopeAI/issues/47).
 | Kill-switch + safety-gate test coverage | `tests/unit/paper_trading/test_safety.py` (~360 lines, 7 test classes covering kill switch, reduce-only bypass, hardcoded limits, configurable limits, state checks, counters, config enforcement) |
 | Paper-trading additional coverage | `tests/unit/paper_trading/test_engine_integration.py`, `test_order_manager.py`, `test_alerting.py`, `test_exchange_client.py`, `test_signal_engine.py` |
 | Market-data unit coverage (14 test files) | `tests/unit/market_data/*` |

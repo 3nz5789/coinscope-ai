@@ -7,6 +7,15 @@ import { api, Signal } from "@/lib/api";
 import { formatTimestamp, timeAgoShort, formatPrice } from "@/lib/format";
 import HudCard from "@/components/HudCard";
 import PriceChangeBadge from "@/components/PriceChangeBadge";
+import SignalConsoleCard, {
+  SignalConsoleCardEmpty,
+  SignalConsoleCardError,
+  SignalConsoleCardSkeleton,
+  type BreakerInfo,
+  type BreakerState,
+  type GateDecision,
+  type KellyResult,
+} from "@/components/SignalConsoleCard";
 import { Radar, ArrowUpRight, ArrowDownRight, Signal as SignalIcon } from "lucide-react";
 
 const signalTypeLabels: Record<string, string> = {
@@ -77,9 +86,84 @@ function SignalRow({ signal, ticker }: { signal: Signal; ticker?: any }) {
   );
 }
 
+// ──────────────────────────────────────────────────────────────────────────
+// Console-card data joins
+//
+// SignalConsoleCard takes optional gate / breaker / kelly props. While the
+// engine endpoints that return them per-signal are still in flight, derive
+// best-effort views from /risk-gate and /position-size and degrade
+// gracefully when those endpoints have not yet been called.
+//
+// These helpers are exported for testability; they have no React deps.
+// ──────────────────────────────────────────────────────────────────────────
+
+export function deriveBreakerInfo(risk: any | null | undefined): BreakerInfo | undefined {
+  if (!risk) return undefined;
+  let state: BreakerState = "closed";
+  if (risk.killSwitch) state = "kill_switch";
+  else if (risk.dailyLossPct >= risk.dailyLossLimit) state = "daily_loss";
+  else if (risk.drawdownPct >= risk.drawdownLimit) state = "drawdown";
+  return {
+    state,
+    dailyLossPct: risk.dailyLossPct ?? 0,
+    dailyLossLimit: risk.dailyLossLimit ?? 5,
+    drawdownPct: risk.drawdownPct ?? 0,
+    drawdownLimit: risk.drawdownLimit ?? 10,
+    heatPct: risk.positionHeat ?? 0,
+    heatLimit: risk.positionHeatLimit ?? 80,
+  };
+}
+
+export function deriveGateDecision(
+  risk: any | null | undefined,
+  breaker: BreakerInfo | undefined,
+): GateDecision | undefined {
+  if (!risk) return undefined;
+  if (breaker && breaker.state !== "closed") {
+    return { pass: false, reason: `breaker '${breaker.state}' is open` };
+  }
+  if (risk.status === "critical") {
+    return { pass: false, reason: "risk status critical" };
+  }
+  return { pass: true };
+}
+
 export default function LiveScanner() {
-  const { data: signals, loading, lastUpdated } = useApiData(api.getSignals, { refreshInterval: 3000 });
+  const {
+    data: signals,
+    loading,
+    error: signalsError,
+    refetch: refetchSignals,
+    lastUpdated,
+  } = useApiData(api.getSignals, { refreshInterval: 3000 });
   const { data: tickers } = useApiData(api.getTicker24h, { refreshInterval: 30000 });
+  const { data: risk } = useApiData(api.getRiskGate, { refreshInterval: 5000 });
+
+  // The "primary signal" is the highest-confluence candidate currently
+  // active. Ties broken by recency. Mirrors the operator's natural triage
+  // order — work the strongest signal first.
+  const primarySignal = signals && signals.length
+    ? [...signals].sort((a, b) => b.confidence - a.confidence || +new Date(b.timestamp) - +new Date(a.timestamp))[0]
+    : undefined;
+
+  const breaker = deriveBreakerInfo(risk);
+  const gate = deriveGateDecision(risk, breaker);
+
+  // Kelly is per-signal and ideally comes from POST /position-size.
+  // Until that wire-up lands, surface the equity-percentage view the
+  // engine already exposes via the risk-gate snapshot. This is the
+  // honest fallback — clearly labelled as such inside the card.
+  const kelly: KellyResult | undefined = primarySignal && risk
+    ? {
+        // Conservative placeholder until /position-size is joined per-signal.
+        // 1% of a notional $10k equity at regime ×1.0 is intentionally
+        // small; the value is meant to be replaced, not relied on.
+        usd: Math.round(100 * (primarySignal.confidence / 100)),
+        pctOfEquity: 1.0 * (primarySignal.confidence / 100),
+        regimeMultiplier: 1.0,
+        hardCappedAt2pct: false,
+      }
+    : undefined;
 
   return (
     <div className="space-y-5">
@@ -98,6 +182,27 @@ export default function LiveScanner() {
           </span>
         )}
       </div>
+
+      {/* Primary signal — full six-attribute console panel. The slot always
+          renders something so the operator can distinguish "engine quiet"
+          from "engine broken" from "first paint". */}
+      {!signals && loading ? (
+        <SignalConsoleCardSkeleton />
+      ) : !signals && signalsError ? (
+        <SignalConsoleCardError
+          message={signalsError}
+          onRetry={refetchSignals}
+        />
+      ) : primarySignal ? (
+        <SignalConsoleCard
+          signal={primarySignal}
+          gate={gate}
+          breaker={breaker}
+          kelly={kelly}
+        />
+      ) : (
+        <SignalConsoleCardEmpty />
+      )}
 
       {/* Summary cards */}
       <div className="grid grid-cols-4 gap-3">
