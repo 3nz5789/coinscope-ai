@@ -39,19 +39,20 @@ CoinScopeAI is an AI-driven trading intelligence system for Binance USDT-M perpe
 
 <!-- readiness:begin -->
 
-**Updated:** 2026-05-13 · **Source of truth:** [`docs/validation/p0-evidence-pack.md`](docs/validation/p0-evidence-pack.md) §0 (honesty pass overrides body)
+**Updated:** 2026-05-15 · **Source of truth:** [`docs/validation/p0-evidence-pack.md`](docs/validation/p0-evidence-pack.md) §0 (honesty pass overrides body)
 
 | Field | Value |
 |---|---|
 | Phase | **P0 — testnet validation** (Binance USDT-M Testnet only) |
 | Freeze | **🔒 Active** — see [Validation Phase Freeze](#validation-phase-freeze). P0 runs through ~2026-05-31 |
-| Latest tag | [`v0.1.0-p0.3`](https://github.com/3nz5789/CoinScopeAI/releases/tag/v0.1.0-p0.3) — 2026-05-13, "Risk Framework Docs" |
+| Latest tag | [`v0.1.0-p0.4`](https://github.com/3nz5789/CoinScopeAI/releases/tag/v0.1.0-p0.4) — 2026-05-15, "Trust Stack + Operator Console" |
 | Evidence baseline | [`p0-evidence-pack.md`](docs/validation/p0-evidence-pack.md) — start at §0.5 for the one-paragraph honest summary |
-| Invariant coverage | 12 🟢 · 4 🟡 · 0 🔴 → [`invariant-matrix.md`](docs/validation/invariant-matrix.md) |
-| Open PR-driven blockers | [#28](https://github.com/3nz5789/CoinScopeAI/pull/28) 65 invariant tests on `main` · [#50](https://github.com/3nz5789/CoinScopeAI/pull/50) kill-switch deactivate guard · [#51](https://github.com/3nz5789/CoinScopeAI/pull/51) WFV+CPCV harness |
+| Invariant coverage | 12 🟢 · 4 🟡 · 0 🔴 → [`invariant-matrix.md`](docs/validation/invariant-matrix.md) (I4 is a 🟢 candidate — issue [#47](https://github.com/3nz5789/CoinScopeAI/issues/47) closed via [#50](https://github.com/3nz5789/CoinScopeAI/pull/50), pending matrix doc update + p0-evidence-pack §0 refresh per the closing rules) |
+| Open PR-driven blockers | (none — the three previous blockers landed via [#50](https://github.com/3nz5789/CoinScopeAI/pull/50), [#51](https://github.com/3nz5789/CoinScopeAI/pull/51), and [#67](https://github.com/3nz5789/CoinScopeAI/pull/67)) |
+| Macro P0 blocker | **CPCV §0.4 graduation bar fails — 0/6 symbols pass** on the 2026-05-13 run. Requires a founder strategy decision (refine thresholds, add scorer components, or revise the bar). No tracking issue yet — intentionally out of scope for any existing issue. See [`docs/validation/runs/2026-05-13/cpcv.md`](docs/validation/runs/2026-05-13/cpcv.md). |
 | Open operator blockers | COI-68 VPS `.env` patch · COI-69 post-restart verification |
 
-> **P0 graduates to P1 when** every PR-driven row above merges, both operator COI items complete, and the four 🟡 rows in the invariant matrix flip 🟢. Do not interpret this block in isolation — read against [`p0-evidence-pack.md`](docs/validation/p0-evidence-pack.md) §0.4 and the invariant matrix.
+> **P0 graduates to P1 when** the CPCV §0.4 graduation bar passes, both operator COI items complete, and the four 🟡 rows in the invariant matrix flip 🟢 per the matrix's own closing rules. Do not interpret this block in isolation — read against [`p0-evidence-pack.md`](docs/validation/p0-evidence-pack.md) §0.4 and the invariant matrix.
 
 <!-- readiness:end -->
 
