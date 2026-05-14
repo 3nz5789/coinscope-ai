@@ -32,6 +32,9 @@ import {
   PauseCircle,
   PlayCircle,
   Eye,
+  Radar,
+  RefreshCw,
+  WifiOff,
 } from "lucide-react";
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -377,6 +380,149 @@ export default function SignalConsoleCard({
               : "muted"
           }
         />
+      </div>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// State variants — Loading / Empty / Error
+//
+// The primary-signal slot in LiveScanner must always render *something*.
+// A blank slot leaves the operator unable to distinguish "engine quiet"
+// from "engine broken" from "first paint" — which is exactly the trust
+// gap a decision-support console must not have.
+//
+// All three variants share the SignalConsoleCard shell (hud-card,
+// border-l-[3px], p-4) so the page layout does not reflow between states.
+// ──────────────────────────────────────────────────────────────────────────
+
+function ShellHeader({
+  title,
+  subtitle,
+  icon: Icon,
+  accent,
+  pulse = false,
+}: {
+  title: string;
+  subtitle?: string;
+  icon: typeof Radar;
+  accent: "muted" | "destructive";
+  pulse?: boolean;
+}) {
+  const iconColor =
+    accent === "destructive" ? "text-destructive" : "text-muted-foreground";
+  return (
+    <div className="flex items-center gap-3">
+      <Icon
+        className={`w-4 h-4 ${iconColor} ${pulse ? "pulse-live" : ""}`}
+      />
+      <div className="flex flex-col">
+        <span className="data-value text-[13px] font-semibold text-foreground">
+          {title}
+        </span>
+        {subtitle && (
+          <span className="text-[11px] text-muted-foreground">{subtitle}</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Loading skeleton — first paint while the signals endpoint is in flight.
+ * Mirrors the six-cell grid shape so the page does not jump when the real
+ * card renders.
+ */
+export function SignalConsoleCardSkeleton() {
+  return (
+    <div
+      className="hud-card border-l-[3px] border-l-muted-foreground/30 p-4 space-y-4"
+      aria-busy="true"
+      aria-label="Loading signal console"
+    >
+      <ShellHeader
+        title="Loading signal feed…"
+        subtitle="Awaiting first scan result"
+        icon={Activity}
+        accent="muted"
+      />
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-3">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="space-y-1.5 animate-pulse">
+            <div className="h-2 w-16 rounded bg-muted/60" />
+            <div className="h-4 w-24 rounded bg-muted/80" />
+            <div className="h-2 w-32 rounded bg-muted/50" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Empty state — signals endpoint returned an empty list. The engine is
+ * online and scanning; no candidate currently meets the active filters.
+ * The visible Radar pulse tells the operator this is live, not stale.
+ */
+export function SignalConsoleCardEmpty() {
+  return (
+    <div
+      className="hud-card border-l-[3px] border-l-muted-foreground/50 p-4 space-y-3"
+      aria-live="polite"
+    >
+      <ShellHeader
+        title="No active signals"
+        subtitle="Engine is online and scanning — no candidate currently meets the active filters."
+        icon={Radar}
+        accent="muted"
+        pulse
+      />
+      <div className="text-[11px] text-muted-foreground leading-relaxed">
+        The console panel will populate as soon as the engine flags a
+        candidate. Until then, no operator action is required.
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Error state — the signals endpoint failed before returning any data.
+ * Distinct from an empty list: this means the *feed* is broken, not the
+ * market. The operator must intervene (likely a backend/exchange issue).
+ */
+export function SignalConsoleCardError({
+  message,
+  onRetry,
+}: {
+  message: string;
+  onRetry?: () => void;
+}) {
+  return (
+    <div
+      className="hud-card border-l-[3px] border-l-destructive p-4 space-y-3"
+      role="alert"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <ShellHeader
+          title="Signal feed unavailable"
+          subtitle="The engine is not returning signals. Check the backend, exchange connectivity, and risk-gate status before trading."
+          icon={WifiOff}
+          accent="destructive"
+        />
+        {onRetry && (
+          <button
+            type="button"
+            onClick={onRetry}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold data-value border border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/15 transition-colors"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            Retry
+          </button>
+        )}
+      </div>
+      <div className="text-[11px] font-mono text-destructive/80 bg-destructive/5 border border-destructive/20 rounded px-2 py-1.5 break-all">
+        {message}
       </div>
     </div>
   );
