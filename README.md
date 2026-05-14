@@ -10,7 +10,7 @@
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/engine-FastAPI-009688)](https://fastapi.tiangolo.com)
 
-[Dashboard](https://app.coinscope.ai) · [API Docs](https://api.coinscope.ai/docs) · [Linear](https://linear.app/coinscopeai) · [Notion](https://www.notion.so/33a29aaf938e81efa983e47b83e15775) · [Disclosures](https://app.coinscope.ai/legal)
+[Dashboard](https://app.coinscope.ai) · [API Docs](https://api.coinscope.ai/docs) · [P0 Status](docs/validation/p0-public-summary.md) · [Linear](https://linear.app/coinscopeai) · [Notion](https://www.notion.so/33a29aaf938e81efa983e47b83e15775) · [Disclosures](https://app.coinscope.ai/legal)
 
 </div>
 
@@ -32,6 +32,40 @@ CoinScopeAI is an AI-driven trading intelligence system for Binance USDT-M perpe
 - Investment advice of any kind
 
 > **P0 validation phase active — May 2026.** The engine runs on **Binance Testnet only**. Real-capital trading is gate-locked behind the [Production Candidate Criteria v2 §8](#validation-phase-freeze) readiness checklist.
+
+---
+
+## Readiness
+
+<!-- readiness:begin -->
+
+**Updated:** 2026-05-13 · **Source of truth:** [`docs/validation/p0-evidence-pack.md`](docs/validation/p0-evidence-pack.md) §0 (honesty pass overrides body)
+
+| Field | Value |
+|---|---|
+| Phase | **P0 — testnet validation** (Binance USDT-M Testnet only) |
+| Freeze | **🔒 Active** — see [Validation Phase Freeze](#validation-phase-freeze). P0 runs through ~2026-05-31 |
+| Latest tag | [`v0.1.0-p0.3`](https://github.com/3nz5789/CoinScopeAI/releases/tag/v0.1.0-p0.3) — 2026-05-13, "Risk Framework Docs" |
+| Evidence baseline | [`p0-evidence-pack.md`](docs/validation/p0-evidence-pack.md) — start at §0.5 for the one-paragraph honest summary |
+| Invariant coverage | 12 🟢 · 4 🟡 · 0 🔴 → [`invariant-matrix.md`](docs/validation/invariant-matrix.md) |
+| Open PR-driven blockers | [#28](https://github.com/3nz5789/CoinScopeAI/pull/28) 65 invariant tests on `main` · [#50](https://github.com/3nz5789/CoinScopeAI/pull/50) kill-switch deactivate guard · [#51](https://github.com/3nz5789/CoinScopeAI/pull/51) WFV+CPCV harness |
+| Open operator blockers | COI-68 VPS `.env` patch · COI-69 post-restart verification |
+
+> **P0 graduates to P1 when** every PR-driven row above merges, both operator COI items complete, and the four 🟡 rows in the invariant matrix flip 🟢. Do not interpret this block in isolation — read against [`p0-evidence-pack.md`](docs/validation/p0-evidence-pack.md) §0.4 and the invariant matrix.
+
+<!-- readiness:end -->
+
+## Start here
+
+Three docs govern day-to-day operation during P0. Read them in this order, and treat them as the source of truth for anything the rest of this README compresses:
+
+| Doc | What it is | When to read it |
+|---|---|---|
+| [Operator Lifecycle](docs/runbooks/operator-workflow.md) | 9-step session lifecycle — every API call, breaker check, and journal step an operator runs per trading day | Before any session; whenever the engine, dashboard, or alerts surface an anomaly |
+| [Validation Proof Hub](docs/validation/p0-evidence-pack.md) | P0 Evidence Pack — what was validated, how, what each artefact proves **and what it does not prove**. §0 (honesty pass) overrides body claims | Before claiming any capability ships in P0; before any review or release decision |
+| [Validation Phase Freeze](#validation-phase-freeze) | What is **blocked** from changing during P0 — thresholds, testnet flag, breaker semantics, ML artifacts, order semantics | Before opening any PR that touches risk, signals, exchange, or ML |
+
+If a claim about CoinScopeAI is not anchored to one of these three, it is not actionable in P0.
 
 ---
 
@@ -102,94 +136,78 @@ Full architecture: [`docs/architecture/architecture.md`](docs/architecture/archi
 
 ## Repository Structure
 
+Present state on `main`. Planned migrations, naming clarifications, and any callouts not yet landed live in [`docs/architecture/repository-roadmap.md`](docs/architecture/repository-roadmap.md) — not here.
+
 ```
 CoinScopeAI/
 │
-├── engine/                     Core trading engine
-│   ├── api.py                  FastAPI app + router registration
-│   ├── core/                   Config, shared state, base classes
-│   ├── exchange/               Binance REST + WebSocket adapter
-│   ├── integrations/           Exchange integrations (Binance primary)
-│   ├── signals/                Multi-factor confluence scoring pipeline
-│   ├── monitoring/             Health checks, Prometheus metrics
-│   └── dashboard/              Dashboard BFF endpoints
+├── engine/                  FastAPI trading engine
+│   ├── api.py                  App entry + router registration
+│   ├── core/                   Pair monitor, orchestrator, shared state
+│   ├── exchange/               Binance Futures Testnet REST/WS clients + executor
+│   ├── integrations/           Notion sync, trade journal, portfolio sync
+│   ├── monitoring/             Health/readiness probes, Prometheus metrics
+│   └── signals/                Confluence scoring pipeline
 │
-├── apps/                       Application layer (planned — dashboard migrates here at P2)
-├── backend/                    Backend services (auth, billing, onboarding)
-├── services/                   Data ingestion pipelines (OHLCV, OI, funding)
-├── strategies/                 Strategy definitions and offline backtests
+├── risk_management/         Risk gate, sizer, regime detector
+│   ├── risk_gate.py             Pre-trade gate: regime, heat, daily loss, drawdown
+│   ├── kelly_position_sizer.py  Fractional Kelly with 2% per-trade hard cap
+│   └── hmm_regime_detector.py   HMM regime classifier (bull / chop / bear)
 │
-├── risk_management/            Risk gate + position sizer + circuit breakers
-│   ├── risk_gate.py            Pre-trade gate: regime, heat, corr, daily loss, drawdown
-│   ├── kelly_sizer.py          Fractional Kelly (0.25x) with 2% hard cap + regime multiplier
-│   ├── circuit_breakers.py     Daily loss, max drawdown, consecutive-loss breakers
-│   └── kill_switch.py          Manual halt — persists across restarts
+├── services/                Long-running workers
+│   ├── paper_trading/           Engine + safety gate + kill switch + CLI
+│   ├── market_data/             Multi-venue stream recorders + aggregator
+│   └── telegram-bot/            @ScoopyAI_bot worker
 │
-├── coinscopeai-dashboard/         React 18 dashboard (Vite + Tailwind + OKLCH tokens)
+├── apps/dashboard/          React 18 + Vite + Tailwind dashboard
 │
-├── configs/
-│   ├── environments/
-│   │   ├── development.yaml    Local dev defaults
-│   │   ├── staging.yaml        Testnet staging defaults
-│   │   └── production.yaml     Production defaults (gated)
-│   └── logging.yaml            Structured JSON log config
+├── strategies/              Strategy configs · research · backtests (scaffold)
+├── ml_models/               Model training scaffolding
+├── data/                    Pipeline scaffolding (raw / processed / features)
 │
-├── scripts/
-│   ├── drift_detector.py           Cross-doc canonical token consistency check
-│   ├── risk_threshold_guardrail.py Codebase-wide threshold violation scanner
-│   ├── daily_status.sh             Morning engine brief (polls all 6 endpoints)
-│   ├── sync_verify.py              Cross-platform structure verifier
-│   ├── auto_sync.py                Session-end git + drift + guardrail runner
-│   └── setup_github_labels.py      GitHub label setup (27 labels — needs classic PAT)
+├── configs/environments/    development.yaml · staging.yaml · production.yaml
+├── infra/docker/            Dockerfiles + docker-compose.{dev,prod}.yml
+├── infra/systemd/           systemd unit files
+├── deploy/systemd/          Production unit installer
 │
-├── docs/
-│   ├── architecture/
-│   │   ├── architecture.md              Full system architecture v5 (canonical)
-│   │   └── design-system-manifest.md   OKLCH design tokens v3
-│   ├── decisions/
-│   │   ├── adr-0001-fastapi-and-uvicorn.md
-│   │   ├── adr-0002-redis-celery-for-workers.md
-│   │   └── adr-0003-llm-off-hot-path.md
-│   ├── risk/
-│   │   ├── risk-framework.md            Risk philosophy + 6 invariants (required reading)
-│   │   ├── risk-gate.md                 Gate logic + full rejection taxonomy
-│   │   ├── position-sizing.md           Kelly pipeline — 6 steps, all non-increasing
-│   │   └── failsafes-and-kill-switches.md
-│   ├── runbooks/
-│   │   ├── daily-ops.md
-│   │   ├── local-development.md
-│   │   ├── digitalocean-deployment.md   Canonical VPS deployment guide
-│   │   ├── troubleshooting.md
-│   │   └── release-checklist.md
-│   └── ml/
-│       ├── regime-detection.md          HMM + v3 classifier architecture
-│       └── confidence-scoring.md
+├── scripts/                 Operational + CI gate scripts (see table below)
+├── tests/                   pytest — smoke + unit + directory-boundary
+├── docs/                    Documentation (see index below)
 │
-├── tests/
-│   ├── test_ci_smoke.py        15 CI smoke checks — run on every push to main
-│   └── test_risk_gate.py       Risk gate unit tests
-│
-├── infra/                      Docker + deployment manifests
-│
-├── .github/
-│   ├── workflows/ci.yml        Tests (15 smoke) + security scan (ubuntu-22.04)
-│   ├── ISSUE_TEMPLATE/
-│   │   ├── bug_report.md
-│   │   ├── feature_request.md
-│   │   ├── strategy_change.md  Required for any risk/gate/signal/ML changes
-│   │   └── config.yml
-│   └── PULL_REQUEST_TEMPLATE.md
-│
-├── coinscope.env.example       Canonical env template — thresholds locked PCC v2 §8
-├── pyproject.toml              ruff · black · pytest config
-├── docker-compose.yml          Local + VPS stack
-├── Makefile                    make dev · make test · make lint · make guardrail
-├── requirements.txt            Root Python dependencies
-├── CLAUDE.md                   AI operator prompt — canonical thresholds + voice
-├── CONTRIBUTING.md             Contribution rules + 2-reviewer policy
-├── CODEOWNERS                  Auto-review assignments by path
-└── SECURITY.md                 Vulnerability disclosure policy
+├── bot/                     Telegram alert helper
+├── notebooks/               Research notebooks
+├── memory/                  Operator memory store
+├── utils/                   Shared helpers
+└── archive/                 Pre-restructure code retained for history
 ```
+
+Root files: `README.md` · `CHANGELOG.md` · `CONTRIBUTING.md` · `SECURITY.md` · `CODEOWNERS` · `Makefile` · `requirements.txt` · `pyproject.toml` · `coinscope.env.example` · `prometheus.yml` · `prometheus-alert-rules.yml`
+
+### Scripts on `main`
+
+| Script | Purpose |
+|---|---|
+| `scripts/risk_threshold_guardrail.py` | Codebase-wide threshold drift scanner |
+| `scripts/evidence_gate.py` | CI gate — sensitive PR must touch proof/freeze/release |
+| `scripts/invariant_matrix_check.py` | CI gate — invariant-matrix citations resolve |
+| `scripts/daily_status_check.py` + `scripts/run_daily_status.sh` | Morning engine brief |
+| `scripts/health_check_paper_trading.py` | Paper-trading health verifier |
+| `scripts/sync_verify.py` | Cross-platform structure verifier |
+| `scripts/test_testnet_connectivity.py` | Binance testnet reachability probe |
+| `scripts/setup_github_labels.py` | Label installer (classic PAT required) |
+
+### Documentation index
+
+| Path | Contents |
+|---|---|
+| `docs/architecture/` | Confluence scoring · design-system manifest |
+| `docs/api/engine-api-contract.md` | Engine API contract |
+| `docs/decisions/` | Architecture decision records |
+| `docs/risk/` | Risk framework · gate · sizing · failsafes |
+| `docs/runbooks/operator-workflow.md` | Trading session lifecycle |
+| `docs/validation/p0-evidence-pack.md` | Validation proof hub |
+| `docs/validation/invariant-matrix.md` | Invariant-to-test mapping |
+| `docs/monitoring/slo-alerts-dashboard.md` | SLO and alert specs |
 
 ---
 
@@ -286,6 +304,23 @@ Locked **2026-05-01** via PCC v2 §8. Enforced by `scripts/risk_threshold_guardr
 > If the risk gate, executor, or adapter is in an uncertain state, the engine **halts — it never guesses**.
 
 Every circuit breaker, kill switch, and rejection path enforces this invariant. See [`docs/risk/risk-framework.md`](docs/risk/risk-framework.md) for all 6 invariants.
+
+---
+
+## Invariant cheatsheet
+
+The six claims this README makes about the system, paired with the code that enforces each one and the tests that catch a regression. The full 16-row matrix — thresholds, regime gating, journaling, hot-path import boundary, drift detection, and the matrix's own integrity check — lives at [`docs/validation/invariant-matrix.md`](docs/validation/invariant-matrix.md).
+
+| Claim | Code | Tests | Matrix |
+|---|---|---|---|
+| P0 runs on Binance Testnet only | `coinscope.env.example` · `configs/environments/staging.yaml` | `tests/test_ci_smoke.py::test_testnet_mode` | 🟢 I7 |
+| No trade bypasses the risk gate | `services/paper_trading/safety.py` · `services/paper_trading/order_manager.py` | `tests/unit/paper_trading/test_safety.py` — every rejection class (BUG-10 is the canonical regression) | 🟢 I1 |
+| No size exceeds the 2% per-trade hard cap | `risk_management/kelly_position_sizer.py` · `services/paper_trading/safety.py` | `tests/unit/paper_trading/test_safety.py` + `scripts/risk_threshold_guardrail.py` | 🟢 I2 |
+| A tripped breaker blocks new entries | `services/paper_trading/safety.py` | Daily-loss · max-drawdown · consecutive-loss tests in `test_safety.py` | 🟢 I3 |
+| Kill switch prevents new entries when engaged | `services/paper_trading/safety.py` · `services/paper_trading/kill.py` | `TestKillSwitch` + `TestSafetyGateKillSwitch` in `test_safety.py` | 🟡 I4 · [#47](https://github.com/3nz5789/CoinScopeAI/issues/47) |
+| Engine halts on uncertain state — never guesses | `services/paper_trading/safety.py` (`validate_order` fail-closed) | `tests/unit/paper_trading/test_safety.py` (reject-default branch) | 🟢 I6 |
+
+Status colour and matrix ID let you jump straight to the full row in [`invariant-matrix.md`](docs/validation/invariant-matrix.md). 🟡 rows carry a tracking issue — the link is in the Matrix column.
 
 ---
 

@@ -13,6 +13,22 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- `docs/validation/p0-public-summary.md` — one-page outsider-facing P0
+  validation summary covering what is live, what is testnet only, what
+  is blocked, what has passed, and what has not. Linked from the README
+  header alongside Dashboard / API Docs / Disclosures. Hand-curated;
+  refreshed at each tagged release. The internal evidence pack and
+  invariant matrix remain the source of truth.
+- `apps/dashboard/src/components/SignalConsoleCard.tsx` — one-panel operator
+  console view for the primary signal. Surfaces confluence, regime, Kelly
+  size, gate pass/fail, breaker state, and a deterministic action-guidance
+  row (HALT / SKIP / WATCH / CONSIDER / EXECUTE) derived from those five
+  inputs. Collapses a workflow that previously required jumping between
+  Live Scanner, Risk Gate, Position Sizer, and Regime State views.
+- `LiveScanner` now renders the highest-confluence active signal through
+  `SignalConsoleCard` above the existing signal table, with a best-effort
+  gate/breaker join from the risk-gate snapshot until per-signal joins
+  to `/position-size` and `/risk-gate` are wired.
 - Full GitHub repository setup: branch protection on `main`, squash-only merge,
   auto-delete head branches, required CI status checks (`Tests` + `Security Scan`)
 - PR template with validation-phase gate checklist

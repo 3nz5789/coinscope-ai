@@ -42,6 +42,48 @@ jobs:
       - name: ruff check
         run: ruff check . --output-format=github
 
+  evidence-gate:
+    name: Evidence Gate
+    runs-on: ubuntu-22.04
+    # PR-only. Pushes to main can't add evidence retroactively.
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Check exemption label
+        id: exempt
+        env:
+          LABELS: ${{ toJson(github.event.pull_request.labels.*.name) }}
+        run: |
+          if echo "$LABELS" | grep -q '"evidence-gate-exempt"'; then
+            echo "exempt=true" >> "$GITHUB_OUTPUT"
+            echo "evidence-gate: PR carries 'evidence-gate-exempt' label — gate skipped."
+            echo "evidence-gate: this is auditable in the PR's label history."
+          else
+            echo "exempt=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Run evidence gate
+        if: steps.exempt.outputs.exempt != 'true'
+        run: |
+          python3 scripts/evidence_gate.py --base "origin/${{ github.base_ref }}"
+
+  invariant-matrix:
+    name: Invariant Matrix
+    runs-on: ubuntu-22.04
+    # Runs on every push and PR — the matrix must be internally
+    # consistent at every commit on main, not just at merge time.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Verify invariant-matrix citations resolve
+        run: python3 scripts/invariant_matrix_check.py
+
   security:
     name: Security Scan
     runs-on: ubuntu-22.04
