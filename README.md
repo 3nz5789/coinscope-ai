@@ -55,6 +55,18 @@ CoinScopeAI is an AI-driven trading intelligence system for Binance USDT-M perpe
 
 <!-- readiness:end -->
 
+## Start here
+
+Three docs govern day-to-day operation during P0. Read them in this order, and treat them as the source of truth for anything the rest of this README compresses:
+
+| Doc | What it is | When to read it |
+|---|---|---|
+| [Operator Lifecycle](docs/runbooks/operator-workflow.md) | 9-step session lifecycle — every API call, breaker check, and journal step an operator runs per trading day | Before any session; whenever the engine, dashboard, or alerts surface an anomaly |
+| [Validation Proof Hub](docs/validation/p0-evidence-pack.md) | P0 Evidence Pack — what was validated, how, what each artefact proves **and what it does not prove**. §0 (honesty pass) overrides body claims | Before claiming any capability ships in P0; before any review or release decision |
+| [Validation Phase Freeze](#validation-phase-freeze) | What is **blocked** from changing during P0 — thresholds, testnet flag, breaker semantics, ML artifacts, order semantics | Before opening any PR that touches risk, signals, exchange, or ML |
+
+If a claim about CoinScopeAI is not anchored to one of these three, it is not actionable in P0.
+
 ---
 
 ## Architecture
