@@ -15,16 +15,20 @@ matrix points at thin air. This script makes that rot fail CI.
 
 What it does
 ------------
-* Reads ``docs/validation/invariant-matrix.md``.
-* Extracts the rows between the matrix markers.
-* For each row, pulls every backtick-quoted token from the four path
-  columns (Source, Code, Test/Script, Evidence).
-* Strips any ``::Class::method`` suffix to recover the file path.
-* Verifies the file exists at ``REPO_ROOT/<path>``.
-* Reports any unresolved paths with the row's invariant ID.
+1. Reads ``docs/validation/invariant-matrix.md``.
+2. Extracts the rows between the matrix markers.
+3. **Path resolution** — for each non-red row, pulls every backtick-quoted
+   token from the four path columns (Source, Code, Test/Script, Evidence),
+   strips any ``::Class::method`` suffix, and verifies the file exists at
+   ``REPO_ROOT/<path>``. Red rows are permitted to cite missing paths.
+4. **Tracking issue** — for every 🟡 or 🔴 row, verifies the Notes column
+   contains at least one ``#NNN`` reference. The matrix doc declares that
+   every non-green row must carry a tracking issue (see the "Tracking
+   issues" section of ``invariant-matrix.md``); this enforces that rule.
 
 A row with status ``🔴`` (red) is permitted to cite missing paths — that
 is the documented meaning of red. ``🟢`` and ``🟡`` must resolve fully.
+🟡 and 🔴 must additionally cite at least one tracking issue.
 
 Exit codes
 ----------
@@ -55,10 +59,14 @@ END_MARKER = "<!-- matrix:end -->"
 HEADER = ("ID", "Invariant", "Status", "Source", "Code", "Test/Script", "Evidence", "Notes")
 PATH_COLUMNS = ("Source", "Code", "Test/Script", "Evidence")
 RED = "🔴"
+YELLOW = "🟡"
 
 # Tokens wrapped in backticks. Path-like tokens are extracted by stripping
 # any pytest-style ``::Class::method`` suffix.
 BACKTICK_RE = re.compile(r"`([^`]+)`")
+
+# Issue/PR references in the Notes column. Matches `#47`, `#58`, etc.
+ISSUE_REF_RE = re.compile(r"#\d+")
 
 
 class MatrixError(Exception):
@@ -149,6 +157,16 @@ def check() -> int:
             errors.append(f"{rowid}: duplicate ID")
         seen_ids.add(rowid)
 
+        # Tracking-issue rule (applies to 🟡 and 🔴 rows):
+        # The matrix doc declares that every non-green row must cite a
+        # tracking issue (or PR) in its Notes column. Enforce that here.
+        if status in (YELLOW, RED):
+            if not ISSUE_REF_RE.search(record["Notes"]):
+                errors.append(
+                    f"{rowid}: {status} row has no tracking issue in Notes "
+                    f"(expected at least one '#NNN' reference)"
+                )
+
         if status == RED:
             # Red rows are documented gaps; do not enforce path resolution.
             continue
@@ -170,14 +188,21 @@ def check() -> int:
         print("matrix-check: FAIL\n")
         for err in errors:
             print(f"  - {err}")
+        try:
+            location = str(MATRIX_FILE.relative_to(REPO_ROOT))
+        except ValueError:
+            location = str(MATRIX_FILE)
         print(
-            "\nFix the matrix at "
-            f"{MATRIX_FILE.relative_to(REPO_ROOT)}: rename or remove broken citations,\n"
-            "or mark the row 🔴 if the protector is genuinely missing on this branch."
+            f"\nFix the matrix at {location}: rename or remove broken citations,\n"
+            "mark the row 🔴 if the protector is genuinely missing on this branch,\n"
+            "or file a tracking issue and cite '#NNN' in the Notes column."
         )
         return 1
 
-    print(f"matrix-check: OK — {row_count} invariant rows, all cited paths resolve.")
+    print(
+        f"matrix-check: OK — {row_count} invariant rows; "
+        "all cited paths resolve and every 🟡/🔴 row carries a tracking issue."
+    )
     return 0
 
 
