@@ -3,6 +3,7 @@
  * Single-screen at-a-glance dashboard combining all critical widgets.
  * Design: Military-grade HUD, information-dense, emerald accent on deep navy.
  */
+import { useState, useEffect } from "react";
 import { useApiData } from "@/hooks/useApiData";
 import { api } from "@/lib/api";
 import { formatCurrency, formatPrice, formatPct, timeAgoShort } from "@/lib/format";
@@ -73,7 +74,7 @@ function RiskWidget({ risk }: { risk: any }) {
       <div className="space-y-2">
         {gauges.map((g) => {
           const ratio = Math.min(g.value / g.limit, 1);
-          const barColor = ratio > 0.7 ? "bg-destructive" : ratio > 0.4 ? "bg-warning" : "bg-emerald";
+          const barColor = ratio >= 0.8 ? "bg-destructive" : ratio >= 0.5 ? "bg-warning" : "bg-emerald";
           return (
             <div key={g.label}>
               <div className="flex justify-between text-[10px] mb-0.5">
@@ -89,7 +90,8 @@ function RiskWidget({ risk }: { risk: any }) {
       </div>
       <div className="mt-3 pt-2 border-t border-border/30 flex items-center justify-between">
         <span className="text-[10px] text-muted-foreground">Kill Switch</span>
-        <span className={`text-[11px] font-semibold data-value ${risk.killSwitch ? "text-destructive" : "text-emerald"}`}>
+        <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold data-value ${risk.killSwitch ? "text-destructive" : "text-emerald"}`}>
+          {risk.killSwitch && <span className="w-1.5 h-1.5 rounded-full bg-destructive pulse-live" />}
           {risk.killSwitch ? "ARMED" : "DISARMED"}
         </span>
       </div>
@@ -155,7 +157,7 @@ function PositionRowCompact({ pos }: { pos: any }) {
 function TickerRow({ symbol, price, ticker }: { symbol: string; price: number; ticker?: any }) {
   return (
     <div className="flex items-center justify-between py-1.5 border-b border-border/20 last:border-0">
-      <span className="data-value text-[12px] font-medium text-foreground">{symbol}</span>
+      <span className="data-value text-[12px] font-medium text-foreground">{symbol.replace("USDT", "")}</span>
       <div className="flex items-center gap-2">
         <span className="data-value text-[12px] text-foreground">{formatPrice(price)}</span>
         {ticker ? (
@@ -170,11 +172,11 @@ function TickerRow({ symbol, price, ticker }: { symbol: string; price: number; t
 
 // ─── Regime Badge (compact) ───────────────────────────────────────────
 
-const regimeConfig: Record<string, { label: string; color: string; icon: React.ComponentType<{ className?: string }> }> = {
-  trending_up: { label: "Trending ↑", color: "text-emerald", icon: TrendingUp },
-  trending_down: { label: "Trending ↓", color: "text-destructive", icon: TrendingDown },
-  ranging: { label: "Ranging", color: "text-blue-400", icon: Minus },
-  volatile: { label: "Volatile", color: "text-warning", icon: Zap },
+const regimeConfig: Record<string, { label: string; color: string; accentBorder: string; barColor: string; icon: React.ComponentType<{ className?: string }> }> = {
+  trending_up: { label: "Trending ↑", color: "text-emerald", accentBorder: "border-l-emerald", barColor: "bg-emerald", icon: TrendingUp },
+  trending_down: { label: "Trending ↓", color: "text-destructive", accentBorder: "border-l-destructive", barColor: "bg-destructive", icon: TrendingDown },
+  ranging: { label: "Ranging", color: "text-blue-400", accentBorder: "border-l-blue-400", barColor: "bg-blue-400", icon: Minus },
+  volatile: { label: "Volatile", color: "text-warning", accentBorder: "border-l-warning", barColor: "bg-warning", icon: Zap },
 };
 
 // ─── Main Overview Page ───────────────────────────────────────────────
@@ -187,6 +189,12 @@ export default function Overview() {
   const { data: regimes } = useApiData(api.getRegimes, { refreshInterval: 10000 });
   const { data: tickers } = useApiData(api.getTicker24h, { refreshInterval: 30000 });
   const { data: prices } = useApiData(api.getLivePrices, { refreshInterval: 3000 });
+
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Equity chart data (last 30 days for mini chart)
   const chartData = perf?.equityCurve
@@ -219,12 +227,12 @@ export default function Overview() {
           </span>
         </div>
         <span className="text-[11px] text-muted-foreground data-value">
-          {new Date().toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })} UTC
+          {now.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })} UTC
         </span>
       </div>
 
       {/* Top KPI Row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <MetricCard
           label="Portfolio Value"
           value={`$${(currentValue / 1000).toFixed(1)}K`}
@@ -252,6 +260,13 @@ export default function Overview() {
           sub={perf ? `${perf.totalTrades} trades · Sharpe ${perf.sharpeRatio}` : ""}
           color="text-foreground"
           icon={Radar}
+        />
+        <MetricCard
+          label="Max Drawdown"
+          value={perf ? `${perf.maxDrawdownPct.toFixed(2)}%` : "—"}
+          sub="Hard stop: 10%"
+          color={perf && perf.maxDrawdownPct >= 8 ? "text-destructive" : perf && perf.maxDrawdownPct >= 5 ? "text-warning" : "text-foreground"}
+          icon={ShieldX}
         />
       </div>
 
@@ -390,13 +405,15 @@ export default function Overview() {
                 const cfg = regimeConfig[r.regime] || regimeConfig.ranging;
                 const Icon = cfg.icon;
                 return (
-                  <div key={r.symbol} className="flex flex-col gap-1 px-2 py-2 rounded bg-muted/30 border border-border/30">
-                    <span className="data-value text-[11px] font-semibold text-foreground">{r.symbol}</span>
+                  <div key={r.symbol} className={`flex flex-col gap-1 px-2 py-2 rounded bg-muted/30 border border-border/30 border-l-[3px] ${cfg.accentBorder}`}>
+                    <span className="data-value text-[11px] font-semibold text-foreground">{r.symbol.replace("USDT", "")}</span>
                     <span className={`inline-flex items-center gap-1 text-[10px] font-medium ${cfg.color}`}>
                       <Icon className="w-3 h-3" />
                       {cfg.label}
                     </span>
-                    <span className="text-[10px] text-muted-foreground data-value">{r.confidence}% conf.</span>
+                    <div className="w-full h-0.5 rounded-full bg-muted overflow-hidden mt-0.5">
+                      <div className={`h-full rounded-full ${cfg.barColor}`} style={{ width: `${r.confidence}%` }} />
+                    </div>
                   </div>
                 );
               })}
