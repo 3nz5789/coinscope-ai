@@ -1,0 +1,15 @@
+{
+  "name": "coinscope-engine",
+  "version": "0.1.0",
+  "description": "MCP tools for the CoinScopeAI Engine API — 14 read-only + 1 safe scan trigger. No order placement, breaker reset/trip, or autotrade flips (validation-phase safety).",
+  "author": {
+    "name": "Mohammed Abuanza"
+  },
+  "keywords": [
+    "coinscope",
+    "trading",
+    "crypto",
+    "mcp",
+    "engine"
+  ]
+}
