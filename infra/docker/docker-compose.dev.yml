@@ -33,7 +33,7 @@ x-common-env: &common-env
 
 x-python-service: &python-service
   build:
-    context: ../../
+    context: ../..
   env_file:
     - ../../.env
   environment:
@@ -90,8 +90,8 @@ services:
     <<: *python-service
     container_name: coinscopeai-engine
     build:
-      context: ../../
-      dockerfile: infra/docker/Dockerfile.engine
+      context: ../..
+      dockerfile: services/trading-engine/Dockerfile
     ports:
       - "${ENGINE_PORT:-8001}:8001"
     depends_on:
@@ -105,8 +105,7 @@ services:
       timeout: 5s
       start_period: 15s
       retries: 3
-    volumes:
-      - ../../coinscope_trading_engine:/app/coinscope_trading_engine:ro
+    # volumes: disabled on VPS
     labels:
       com.coinscopeai.service: "engine"
       com.coinscopeai.tier: "prototype"
@@ -116,7 +115,7 @@ services:
     <<: *python-service
     container_name: coinscopeai-ingestion
     build:
-      context: ../../
+      context: ../..
       dockerfile: infra/docker/Dockerfile.ingestion
     depends_on:
       db:
@@ -136,7 +135,7 @@ services:
     <<: *python-service
     container_name: coinscopeai-backtesting
     build:
-      context: ../../
+      context: ../..
       dockerfile: infra/docker/Dockerfile.backtesting
     depends_on:
       db:
@@ -157,7 +156,7 @@ services:
     <<: *python-service
     container_name: coinscopeai-paper-trading
     build:
-      context: ../../
+      context: ../..
       dockerfile: infra/docker/Dockerfile.paper_trading
     depends_on:
       db:
@@ -188,7 +187,7 @@ services:
     <<: *python-service
     container_name: coinscopeai-recorder
     build:
-      context: ../../
+      context: ../..
       dockerfile: infra/docker/Dockerfile.recorder
     volumes:
       - ../../services/market_data:/app/services/market_data:ro
@@ -209,7 +208,7 @@ services:
     <<: *python-service
     container_name: coinscopeai-paper-trading-v2
     build:
-      context: ../../
+      context: ../..
       dockerfile: infra/docker/Dockerfile.paper_trading
     depends_on:
       db:
