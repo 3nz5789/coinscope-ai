@@ -1,0 +1,66 @@
+<!--
+  coinscope-mcp-server v0.1 evaluation set.
+
+  Questions test whether an MCP-capable LLM can navigate the server's
+  surface and answer correctly. Designed against a canonical, healthy
+  engine state (testnet, PCC v2 §8 thresholds applied).
+
+  Eval design notes:
+    - All answers are stable for v0.1 (do not depend on live market data
+      or fast-changing state like specific signal scores).
+    - Most questions require either tool inspection (tools/list schema)
+      OR calling a tool against a canonical-state engine.
+    - Questions explicitly marked [LIVE] need the engine running with
+      canonical thresholds and the v3 ML classifier loaded.
+-->
+<evaluation>
+  <qa_pair>
+    <question>According to the master prompt PCC v2 §8 (2026-05-01) and confirmed by calling coinscope_config against a canonically-configured engine, what is the maximum leverage allowed for CoinScopeAI? Answer with the integer value only (no 'x').</question>
+    <answer>10</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>What value does coinscope_config return for max_open_positions per the canonical PCC v2 §8 thresholds (revised 2026-05-03)? Answer with the integer only.</question>
+    <answer>5</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>How many tools does coinscope-mcp-server v0.1 expose via tools/list? Answer with the integer only.</question>
+    <answer>15</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>Of the 15 tools in coinscope-mcp-server v0.1, exactly one has readOnlyHint set to false. What is the name of that tool? Answer with the tool name only.</question>
+    <answer>coinscope_scan_trigger</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>If you call coinscope_position_size with entry=65000 and stop_loss=64000, what direction does the engine infer? Answer with one word: LONG or SHORT.</question>
+    <answer>LONG</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>What is the minimum allowed value of the limit parameter for coinscope_scan_trigger, per its inputSchema? Answer with the integer only.</question>
+    <answer>30</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>The coinscope_regime tool's description notes that the engine implements its regime endpoint differently from what CLAUDE.md documents. According to the tool's drift note, what HTTP method does the actual engine use for the regime endpoint? Answer with one word.</question>
+    <answer>GET</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>[LIVE] When coinscope_health is called against a healthy running engine, what string value does its 'status' field return? Answer with one word in lowercase, no quotes.</question>
+    <answer>ok</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>[LIVE] When coinscope_regime is called with symbol=BTCUSDT and the v3 ML classifier is loaded, what string value does the 'model' field of the response equal? Answer with the exact string from the response.</question>
+    <answer>v3_ensemble_rf_xgb</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>What is the default value of the 'days' parameter for coinscope_journal, per its inputSchema? Answer with the integer only.</question>
+    <answer>30</answer>
+  </qa_pair>
+</evaluation>

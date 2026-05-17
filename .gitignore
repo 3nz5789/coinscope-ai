@@ -7,7 +7,6 @@
 .env
 .env.*
 !.env.example
-!.env.template
 secrets.json
 credentials.json
 *.key
@@ -143,3 +142,4 @@ frontend/node_modules/
 # Validation harness outputs are intentional evidence artifacts —
 # exempt from the *.csv data-file rule so they're committed as proof.
 !docs/validation/runs/**/*.csv
+.env.template

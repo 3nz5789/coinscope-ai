@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Regime Topology — CoinScopeAI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+  <style>
+    :root {
+      --anthropic-dark:       #141413;
+      --anthropic-beige:      #f5f0e8;
+      --anthropic-orange:     #d97757;
+      --anthropic-blue:       #6a9bcc;
+      --anthropic-green:      #788c5d;
+      --anthropic-tan:        #b0aea5;
+      --sidebar-bg:           #1a1916;
+      --sidebar-border:       #2a2927;
+      --control-bg:           #1f1e1c;
+      --control-border:       #2d2c2a;
+      --text-primary:         #e8e3da;
+      --text-secondary:       #8c8880;
+      --text-muted:           #5a5855;
+      --accent:               var(--anthropic-orange);
+      --radius:               6px;
+
+      /* CoinScopeAI regime colors */
+      --regime-trending:      #00FFB8;
+      --regime-volatile:      #F5A623;
+      --regime-meanrev:       #A3ADBD;
+      --regime-quiet:         #5B6472;
+      --canvas-bg:            #0D1117;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--anthropic-dark);
+      color: var(--text-primary);
+      font-family: 'Poppins', sans-serif;
+      font-size: 13px;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── Header ── */
+    header {
+      padding: 14px 20px 12px;
+      border-bottom: 1px solid var(--sidebar-border);
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      flex-shrink: 0;
+      background: var(--anthropic-dark);
+    }
+
+    header h1 {
+      font-family: 'Lora', serif;
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--text-primary);
+      letter-spacing: 0.01em;
+    }
+
+    header .subtitle {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 300;
+      line-height: 1.4;
+    }
+
+    /* ── Main layout ── */
+    .main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ── Canvas area ── */
+    #canvas-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--canvas-bg);
+      overflow: hidden;
+    }
+
+    #canvas-container canvas {
+      display: block;
+      max-width: 100% !important;
+      max-height: 100% !important;
+      width: auto !important;
+      height: auto !important;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 230px;
+      flex-shrink: 0;
+      background: var(--sidebar-bg);
+      border-left: 1px solid var(--sidebar-border);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-track { background: transparent; }
+    .sidebar::-webkit-scrollbar-thumb { background: var(--control-border); border-radius: 2px; }
+
+    .section {
+      padding: 14px 14px 10px;
+      border-bottom: 1px solid var(--sidebar-border);
+    }
+
+    .section-title {
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    /* ── Seed controls ── */
+    .seed-display {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+
+    .seed-nav {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 6px;
+    }
+
+    .seed-nav button,
+    .btn {
+      flex: 1;
+      background: var(--control-bg);
+      border: 1px solid var(--control-border);
+      color: var(--text-secondary);
+      border-radius: var(--radius);
+      padding: 5px 0;
+      font-family: 'Poppins', sans-serif;
+      font-size: 11px;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+
+    .seed-nav button:hover,
+    .btn:hover {
+      border-color: var(--accent);
+      color: var(--text-primary);
+    }
+
+    .btn-accent {
+      background: var(--control-bg);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .btn-accent:hover {
+      background: var(--accent);
+      color: #000;
+    }
+
+    .seed-jump {
+      display: flex;
+      gap: 4px;
+    }
+
+    .seed-jump input {
+      flex: 1;
+      background: var(--control-bg);
+      border: 1px solid var(--control-border);
+      color: var(--text-primary);
+      border-radius: var(--radius);
+      padding: 5px 8px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 11px;
+      outline: none;
+      min-width: 0;
+    }
+
+    .seed-jump input:focus { border-color: var(--accent); }
+
+    .seed-jump button {
+      flex-shrink: 0;
+      width: 36px;
+      padding: 5px 0;
+    }
+
+    /* ── Parameter controls ── */
+    .control-group {
+      margin-bottom: 10px;
+    }
+
+    .control-group:last-child { margin-bottom: 0; }
+
+    .control-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+
+    .control-label span:first-child {
+      font-size: 11px;
+      color: var(--text-secondary);
+      font-weight: 400;
+    }
+
+    .value-display {
+      font-size: 11px;
+      color: var(--text-primary);
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+      min-width: 28px;
+      text-align: right;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 3px;
+      border-radius: 2px;
+      background: var(--control-border);
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.25);
+    }
+
+    /* ── Toggle ── */
+    .toggle-group {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+
+    .toggle-label {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .toggle {
+      position: relative;
+      width: 28px;
+      height: 16px;
+    }
+
+    .toggle input { opacity: 0; width: 0; height: 0; }
+
+    .toggle-slider {
+      position: absolute;
+      inset: 0;
+      background: var(--control-border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .toggle-slider:before {
+      content: '';
+      position: absolute;
+      width: 10px; height: 10px;
+      left: 3px; top: 3px;
+      background: var(--text-muted);
+      border-radius: 50%;
+      transition: transform 0.2s, background 0.2s;
+    }
+
+    .toggle input:checked + .toggle-slider { background: var(--accent); }
+    .toggle input:checked + .toggle-slider:before {
+      transform: translateX(12px);
+      background: #000;
+    }
+
+    /* ── Regime legend ── */
+    .regime-list { display: flex; flex-direction: column; gap: 6px; }
+
+    .regime-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .regime-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .regime-name {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      color: var(--text-secondary);
+      flex: 1;
+    }
+
+    .regime-desc {
+      font-size: 9px;
+      color: var(--text-muted);
+      text-align: right;
+    }
+
+    /* ── Actions ── */
+    .actions { display: flex; flex-direction: column; gap: 6px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Regime Topology</h1>
+  <span class="subtitle">Four market behavioral states as a living field</span>
+</header>
+
+<div class="main">
+  <div id="canvas-container"></div>
+
+  <div class="sidebar">
+
+    <!-- SEED -->
+    <div class="section">
+      <div class="section-title">Seed</div>
+      <div class="seed-display" id="seed-display">42</div>
+      <div class="seed-nav">
+        <button onclick="previousSeed()">← Prev</button>
+        <button onclick="nextSeed()">Next →</button>
+        <button onclick="randomSeedAndUpdate()">Rand</button>
+      </div>
+      <div class="seed-jump">
+        <input type="number" id="seed-input" placeholder="Jump to…" min="1" max="99999">
+        <button onclick="jumpToSeed()">Go</button>
+      </div>
+    </div>
+
+    <!-- PARAMETERS -->
+    <div class="section">
+      <div class="section-title">Parameters</div>
+
+      <div class="control-group">
+        <div class="control-label">
+          <span>Particles</span>
+          <span class="value-display" id="particleCount-value">700</span>
+        </div>
+        <input type="range" id="particleCount" min="100" max="1400" step="50" value="700"
+               oninput="updateParam('particleCount', +this.value); document.getElementById('particleCount-value').textContent = this.value;">
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">
+          <span>Zone Scale</span>
+          <span class="value-display" id="zoneScale-value">4</span>
+        </div>
+        <input type="range" id="zoneScale" min="1" max="10" step="0.5" value="4"
+               oninput="updateParam('zoneScale', +this.value); document.getElementById('zoneScale-value').textContent = (+this.value).toFixed(1);">
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">
+          <span>Evolution Speed</span>
+          <span class="value-display" id="evolutionSpeed-value">3</span>
+        </div>
+        <input type="range" id="evolutionSpeed" min="0" max="10" step="0.5" value="3"
+               oninput="updateParam('evolutionSpeed', +this.value); document.getElementById('evolutionSpeed-value').textContent = (+this.value).toFixed(1);">
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">
+          <span>Trail Length</span>
+          <span class="value-display" id="trailLength-value">16</span>
+        </div>
+        <input type="range" id="trailLength" min="3" max="50" step="1" value="16"
+               oninput="updateParam('trailLength', +this.value); document.getElementById('trailLength-value').textContent = this.value;">
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">
+          <span>Speed</span>
+          <span class="value-display" id="speed-value">1.5</span>
+        </div>
+        <input type="range" id="speed" min="0.3" max="3.0" step="0.1" value="1.5"
+               oninput="updateParam('speed', +this.value); document.getElementById('speed-value').textContent = (+this.value).toFixed(1);">
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">
+          <span>Fade</span>
+          <span class="value-display" id="fadeAlpha-value">12</span>
+        </div>
+        <input type="range" id="fadeAlpha" min="3" max="45" step="1" value="12"
+               oninput="updateParam('fadeAlpha', +this.value); document.getElementById('fadeAlpha-value').textContent = this.value;">
+      </div>
+
+      <div class="toggle-group">
+        <span class="toggle-label">Show field</span>
+        <label class="toggle">
+          <input type="checkbox" id="showField" checked onchange="updateParam('showField', this.checked);">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- REGIMES -->
+    <div class="section">
+      <div class="section-title">Regimes</div>
+      <div class="regime-list">
+        <div class="regime-item">
+          <div class="regime-dot" style="background:#00FFB8;"></div>
+          <span class="regime-name">TRENDING</span>
+          <span class="regime-desc">directional flow</span>
+        </div>
+        <div class="regime-item">
+          <div class="regime-dot" style="background:#F5A623;"></div>
+          <span class="regime-name">VOLATILE</span>
+          <span class="regime-desc">chaotic deflection</span>
+        </div>
+        <div class="regime-item">
+          <div class="regime-dot" style="background:#A3ADBD;"></div>
+          <span class="regime-name">MEAN-REV</span>
+          <span class="regime-desc">spring attractor</span>
+        </div>
+        <div class="regime-item">
+          <div class="regime-dot" style="background:#5B6472;"></div>
+          <span class="regime-name">QUIET</span>
+          <span class="regime-desc">near-stillness</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACTIONS -->
+    <div class="section">
+      <div class="section-title">Actions</div>
+      <div class="actions">
+        <button class="btn btn-accent" onclick="regenerate()">Regenerate</button>
+        <button class="btn" onclick="resetParams()">Reset</button>
+        <button class="btn" onclick="savePNG()">Save PNG</button>
+      </div>
+    </div>
+
+  </div><!-- /sidebar -->
+</div><!-- /main -->
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// REGIME TOPOLOGY — CoinScopeAI Generative Art
+// Behavioral states as a continuously-evolving Perlin noise manifold.
+// Two orthogonal noise channels define four soft regime zones.
+// Particles obey distinct physics laws per zone.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const PALETTE = {
+  BG:       [13,  17,  23 ],   // #0D1117
+  TRENDING: [0,   255, 184],   // #00FFB8  mint
+  VOLATILE: [245, 166, 35 ],   // #F5A623  amber
+  MEANREV:  [163, 173, 189],   // #A3ADBD  neutral
+  QUIET:    [91,  100, 114],   // #5B6472  muted
+};
+
+const DEFAULTS = {
+  seed:           42,
+  particleCount:  700,
+  zoneScale:      4,
+  evolutionSpeed: 3,
+  trailLength:    16,
+  speed:          1.5,
+  fadeAlpha:      12,
+  showField:      true,
+};
+
+let params = Object.assign({}, DEFAULTS);
+let particles = [];
+let t = 0;
+
+// ── Regime detection ─────────────────────────────────────────────────────────
+function getRegime(x, y) {
+  const s  = params.zoneScale * 0.00075;
+  const et = t * params.evolutionSpeed * 0.000012;
+  const n1 = noise(x * s,        y * s,        et       ) - 0.5;
+  const n2 = noise(x * s + 1000, y * s + 1000, et + 500 ) - 0.5;
+  if      (n1 >= 0 && n2 >= 0) return 'TRENDING';
+  else if (n1 >= 0 && n2 <  0) return 'QUIET';
+  else if (n1 <  0 && n2 >= 0) return 'VOLATILE';
+  else                          return 'MEANREV';
+}
+
+// ── Per-regime velocity physics ───────────────────────────────────────────────
+function getVelocity(x, y, regime) {
+  const s  = params.speed;
+  const et = t * params.evolutionSpeed * 0.000012;
+  const fs = params.zoneScale * 0.00075;
+
+  switch (regime) {
+    case 'TRENDING': {
+      // Coherent directional flow — large-scale noise angle, high magnitude
+      const ang = noise(x * fs * 1.5, y * fs * 1.5, et * 0.6 + 300) * TWO_PI * 3;
+      return { vx: cos(ang) * s * 2.2, vy: sin(ang) * s * 2.2 };
+    }
+    case 'VOLATILE': {
+      // Chaotic high-frequency deflection — unpredictable angle + variable magnitude
+      const ang = noise(x * fs * 6, y * fs * 6, et * 8 + 700) * TWO_PI * 7;
+      const mag = s * (0.8 + noise(x * fs * 4, y * fs * 4, et * 5 + 900) * 3.0);
+      return { vx: cos(ang) * mag, vy: sin(ang) * mag };
+    }
+    case 'MEANREV': {
+      // Spring attractor toward nearest grid cell centre + gentle oscillation
+      const gx  = (floor(x / 90) + 0.5) * 90;
+      const gy  = (floor(y / 90) + 0.5) * 90;
+      const svx = (gx - x) * 0.045;
+      const svy = (gy - y) * 0.045;
+      const osc = noise(x * fs * 0.8, y * fs * 0.8, et * 2 + 200) * TWO_PI * 2;
+      return { vx: svx + cos(osc) * s * 0.7, vy: svy + sin(osc) * s * 0.7 };
+    }
+    case 'QUIET': {
+      // Near-stillness — barely-there drift
+      const ang = noise(x * fs * 0.4, y * fs * 0.4, et * 0.08 + 1200) * TWO_PI;
+      return { vx: cos(ang) * s * 0.22, vy: sin(ang) * s * 0.22 };
+    }
+  }
+}
+
+// ── Particle class ─────────────────────────────────────────────────────────
+class Particle {
+  constructor(aged = false) { this._init(aged); }
+
+  _init(aged = false) {
+    this.x      = random(width);
+    this.y      = random(height);
+    this.vx     = 0;
+    this.vy     = 0;
+    this.maxAge = floor(random(100, 280));
+    this.age    = aged ? floor(random(0, this.maxAge)) : 0;
+    this.trail  = [];
+    this.regime = 'QUIET';
+  }
+
+  update() {
+    this.regime   = getRegime(this.x, this.y);
+    const vel     = getVelocity(this.x, this.y, this.regime);
+    this.vx       = lerp(this.vx, vel.vx, 0.18);
+    this.vy       = lerp(this.vy, vel.vy, 0.18);
+
+    // Speed cap
+    const spd    = sqrt(this.vx * this.vx + this.vy * this.vy);
+    const maxSpd = params.speed * 5;
+    if (spd > maxSpd) { this.vx = (this.vx / spd) * maxSpd; this.vy = (this.vy / spd) * maxSpd; }
+
+    // Trail
+    this.trail.push({ x: this.x, y: this.y });
+    if (this.trail.length > params.trailLength) this.trail.shift();
+
+    this.x += this.vx;
+    this.y += this.vy;
+    this.age++;
+
+    // Retire if aged out or off-canvas
+    if (this.age > this.maxAge ||
+        this.x < -40 || this.x > width  + 40 ||
+        this.y < -40 || this.y > height + 40) {
+      this._init();
+    }
+  }
+
+  display() {
+    if (this.trail.length < 2) return;
+    const col   = PALETTE[this.regime];
+    const lifeR = this.age / this.maxAge;
+    const aBase = sin(lifeR * PI) * 195;
+
+    for (let i = 1; i < this.trail.length; i++) {
+      const ta = map(i, 0, this.trail.length - 1, 0, aBase);
+      const lw = this.regime === 'TRENDING'  ? 0.9 :
+                 this.regime === 'VOLATILE'  ? 0.65 : 0.55;
+      stroke(col[0], col[1], col[2], ta);
+      strokeWeight(lw);
+      line(this.trail[i-1].x, this.trail[i-1].y, this.trail[i].x, this.trail[i].y);
+    }
+
+    // Head dot
+    const dotR = this.regime === 'VOLATILE' ? 1.3 : 1.0;
+    fill(col[0], col[1], col[2], aBase * 0.65);
+    noStroke();
+    circle(this.x, this.y, dotR);
+  }
+}
+
+// ── p5.js lifecycle ──────────────────────────────────────────────────────────
+function setup() {
+  const cnv = createCanvas(900, 900);
+  cnv.parent('canvas-container');
+  colorMode(RGB, 255, 255, 255, 255);
+  initializeSystem();
+}
+
+function initializeSystem() {
+  randomSeed(params.seed);
+  noiseSeed(params.seed);
+  t = 0;
+  particles = [];
+  for (let i = 0; i < params.particleCount; i++) {
+    particles.push(new Particle(true));
+  }
+  background(PALETTE.BG[0], PALETTE.BG[1], PALETTE.BG[2]);
+}
+
+function draw() {
+  // Trail persistence via semi-transparent BG fade
+  noStroke();
+  fill(PALETTE.BG[0], PALETTE.BG[1], PALETTE.BG[2], params.fadeAlpha);
+  rect(0, 0, width, height);
+
+  // Optional regime heatmap
+  if (params.showField) drawRegimeField();
+
+  // Particles
+  noFill();
+  for (const p of particles) { p.update(); p.display(); }
+
+  // Particle count adjustment (add/remove without full reset)
+  while (particles.length < params.particleCount) particles.push(new Particle(true));
+  while (particles.length > params.particleCount) particles.pop();
+
+  // HUD
+  drawRegimeLabels();
+  t++;
+}
+
+// ── Regime heatmap ─────────────────────────────────────────────────────────
+function drawRegimeField() {
+  const res = 42;
+  noStroke();
+  for (let px = 0; px < width; px += res) {
+    for (let py = 0; py < height; py += res) {
+      const r   = getRegime(px + res / 2, py + res / 2);
+      const col = PALETTE[r];
+      fill(col[0], col[1], col[2], 5);
+      rect(px, py, res, res);
+    }
+  }
+}
+
+// ── Regime labels (minimal clinical typography) ────────────────────────────
+function drawRegimeLabels() {
+  textFont('Courier New');
+  textSize(8);
+  textAlign(LEFT, BOTTOM);
+
+  const labels = [
+    { name: 'TRENDING', col: PALETTE.TRENDING, y: height - 14 },
+    { name: 'VOLATILE', col: PALETTE.VOLATILE, y: height - 26 },
+    { name: 'MEAN-REV', col: PALETTE.MEANREV,  y: height - 38 },
+    { name: 'QUIET',    col: PALETTE.QUIET,    y: height - 50 },
+  ];
+
+  for (const lbl of labels) {
+    fill(lbl.col[0], lbl.col[1], lbl.col[2], 110);
+    noStroke();
+    text(lbl.name, 14, lbl.y);
+  }
+
+  // Wordmark
+  textAlign(RIGHT, BOTTOM);
+  fill(255, 255, 255, 25);
+  text('COINSCOPE', width - 14, height - 14);
+}
+
+// ── UI helpers ───────────────────────────────────────────────────────────────
+function updateParam(name, value) {
+  params[name] = value;
+  // showField and trailLength changes take effect immediately without full reset
+}
+
+function regenerate() {
+  initializeSystem();
+  document.getElementById('seed-display').textContent = params.seed;
+}
+
+function resetParams() {
+  params = Object.assign({}, DEFAULTS);
+  document.getElementById('particleCount').value  = params.particleCount;
+  document.getElementById('particleCount-value').textContent = params.particleCount;
+  document.getElementById('zoneScale').value      = params.zoneScale;
+  document.getElementById('zoneScale-value').textContent = params.zoneScale.toFixed(1);
+  document.getElementById('evolutionSpeed').value = params.evolutionSpeed;
+  document.getElementById('evolutionSpeed-value').textContent = params.evolutionSpeed.toFixed(1);
+  document.getElementById('trailLength').value    = params.trailLength;
+  document.getElementById('trailLength-value').textContent = params.trailLength;
+  document.getElementById('speed').value          = params.speed;
+  document.getElementById('speed-value').textContent = params.speed.toFixed(1);
+  document.getElementById('fadeAlpha').value      = params.fadeAlpha;
+  document.getElementById('fadeAlpha-value').textContent = params.fadeAlpha;
+  document.getElementById('showField').checked    = params.showField;
+  document.getElementById('seed-display').textContent = params.seed;
+  initializeSystem();
+}
+
+function savePNG() {
+  saveCanvas('regime-topology-seed-' + params.seed, 'png');
+}
+
+// ── Seed navigation ──────────────────────────────────────────────────────────
+function updateSeed(s) {
+  params.seed = s;
+  document.getElementById('seed-display').textContent = s;
+  initializeSystem();
+}
+
+function previousSeed() { updateSeed(Math.max(1, params.seed - 1)); }
+function nextSeed()     { updateSeed(params.seed + 1); }
+function randomSeedAndUpdate() { updateSeed(Math.floor(Math.random() * 99999) + 1); }
+function jumpToSeed() {
+  const v = parseInt(document.getElementById('seed-input').value);
+  if (!isNaN(v) && v > 0) updateSeed(v);
+  document.getElementById('seed-input').value = '';
+}
+</script>
+</body>
+</html>
