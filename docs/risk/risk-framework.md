@@ -34,7 +34,7 @@ All values are locked. Env-var names match the engine's `coinscope.env.example`.
 | What | Value | Variable |
 | --- | --- | --- |
 | Max drawdown (peak-to-trough) | 10% | `MAX_DRAWDOWN_PCT` |
-| Daily loss budget | 5% | `MAX_DAILY_LOSS_PCT` |
+| Daily loss budget | 5% ¹ | `MAX_DAILY_LOSS_PCT` |
 | Per-trade size cap | 2% of equity | `KELLY_HARD_CAP_PCT` |
 | Fractional Kelly factor | 0.25 | `KELLY_FRACTION` |
 | Portfolio heat cap | 80% | `POSITION_HEAT_CAP_PCT` |
@@ -45,6 +45,8 @@ All values are locked. Env-var names match the engine's `coinscope.env.example`.
 | ATR stop multiplier | 1.5 × ATR | `ATR_STOP_MULTIPLIER` |
 | Risk:reward ratio | 2:1 | `RR_RATIO` |
 | Regime multipliers | bull 1.0, chop 0.5, bear 0.3 | `REGIME_MULT_*` |
+
+> ¹ P0 exception (decision-log 2026-05-18 §8): engine runs `MAX_DAILY_LOSS_PCT=2%` during testnet validation. Restores to 5% at P1 kickoff (COI-97).
 
 The CI smoke suite ([`tests/test_ci_smoke.py`](../../tests/test_ci_smoke.py)) and [`scripts/risk_threshold_guardrail.py`](../../scripts/risk_threshold_guardrail.py) catch any drift from these values.
 

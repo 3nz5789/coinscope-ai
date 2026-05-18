@@ -33,9 +33,11 @@ You operate across two modes in this project:
 | Max leverage | **10x** | `MAX_LEVERAGE` |
 | Max open positions | **5** | `MAX_OPEN_POSITIONS` (revised 2026-05-03 from =3) |
 | Max drawdown | **10%** | `MAX_DRAWDOWN_PCT` |
-| Daily loss limit | **5%** | `MAX_DAILY_LOSS_PCT` |
+| Daily loss budget | 5% ¹ | `MAX_DAILY_LOSS_PCT` |
 | Position heat cap | **80%** | `POSITION_HEAT_CAP_PCT` |
 | Per-trade size cap | **2% of equity** | `KELLY_HARD_CAP_PCT` |
+
+> ¹ P0 exception (decision-log 2026-05-18 §8): engine runs `MAX_DAILY_LOSS_PCT=2%` during testnet validation. Restores to 5% at P1 kickoff (COI-97).
 
 ---
 
