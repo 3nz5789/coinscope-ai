@@ -12,13 +12,18 @@ Exposes REST endpoints for:
 - Walk-forward validation
 """
 
+import logging
 import time
+from datetime import timezone
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from engine.core.scale_up_manager import ScaleUpManager
 from engine.integrations.trade_journal import TradeJournal
+from risk_management.regime_predictor import HMMRegimePredictor
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="CoinScopeAI Engine API", version="1.0.0")
 
@@ -32,6 +37,13 @@ app.add_middleware(
 
 journal = TradeJournal()
 scaler = ScaleUpManager()
+regime_predictor = HMMRegimePredictor()
+
+# Mapping legacy 3-state ensemble labels onto the 4-state v1 taxonomy.
+# Used only by the hmm_fallback path; the primary path uses the trained
+# regime_map persisted in the pickle.
+_FALLBACK_LABEL_MAP = {"bull": "Trending", "bear": "Volatile", "chop": "Mean-Reverting"}
+_V1_STATE_LABELS = ["Trending", "Mean-Reverting", "Volatile", "Quiet"]
 
 
 # ── Health ────────────────────────────────────────────────────────
@@ -89,32 +101,114 @@ async def get_journal(days: int = 7):
 
 
 # ── Regime ────────────────────────────────────────────────────────
+def _normalise_symbols(symbol: str) -> tuple[str, str]:
+    """Return (registry_symbol, ccxt_symbol). e.g. 'btc-usdt' → ('BTCUSDT','BTC/USDT')."""
+    raw = symbol.upper().replace("-", "").replace("/", "")
+    if raw.endswith("USDT") and len(raw) > 4:
+        base, quote = raw[:-4], "USDT"
+    elif raw.endswith("USD") and len(raw) > 3:
+        base, quote = raw[:-3], "USD"
+    else:
+        base, quote = raw, ""
+    return (raw, f"{base}/{quote}" if quote else raw)
+
+
+def _hmm_fallback(symbol: str, registry_symbol: str) -> dict:
+    """Named fallback used when model_registry has no active row or the pickle is missing.
+
+    Runs the legacy 3-state ensemble (fit on demand against 4h bars), maps its
+    label onto the v1 4-state taxonomy, and synthesises a soft 4-element
+    state_probs so the response contract stays uniform.
+    """
+    import ccxt
+    import pandas as pd
+
+    from risk_management.hmm_regime_detector import EnsembleRegimeDetector
+
+    exchange = ccxt.binance({"enableRateLimit": True})
+    ohlcv = exchange.fetch_ohlcv(symbol, "4h", limit=200)
+    df = pd.DataFrame(ohlcv, columns=["ts", "open", "high", "low", "close", "vol"])
+    returns = df["close"].pct_change().dropna().values
+    vol = pd.Series(returns).rolling(20).std().dropna().values
+    det = EnsembleRegimeDetector()
+    min_len = min(len(returns), len(vol))
+    det.fit(returns[-min_len:], vol)
+    result = det.predict_regime(returns[-min_len:][-50:], vol[-50:])
+
+    legacy_label = result["regime"]
+    raw_confidence = float(result["confidence"])
+    # Clamp the fallback confidence to [0.40, 0.85] for two reasons:
+    #  - 0.85 ceiling: guarantees the residual 0.15 splits across the other
+    #    three buckets at >0 each, so we never emit the [0, 0, 1, 0] anti-pattern.
+    #  - 0.40 floor: legacy ensemble's "confidence" is a heuristic blend; values
+    #    below 0.40 are noise, and pegging the peak below 0.40 would invert
+    #    argmax. 0.40 lets the mapped label remain dominant by construction.
+    confidence = max(0.40, min(0.85, raw_confidence))
+    mapped = _FALLBACK_LABEL_MAP.get(legacy_label, "Mean-Reverting")
+    others = (1.0 - confidence) / 3.0
+    probs = [confidence if lab == mapped else others for lab in _V1_STATE_LABELS]
+
+    return {
+        "symbol": registry_symbol,
+        "label": mapped,
+        "confidence": round(confidence, 4),
+        "state_probs": [round(p, 4) for p in probs],
+        "state_labels": _V1_STATE_LABELS,
+        "source": "hmm_fallback",
+        "legacy_label": legacy_label,
+        "price": float(df["close"].iloc[-1]),
+        "timestamp": time.time(),
+    }
+
+
 @app.get("/regime/{symbol}")
 async def get_regime(symbol: str):
-    """Get current regime for a symbol."""
+    """Get current regime for a symbol.
+
+    Path 1 (primary): load active HMM v1 model from `model_registry`, predict
+    state distribution from 1h bars, return label + 4-element state_probs.
+
+    Path 2 (fallback): legacy 3-state on-the-fly ensemble, mapped to the v1
+    4-state taxonomy. Triggered when no active registry row exists for the
+    symbol, the pickle is missing, or feature computation fails.
+    """
+    registry_symbol, ccxt_symbol = _normalise_symbols(symbol)
+
     try:
         import ccxt
         import pandas as pd
 
-        from risk_management.hmm_regime_detector import EnsembleRegimeDetector
-
+        # Try the persisted model first. Even instantiating the predictor is
+        # cheap — the DB query happens inside .predict().
         exchange = ccxt.binance({"enableRateLimit": True})
-        sym = symbol.upper().replace("-", "/")
-        ohlcv = exchange.fetch_ohlcv(sym, "4h", limit=200)
-        df = pd.DataFrame(ohlcv, columns=["ts", "open", "high", "low", "close", "vol"])
-        returns = df["close"].pct_change().dropna().values
-        vol = pd.Series(returns).rolling(20).std().dropna().values
-        det = EnsembleRegimeDetector()
-        min_len = min(len(returns), len(vol))
-        det.fit(returns[-min_len:], vol)
-        result = det.predict_regime(returns[-min_len:][-50:], vol[-50:])
-        return {
-            "symbol": sym,
-            "regime": result["regime"],
-            "confidence": result["confidence"],
-            "price": float(df["close"].iloc[-1]),
-            "timestamp": time.time(),
-        }
+        raw = exchange.fetch_ohlcv(ccxt_symbol, "1h", limit=500)
+        df = pd.DataFrame(
+            raw,
+            columns=["ts", "open", "high", "low", "close", "volume"],
+        )
+        df["open_time"] = pd.to_datetime(df["ts"], unit="ms", utc=True)
+
+        prediction = regime_predictor.predict(registry_symbol, df)
+        if prediction is not None:
+            return {
+                "symbol": prediction.symbol,
+                "label": prediction.label,
+                "confidence": round(prediction.confidence, 6),
+                "state_probs": [round(p, 6) for p in prediction.state_probs],
+                "state_labels": prediction.state_labels,
+                "source": "hmm_regime_v1",
+                "model_version": prediction.model_version,
+                "trained_at": prediction.trained_at.astimezone(timezone.utc).isoformat(),
+                "val_accuracy": prediction.val_accuracy,
+                "price": float(df["close"].iloc[-1]),
+                "timestamp": time.time(),
+            }
+
+        logger.warning(
+            "regime %s: no active model_registry row or pickle missing; using hmm_fallback",
+            registry_symbol,
+        )
+        return _hmm_fallback(ccxt_symbol, registry_symbol)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

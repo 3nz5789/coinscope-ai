@@ -47,10 +47,16 @@ from scipy.special import logsumexp
 from scipy.stats import multivariate_normal
 from sklearn.preprocessing import StandardScaler
 
-SYMBOLS: Sequence[str] = ("BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT")
-FEATURE_SET: Sequence[str] = (
-    "log_return", "volatility", "volume_ratio", "price_position",
+# Project-internal — must import from this exact module so train/serve features stay byte-identical.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from risk_management.regime_features import (  # noqa: E402
+    ATR_WINDOW,
+    FEATURE_SET,
+    RANGE_WINDOW,
+    compute_features,
 )
+
+SYMBOLS: Sequence[str] = ("BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT")
 MODEL_TYPE = "hmm_regime"
 MODEL_VERSION = "v1"
 N_COMPONENTS = 4
@@ -58,57 +64,10 @@ COV_TYPE = "full"
 N_ITER = 200
 RANDOM_STATE = 42
 TRAIN_FRAC = 0.80
-ATR_WINDOW = 14
-RANGE_WINDOW = 20
 
 REGIME_LABELS = ("Trending", "Mean-Reverting", "Volatile", "Quiet")
 
 LOG = logging.getLogger("train_hmm_regime")
-
-
-# ─── Feature engineering ────────────────────────────────────────────────────
-
-def _atr_wilder(high: pd.Series, low: pd.Series, close: pd.Series, n: int) -> pd.Series:
-    """Wilder's ATR — SMA seed for first n bars, then exponential smoothing."""
-    prev_close = close.shift(1)
-    tr = pd.concat([
-        (high - low),
-        (high - prev_close).abs(),
-        (low - prev_close).abs(),
-    ], axis=1).max(axis=1)
-    atr = tr.copy()
-    atr.iloc[:n] = np.nan
-    atr.iloc[n - 1] = tr.iloc[:n].mean()
-    for i in range(n, len(tr)):
-        atr.iloc[i] = (atr.iloc[i - 1] * (n - 1) + tr.iloc[i]) / n
-    return atr
-
-
-def compute_features(df: pd.DataFrame) -> pd.DataFrame:
-    """df must have columns: open_time, open, high, low, close, volume.
-
-    Returns the same df with feature columns appended, warm-up rows dropped.
-    """
-    out = df.sort_values("open_time").reset_index(drop=True).copy()
-    out["log_return"] = np.log(out["close"] / out["close"].shift(1))
-
-    atr = _atr_wilder(out["high"], out["low"], out["close"], ATR_WINDOW)
-    out["volatility"] = atr / out["close"]
-
-    vol_ma = out["volume"].rolling(RANGE_WINDOW, min_periods=RANGE_WINDOW).mean()
-    out["volume_ratio"] = out["volume"] / vol_ma
-
-    rolling_high = out["high"].rolling(RANGE_WINDOW, min_periods=RANGE_WINDOW).max()
-    rolling_low = out["low"].rolling(RANGE_WINDOW, min_periods=RANGE_WINDOW).min()
-    rng = rolling_high - rolling_low
-    # Avoid /0 on degenerate flat ranges — extremely unlikely on 1h crypto, but defensive.
-    out["price_position"] = (out["close"] - rolling_low) / rng.replace(0, np.nan)
-
-    feat_cols = list(FEATURE_SET)
-    before = len(out)
-    out = out.dropna(subset=feat_cols).reset_index(drop=True)
-    LOG.debug("warm-up dropped %d rows (%d → %d)", before - len(out), before, len(out))
-    return out
 
 
 # ─── HMM filter / one-step prediction ───────────────────────────────────────
